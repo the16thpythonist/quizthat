@@ -1,0 +1,7 @@
+{
+  "name": "quizthat",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "vue"
+}
