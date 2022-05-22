@@ -1,0 +1,13 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Kreuzkombinationen 1",
+  "difficulty": 1,
+  "content": "Wie nennt man das Ergebnis einer Plus-Rächnung",
+  "options": {
+    "0": "Summe",
+    "1": "Addition",
+    "2": "Produkt",
+    "3": "Integral"
+  },
+  "solution": "0"
+}
