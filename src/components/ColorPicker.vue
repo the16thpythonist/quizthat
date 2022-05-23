@@ -1,7 +1,10 @@
 <template>
     <button :id="hash" class="picker" :style="buttonStyle()"></button>
     <ion-modal :trigger="hash">
-        <color-picker-screen :value="this.color" @input="onColorInput">
+        <color-picker-screen
+                :value="this.color"
+                :options="this.options"
+                @input="onColorInput">
         </color-picker-screen>
     </ion-modal>
 
@@ -26,7 +29,13 @@
             value: {
                 type: String,
                 required: true,
-                default: '#000000'
+            },
+            options: {
+                type: Array,
+                required: false,
+                default(args) {
+                    return ['#000000']
+                }
             }
         },
         data() {

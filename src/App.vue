@@ -34,7 +34,7 @@
 import { IonApp, IonContent, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonMenu, IonMenuToggle, IonNote, IonRouterOutlet, IonSplitPane } from '@ionic/vue';
 import { defineComponent, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { homeSharp } from 'ionicons/icons';
+import { homeSharp, trophy } from 'ionicons/icons';
 
 export default defineComponent({
   name: 'App',
@@ -61,8 +61,14 @@ export default defineComponent({
         iosIcon: homeSharp,
         mdIcon: homeSharp
       },
+      {
+        title: 'Übersicht',
+        url: '/overview',
+        iosIcon: trophy,
+        mdIcon: trophy,
+      }
     ];
-    const labels = ['Family', 'Friends', 'Notes', 'Work', 'Travel', 'Reminders'];
+    const labels = [''];
     
     const path = window.location.pathname.split('folder/')[1];
     if (path !== undefined) {
@@ -76,6 +82,7 @@ export default defineComponent({
       appPages, 
       labels,
       homeSharp,
+      trophy,
       isSelected: (url: string) => url === route.path ? 'selected' : ''
     }
   }

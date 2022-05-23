@@ -25,6 +25,10 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import ('../views/StartGamePage.vue')
   },
   {
+    path: '/overview',
+    component: () => import('../views/OverviewPage.vue')
+  },
+  {
     path: '/question/:topic/:name',
     component: () => import ('../views/MultipleChoiceQuestionPage.vue')
   }
