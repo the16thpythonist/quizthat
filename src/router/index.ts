@@ -29,8 +29,12 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/OverviewPage.vue')
   },
   {
+    path: '/choice/:playerId',
+    component: () => import('../views/ChoicePage.vue'),
+  },
+  {
     path: '/question/:topic/:name',
-    component: () => import ('../views/MultipleChoiceQuestionPage.vue')
+    component: () => import ('../views/QuestionPage.vue')
   }
 ]
 

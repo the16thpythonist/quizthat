@@ -75,3 +75,15 @@ http://ionicframework.com/docs/theming/ */
   --ion-color-light-shade: #d7d8da;
   --ion-color-light-tint: #f5f6f9;
 }
+
+.success-alert {
+  --background: #D0FFD6;
+}
+
+.failure-alert {
+  --background: #FFD3D3;
+}
+
+.alert-button-group {
+  justify-content: space-around;
+}

@@ -6,6 +6,7 @@ export class Question {
     topic: string;
     difficulty: number;
     content: string;
+    type: string;
 
     constructor(
         name: string = '',
@@ -19,6 +20,7 @@ export class Question {
         this.topic = topic;
         this.difficulty = difficulty;
         this.content = content;
+        this.type = '';
     }
 
     toString(): string {

@@ -82,7 +82,7 @@
     import { defineComponent } from 'vue';
     import { IonButtons, IonContent, IonHeader, IonMenuButton, IonPage, IonTitle, IonToolbar, IonInput, IonFab, IonFabButton, IonIcon, IonSelect, IonSelectOption} from '@ionic/vue';
     import { addCircle, add, close } from 'ionicons/icons';
-    import { useIonRouter } from '@ionic/vue'
+    import { useIonRouter } from '@ionic/vue';
     import { Player, STRENGTHS, EDUCATIONS } from '@/lib/player';
     import { STATE } from '@/lib/game';
     import ColorPicker from "@/components/ColorPicker.vue";
@@ -161,7 +161,8 @@
             },
             onStartGame() {
                 STATE.players = this.players;
-                this.ionRouter.push('/overview');
+                STATE.startGame();
+                this.ionRouter.push(`/choice/${STATE.currentPlayer.id}`);
             }
         }
     });

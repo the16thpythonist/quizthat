@@ -1,5 +1,5 @@
 /* eslint-disable */
-export const STRENGTHS = {
+export const STRENGTHS: Record<string, string> = {
     'science': 'Wissenschaft',
     'sports': 'Sport',
     'geography': 'Geographie',
@@ -7,7 +7,7 @@ export const STRENGTHS = {
     'culture': 'Kultur',
 }
 
-export const EDUCATIONS = {
+export const EDUCATIONS: Record<string, string> = {
     '1': 'Grundschule',
     '2': 'Abitur'
 }
@@ -37,5 +37,13 @@ export class Player {
         this.strength = strength;
         this.education = education;
         this.score = score;
+    }
+
+    getStrength(): string {
+        return STRENGTHS[this.strength];
+    }
+
+    getEducation(): string {
+        return EDUCATIONS[this.education];
     }
 }
