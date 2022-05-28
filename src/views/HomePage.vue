@@ -19,10 +19,34 @@
             <div id="container">
                 <div id="title">QuizThat!</div>
                 <div class="menu-container">
-                    <ion-button class="menu-button" id="new-game" router-link="/start">Neues Spiel</ion-button>
-                    <ion-button class="menu-button" id="question" router-link="/question/mathematics/mc_summe_benennen">Question</ion-button>
-                    <ion-button class="menu-button" id="options">Optionen</ion-button>
-                    <ion-button class="menu-button" id="credits">Credits</ion-button>
+
+                    <ion-button
+                            class="menu-button"
+                            id="new-game"
+                            router-link="/start">
+                        Neues Spiel
+                    </ion-button>
+
+                    <ion-button
+                            class="menu-button"
+                            id="question"
+                            :disabled="!STATE.isRunning"
+                            :router-link="STATE.currentPath">
+                        Spiel fortführen
+                    </ion-button>
+
+                    <ion-button
+                            class="menu-button"
+                            id="options"
+                            router-link="/options">
+                        Optionen
+                    </ion-button>
+
+                    <ion-button
+                            class="menu-button"
+                            id="credits">
+                        Credits
+                    </ion-button>
                 </div>
                 <div class="bottom-spacer"></div>
             </div>
@@ -33,9 +57,10 @@
 <script lang="ts">
     import { defineComponent } from 'vue';
     import { IonButton, IonButtons, IonContent, IonHeader, IonMenuButton, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
+    import { STATE } from "@/lib/game";
 
     export default defineComponent({
-        name: 'FolderPage',
+        name: 'HomePage',
         components: {
             IonButton,
             IonButtons,
@@ -45,6 +70,12 @@
             IonPage,
             IonTitle,
             IonToolbar
+        },
+        setup() {
+
+            return {
+                STATE
+            }
         }
     });
 </script>

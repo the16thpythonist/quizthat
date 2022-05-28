@@ -12,9 +12,10 @@
 </template>
 
 <script>
+    import { defineComponent } from 'vue';
     import {Player} from '@/lib/player';
 
-    export default {
+    export default defineComponent({
         name: "PlayerHeader",
         props: {
             player: {
@@ -22,14 +23,16 @@
                 type: Player
             }
         },
-        methods: {
-            style() {
-                return {
-                    'background-color': this.player.color
-                }
+        setup(props, context) {
+            function style() {
+                return {'background-color': props.player.color};
             }
-        }
-    }
+
+            return {
+                style
+            }
+        },
+    });
 </script>
 
 <style scoped>

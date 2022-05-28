@@ -1,0 +1,13 @@
+{
+  "type": "multiple-choice",
+  "teaser": "in Australien halt doch andersrum",
+  "difficulty": 1,
+  "content": "Was versteht man unter der sgt. 'Corioliskraft'",
+  "options": {
+    "0": "Kraft welche runde Gegenstände eine schiefe Ebene herunterrollen lässt",
+    "1": "Durch die Erdrotation hervorgerufene Scheinkraft welche Winde ablenkt",
+    "2": "Anziehungskraft zwischen den Platten eines geladenen Kondensators",
+    "3": "Kraft welche Passagiere in einem Karussel nach außen drückt"
+  },
+  "solution": "1"
+}

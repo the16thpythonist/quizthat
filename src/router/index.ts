@@ -25,6 +25,10 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import ('../views/StartGamePage.vue')
   },
   {
+    path: '/options',
+    component: () => import ('../views/OptionsPage.vue')
+  },
+  {
     path: '/overview',
     component: () => import('../views/OverviewPage.vue')
   },

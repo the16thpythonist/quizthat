@@ -9,6 +9,7 @@
         <div id="options-container">
             <string-select
                     :options="question.options"
+                    :value="selectedOption"
                     @input="onSelect($event)">
             </string-select>
         </div>
@@ -22,13 +23,13 @@
 
 <script>
     /* eslint-disable */
-    import { defineComponent } from 'vue';
+    import { defineComponent, ref } from 'vue';
     import { IonButton } from '@ionic/vue';
     import { useRoute } from 'vue-router';
     import { MultipleChoiceQuestion, Question, loadQuestion } from "@/lib/question";
     import StringSelect from "./StringSelect";
 
-    export default {
+    export default defineComponent({
         name: 'FolderPage',
         components: {
             StringSelect,
@@ -38,22 +39,35 @@
             question: {
                 required: true,
                 type: Question,
-            }
-        },
-        data() {
-            return {
-                selectedOption: ''
-            }
-        },
-        methods: {
-            onSelect(option) {
-                this.selectedOption = option;
             },
-            onPressConfirm() {
-                this.$emit('confirm', this.selectedOption === this.question.solution);
+            query: {
+                required: false,
+                type: Object,
+                default: () => {return {}; }
+            }
+        },
+        setup(props, context) {
+            const selectedOption = ref('');
+            if (Object.keys(props.query).includes('selected')) {
+                selectedOption.value = props.query.selected;
+            }
+
+            function onSelect(option) {
+                selectedOption.value = option;
+                context.emit('query', {selected: selectedOption.value});
+            }
+
+            function onPressConfirm() {
+                context.emit('confirm', selectedOption.value === props.question.solution);
+            }
+
+            return {
+                selectedOption,
+                onSelect,
+                onPressConfirm
             }
         }
-    };
+    });
 
 </script>
 

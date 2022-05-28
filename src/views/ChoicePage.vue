@@ -19,11 +19,11 @@
             <div id="container">
                 <player-header :player="player"></player-header>
 
-                <question-selection
+                <question-select
                         class="question-selection"
                         :questions="questions"
                         @input="onSelectQuestion($event)">
-                </question-selection>
+                </question-select>
 
                 <ion-button
                         id="continue-btn"
@@ -38,13 +38,14 @@
 
 <script>
     /* eslint-disable */
-    import { defineComponent } from 'vue';
+    import { defineComponent, ref, reactive , onMounted } from 'vue';
+    import { useRoute } from 'vue-router';
     import { IonButtons, IonContent, IonHeader, IonMenuButton, IonPage, IonTitle, IonToolbar, IonButton } from '@ionic/vue';
     import { useIonRouter } from '@ionic/vue';
     import {STATE} from "../lib/game";
     import {Player} from "../lib/player";
     import {Question, loadQuestion} from "../lib/question";
-    import QuestionSelection from '../components/QuestionSelection.vue';
+    import QuestionSelect from '../components/QuestionSelect.vue';
     import PlayerHeader from "../components/PlayerHeader";
 
     export default defineComponent({
@@ -59,46 +60,56 @@
             IonPage,
             IonTitle,
             IonToolbar,
-            QuestionSelection
+            QuestionSelect
         },
-        data() {
-            return {
-                ionRouter: useIonRouter(),
-                player: new Player(),
-                question: new Question(),
-                questions: [],
-                valid: false
+        setup(props, context) {
+            const route = useRoute();
+
+            // First of all - We can extract the player ID from the route parameters. The corresponding player object
+            // is saved in the global game state and we can retrieve it like this:
+            const player = ref(STATE.players[route.params.playerId]);
+
+            // The second thing which is encoded in the route is the actual choice of questions which should be
+            // displayed:
+            const questions = ref([]);
+            for (let questionPath of route.query.questions) {
+                const [topic, name] = questionPath.split('|');
+                loadQuestion(topic, name).then((question) => {
+                    questions.value.push(question);
+                });
             }
-        },
-        methods: {
-            playerStyle() {
-                return {
-                    'background-color': this.player.color
-                }
-            },
-            onSelectQuestion(question) {
-                this.valid = true;
-                this.question = question;
-            },
-            onPressContinue() {
-                if (this.valid) {
-                    console.log(this.question);
-                    this.ionRouter.push(`/question/${this.question.topic}/${this.question.name}`);
+
+            const ionRouter = useIonRouter();
+            const question = ref(new Question());
+            const valid = ref(false);
+
+            function playerStyle() {
+                return {'background-color': player.color}
+            }
+
+            function onSelectQuestion(_question) {
+                question.value = _question;
+                valid.value = true;
+            }
+
+            function onPressContinue() {
+                if (valid) {
+                    ionRouter.push(STATE.questionPath(player.value, question.value));
                 } else {
                     console.log('You have not selected any question, you cannot continue!');
                 }
             }
-        },
-        mounted() {
-            this.player = STATE.players[this.$route.params.playerId];
-            let self = this;
-            loadQuestion('mathematics', 'mc_summe_benennen').then((question) => {
-                self.questions.push(question);
-            })
-            loadQuestion('mathematics', 'mc_produkt_benennen').then((question) => {
-                self.questions.push(question);
-                self.questions.push(question);
-            })
+
+            return {
+                ionRouter,
+                player,
+                question,
+                questions,
+                valid,
+                playerStyle,
+                onSelectQuestion,
+                onPressContinue
+            }
         }
     });
 </script>

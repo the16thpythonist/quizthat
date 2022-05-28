@@ -25,3 +25,16 @@ Next steps are:
   and also the mechanic which lets other players attempt a question if one has failed.
 
 If I have all those things, I have basically arrived at a version 1.0 with the bare minimum of features.
+
+28.05.2022
+----------
+
+I have implemented the main game logic now. The thing which took most of the time now was to rewrite a lot of the
+components such that they store their state in the url query parameters...
+
+The basic functionality is there but I still have to do the random question sample and put it all together and then
+test it...
+
+for usability I think I also need an end page which displays the winner.
+
+If I have all that I can move on to creating the first Duel game...

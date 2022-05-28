@@ -34,7 +34,8 @@
 import { IonApp, IonContent, IonIcon, IonItem, IonLabel, IonList, IonListHeader, IonMenu, IonMenuToggle, IonNote, IonRouterOutlet, IonSplitPane } from '@ionic/vue';
 import { defineComponent, ref } from 'vue';
 import { useRoute } from 'vue-router';
-import { homeSharp, trophy } from 'ionicons/icons';
+import { homeSharp, trophy, options } from 'ionicons/icons';
+import { STATE } from "@/lib/game";
 
 export default defineComponent({
   name: 'App',
@@ -66,6 +67,12 @@ export default defineComponent({
         url: '/overview',
         iosIcon: trophy,
         mdIcon: trophy,
+      },
+      {
+        title: 'Optionen',
+        url: '/options',
+        iosIcon: options,
+        mdIcon: options,
       }
     ];
     const labels = [''];
@@ -76,13 +83,14 @@ export default defineComponent({
     }
     
     const route = useRoute();
-    
+
     return { 
       selectedIndex,
       appPages, 
       labels,
       homeSharp,
       trophy,
+      options,
       isSelected: (url: string) => url === route.path ? 'selected' : ''
     }
   }

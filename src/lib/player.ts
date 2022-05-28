@@ -1,13 +1,19 @@
 /* eslint-disable */
-export const STRENGTHS: Record<string, string> = {
+export const STRENGTH_NAMES: Record<string, string> = {
     'science': 'Wissenschaft',
     'sports': 'Sport',
-    'geography': 'Geographie',
-    'history': 'Geschichte',
+    'facts': 'Allgemeinwissen',
     'culture': 'Kultur',
 }
 
-export const EDUCATIONS: Record<string, string> = {
+export const STRENGTH_TOPICS: Record<string, Array<string>> = {
+    'science': ['mathematics', 'physics'],
+    'sports': ['sports'],
+    'facts': ['geography', 'history'],
+    'culture': ['culture'],
+}
+
+export const EDUCATION_NAMES: Record<string, string> = {
     '1': 'Grundschule',
     '2': 'Abitur'
 }
@@ -40,10 +46,10 @@ export class Player {
     }
 
     getStrength(): string {
-        return STRENGTHS[this.strength];
+        return STRENGTH_NAMES[this.strength];
     }
 
     getEducation(): string {
-        return EDUCATIONS[this.education];
+        return EDUCATION_NAMES[this.education];
     }
 }

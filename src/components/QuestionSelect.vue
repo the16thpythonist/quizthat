@@ -12,7 +12,7 @@
                     <div class="question-topic">{{ question.topic }}</div>
                     <div class="question-difficulty">Schwierigkeit {{ question.difficulty }}</div>
                 </div>
-                <div class="row">
+                <div class="row" :style="{'flex-grow': 1}">
                     <div class="question-teaser">{{ question.teaser }}</div>
                 </div>
                 <div class="row">
@@ -30,7 +30,7 @@
     import {MultipleChoiceQuestion, Question} from "../lib/question";
 
     export default {
-        name: "QuestionSelection",
+        name: "QuestionSelect",
         props: {
             questions: {
                 required: true,

@@ -40,7 +40,7 @@
                                     interface="action-sheet"
                                     @ionChange="onStrengthSelect($event, player)">
                                 <ion-select-option
-                                        v-for="(label, value) in STRENGTHS"
+                                        v-for="(label, value) in STRENGTH_NAMES"
                                         :key="value"
                                         :value="value">
                                     {{ label }}
@@ -52,7 +52,7 @@
                                     interface="action-sheet"
                                     @ionChange="onEducationSelect($event, player)">
                                 <ion-select-option
-                                        v-for="(label, value) in EDUCATIONS"
+                                        v-for="(label, value) in EDUCATION_NAMES"
                                         :key="value"
                                         :value="value">
                                     {{ label }}
@@ -83,7 +83,7 @@
     import { IonButtons, IonContent, IonHeader, IonMenuButton, IonPage, IonTitle, IonToolbar, IonInput, IonFab, IonFabButton, IonIcon, IonSelect, IonSelectOption} from '@ionic/vue';
     import { addCircle, add, close } from 'ionicons/icons';
     import { useIonRouter } from '@ionic/vue';
-    import { Player, STRENGTHS, EDUCATIONS } from '@/lib/player';
+    import { Player, STRENGTH_NAMES, EDUCATION_NAMES } from '@/lib/player';
     import { STATE } from '@/lib/game';
     import ColorPicker from "@/components/ColorPicker.vue";
 
@@ -111,8 +111,8 @@
             return {
                 add,
                 close,
-                STRENGTHS,
-                EDUCATIONS,
+                STRENGTH_NAMES,
+                EDUCATION_NAMES,
                 STATE,
                 ionRouter
             }
@@ -162,7 +162,7 @@
             onStartGame() {
                 STATE.players = this.players;
                 STATE.startGame();
-                this.ionRouter.push(`/choice/${STATE.currentPlayer.id}`);
+                this.ionRouter.push(STATE.choicePath(STATE.currentPlayer));
             }
         }
     });
