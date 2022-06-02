@@ -57,6 +57,8 @@ export default defineComponent({
         const ionRouter = useIonRouter();
         const players = Object.values(STATE.players);
 
+        STATE.currentPath = '/end';
+
         function onPressFinish() {
             STATE.endGame();
             ionRouter.push('/home');

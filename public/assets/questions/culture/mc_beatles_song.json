@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Beatles",
+  "difficulty": 1,
+  "content": "Welcher der Songs ist nicht von den Beatles?",
+  "options": {
+    "0": "Let It Be",
+    "1": "Wonderwall",
+    "2": "Hey Jude",
+    "3": "Eleanor Rigby"
+  },
+  "details": "Wonderwall ist ein Song der Band 'Oasis'",
+  "source": "-",
+  "solution": "1"
+}

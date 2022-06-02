@@ -4,13 +4,15 @@ export const STRENGTH_NAMES = {
     'sports': 'Sport',
     'facts': 'Allgemeinwissen',
     'culture': 'Kultur',
+    'zoomer': 'Zoomer'
 }
 
 export const STRENGTH_TOPICS = {
     'science': ['mathematics', 'physics'],
     'sports': ['sports'],
-    'facts': ['geography', 'history'],
+    'facts': ['history', 'geography'],
     'culture': ['culture'],
+    'zoomer': ['gaming', 'internet']
 }
 
 export const EDUCATION_NAMES = {

@@ -15,6 +15,14 @@ class Options {
             'inputType': 'number',
             'label': 'Rundenanzahl'
         },
+        'questionCount': {
+            'default': 5,
+            'encode': (v) => {return v.toString()},
+            'decode': (v) => {return parseInt(v)},
+            'ref': ref(null),
+            'inputType': 'number',
+            'label': 'Fragen pro Runde'
+        },
         'useAudio': {
             'default': true,
             'encode': (v) => {return v.toString()},

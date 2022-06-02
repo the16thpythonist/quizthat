@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Pocket Monsters",
+  "difficulty": 1,
+  "content": "Welches der folgenden Namen bezeichnet KEIN Pokemon?",
+  "options": {
+    "0": "Agumon",
+    "1": "Bisaflor",
+    "2": "Flegmon",
+    "3": "Pikachu"
+  },
+  "details": "Agumon ist ein Character aus der konkurrierenden japanischen TV Serie 'Digimon'",
+  "source": "",
+  "solution": "0"
+}

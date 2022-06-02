@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Die Mauer",
+  "difficulty": 1,
+  "content": "Welches Datum schreibt man dem Fall der deutschen Mauer zu?",
+  "options": {
+    "0": "2.Januar 1981",
+    "1": "9.November 1989",
+    "2": "11.September 1990",
+    "3": "3.Dezember 1981"
+  },
+  "details": "Zum Fall der Berliner Mauer kam es alle Welt überraschend in der Nacht von Donnerstag, dem 9. November, auf Freitag, den 10. November 1989, nach über 28 Jahren ihrer Existenz.",
+  "source": "https://de.wikipedia.org/wiki/Berliner_Mauer#Mauerfall",
+  "solution": "1"
+}

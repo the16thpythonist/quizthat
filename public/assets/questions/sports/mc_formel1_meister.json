@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Formel 1 Weltmeister",
+  "difficulty": 3,
+  "content": "Welcher der folgenden Rennfahrer war noch nie Formel 1 Weltmeister?",
+  "options": {
+    "0": "Lewis Hamilton",
+    "1": "Max Verstappen",
+    "2": "Micheal Schuhmacher",
+    "3": "Valterri Bottas"
+  },
+  "solution": "3",
+  "details": "Valterri Bottas hat sowohl 2019 als auch 2020 den 2.Platz gemacht, bisher aber noch nicht gewonnen",
+  "source": "https://de.wikipedia.org/wiki/Liste_der_Formel-1-Weltmeister"
+}

@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Ein sehr altes Buch",
+  "difficulty": 3,
+  "content": "In welcher Sprache wurde das Neue Testament der Bibel verfasst?",
+  "options": {
+    "0": "Hebräisch",
+    "1": "Griechisch",
+    "2": "Aramäisch",
+    "3": "Latein"
+  },
+  "details": "Das Originalsprachen des alten Testaments sind Hebräisch, Griechisch und in kleinen Teilen Aramaisch. Das neue Testament is allerdings durchgehend in griechischer Sprache verfasst.",
+  "source": "https://www.bibelwerk.at/pages/katholischesbibelwerk/faq/fragenantworten/article/118646.html",
+  "solution": "2"
+}

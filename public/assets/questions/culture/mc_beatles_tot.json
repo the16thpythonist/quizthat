@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Toter Käfer",
+  "difficulty": 1,
+  "content": "Welcher der Beatles ist durch einen Attentat gestorben?",
+  "options": {
+    "0": "Ringo Star",
+    "1": "Paul McCartney",
+    "2": "John Lennon",
+    "3": "George Harrison"
+  },
+  "details": "am 8.Dezember 1980 wurde John Lennon vom Mark David Chapman mit einem Revolver erschossen.",
+  "source": "https://de.wikipedia.org/wiki/John_Lennon#Attentat_und_Tod",
+  "solution": "2"
+}

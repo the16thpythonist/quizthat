@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Cryptomining",
+  "difficulty": 1,
+  "content": "Welche der folgenden Komponenten ist wegen seiner starken Parallelisierungsmöglichkeiten in jüngster Zeit essentiell für das Cryptomining geworden?",
+  "options": {
+    "0": "RAM",
+    "1": "CPU",
+    "2": "GPU",
+    "3": "SSD"
+  },
+  "solution": "1",
+  "details": "GPU: Graphic Processing Unit oder auch Grafikkarten genannt setzen für die Datenverarbeitung auf stark parallelisierte Architekturen und werden in jüngster Zeit verstärkt von Crypto-Farmen aufgekauft.",
+  "source": ""
+}

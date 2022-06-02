@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Videospiel Hits",
+  "difficulty": 1,
+  "content": "Welches der folgenden Videospiele wurde weltweit am meisten verkauft?",
+  "options": {
+    "0": "Elder Scrolls 5: Skyrim",
+    "1": "Minecraft",
+    "2": "Grand Theft Auto 5",
+    "3": "Wii Sports"
+  },
+  "details": "Natürlich Minecraft mit weltweit 238 Millionen Verkäufen. Wii Sports erstaunlicherweise global auf Platz 4 o0...",
+  "source": "https://www.pokewiki.de/Pok%C3%A9mon-Liste",
+  "solution": "1"
+}

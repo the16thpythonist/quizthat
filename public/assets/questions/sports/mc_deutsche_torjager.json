@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Deutsche Torjäger",
+  "difficulty": 2,
+  "content": "Welcher der folgenden deutschen Fußballer hat die meistem WM Tore geschossen?",
+  "options": {
+    "0": "Gerd Müller",
+    "1": "Miroslav Klose",
+    "2": "Jürgen Klinsman",
+    "3": "Rudi Völler"
+  },
+  "solution": "1",
+  "details": "Miroslav Klose liegt mit 71 knapp vor Gerd Müller (68) auf Platz 1",
+  "source": "https://de.wikipedia.org/wiki/Liste_der_Torsch%C3%BCtzen_der_deutschen_Fu%C3%9Fballnationalmannschaft"
+}

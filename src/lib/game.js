@@ -97,7 +97,7 @@ export class GameState {
     sampleQuestions(player, k) {
         // First of all we need to determine the topics for the questions.
         let randomTopics = sampleArray(this.topics, k);
-        let strengthTopics = sampleArray(STRENGTH_TOPICS[player.strength], k);
+        let strengthTopics = sampleArray(STRENGTH_TOPICS[player.strength], Math.floor((k - 1) / 2));
         let topics = [...randomTopics, ...strengthTopics];
 
         let questions = [];
@@ -132,7 +132,7 @@ export class GameState {
     }
 
     choicePath(player) {
-        const questions = this.sampleQuestions(player);
+        const questions = this.sampleQuestions(player, OPTIONS.get('questionCount'));
         const questionString = questions.map((q) => `questions=${q}`).join('&');
         const id = (Math.random() + 1).toString(36).substring(4);
         let path =  `/choice/${player.id}/${id}/?${questionString}`;

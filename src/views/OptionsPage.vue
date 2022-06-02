@@ -25,6 +25,7 @@
                             :key="key">
                         <ion-label class="label">{{ data['label'] }}</ion-label>
                         <ion-input
+                                class="ion-text-right"
                                 :key="key"
                                 :type="data['inputType']"
                                 :value="OPTIONS.get(key)"

@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Luther",
+  "difficulty": 2,
+  "content": "Wie viele Thesen wollte der Mönch Martin Luther 1517 eine Reform der Kirche erwirken?",
+  "options": {
+    "0": "10",
+    "1": "48",
+    "2": "95",
+    "3": "100"
+  },
+  "details": "Es waren 95 Thesen.",
+  "source": "https://www.bibelwerk.at/pages/katholischesbibelwerk/faq/fragenantworten/article/118646.html",
+  "solution": "2"
+}

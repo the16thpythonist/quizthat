@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Crypto-Jargon",
+  "difficulty": 2,
+  "content": "Welche der folgenden Crypto Währungen existiert NICHT? (Stand Mai 2022)",
+  "options": {
+    "0": "Dodge Coin",
+    "1": "Bitcoin",
+    "2": "Shiba Inu Coin",
+    "3": "Birma Cat Coin"
+  },
+  "details": "Es gibt mittlerweile viel zu viele Cryptowährungen... und ja auch einen Shiba Inu Coin. Allerdings noch keinen 'Birma Cat Coin'",
+  "source": "",
+  "solution": "3"
+}

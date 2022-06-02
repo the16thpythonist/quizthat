@@ -1,13 +1,45 @@
 {
+    "culture": [
+        "mc_beatles_song",
+        "mc_beatles_tot",
+        "mc_linkin_park_songs"
+    ],
+    "gaming": [
+        "mc_kein_pokemon",
+        "mc_kein_pokemon_2",
+        "mc_verkaufte_spiele"
+    ],
+    "geography": [
+        "mc_hauptstadt_deutschland",
+        "mc_hauptstadt_island",
+        "mc_hauptstadt_laos"
+    ],
+    "history": [
+        "mc_bibel_sprache",
+        "mc_luther_thesen",
+        "mc_mauerfall"
+    ],
+    "internet": [
+        "mc_cryptocurrency_names"
+    ],
     "mathematics": [
         "mc_kein_begriff",
         "mc_produkt_benennen",
         "mc_summe_benennen"
     ],
     "physics": [
-        "mc_corioliskraft_definition"
+        "mc_corioliskraft_definition",
+        "mc_einstein_nobelpreis",
+        "mc_erfinder_atombombe"
+    ],
+    "sports": [
+        "mc_deutsche_torjager",
+        "mc_formel1_meister",
+        "mc_wann_olympische_de"
     ],
     "technology": [
+        "mc_cryptomining_gpu",
+        "mc_javascript_framework",
         "mc_wann_computer"
     ]
 }

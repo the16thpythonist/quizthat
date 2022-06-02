@@ -170,9 +170,8 @@
     }
 
     .button {
-        margin: 10px;
-        width: 90%;
-        height: 5%;
+        width: 80%;
+        margin: 20px;
     }
 
 </style>

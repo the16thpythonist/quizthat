@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Javascript Frameworks",
+  "difficulty": 3,
+  "content": "Welche der folgenden Wörter bezeichnet KEIN modernes Javascript Framework?",
+  "options": {
+    "0": "React",
+    "1": "Angular",
+    "2": "Django",
+    "3": "Vue"
+  },
+  "solution": "2",
+  "details": "React, Angular und Vue sind die 3 bekanntesten Javascript Frontend Frameworks (Stand 2022). Django ist ein Backend Framework für die Programmiersprache Python.",
+  "source": "https://www.computerhistory.org/timeline/computers/"
+}

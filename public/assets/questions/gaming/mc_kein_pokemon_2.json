@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Pocket Monsters",
+  "difficulty": 2,
+  "content": "Welches der folgenden Namen bezeichnet KEIN Pokemon?",
+  "options": {
+    "0": "Giratina",
+    "1": "Klikdiklak",
+    "2": "Dratara",
+    "3": "Hoothoot"
+  },
+  "details": "'Dratara' ist ein erfundenes Wort, könnte allerdings plausiblerweise der Name für eine zukünftige Drachen-Entwicklung von Evoli sein",
+  "source": "https://www.pokewiki.de/Pok%C3%A9mon-Liste",
+  "solution": "2"
+}

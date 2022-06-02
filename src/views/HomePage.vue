@@ -17,7 +17,11 @@
             </ion-header>
 
             <div id="container">
-                <div id="title">QuizThat!</div>
+                <div class="title-container">
+                    <div class="title">QuizThat!</div>
+                    <div class="subtitle">Version 0.3.0</div>
+                </div>
+
                 <div class="menu-container">
 
                     <ion-button
@@ -81,10 +85,25 @@
 </script>
 
 <style scoped>
-    #title {
-        font-size: 2em;
+
+    .title-container {
         margin-top: 20%;
         margin-bottom: 20%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .title {
+        font-size: 3em;
+        letter-spacing: 2px;
+    }
+
+    .subtitle {
+        font-size: 0.8em;
+        font-variant: small-caps;
+        text-align: center;
+        color: dimgray;
     }
 
     div.menu-container {

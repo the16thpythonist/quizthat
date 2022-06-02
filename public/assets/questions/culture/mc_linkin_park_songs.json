@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Linkin Park",
+  "difficulty": 1,
+  "content": "Welcher der folgenden Songs ist nicht von Linkin Park?",
+  "options": {
+    "0": "Numb",
+    "1": "In the End",
+    "2": "Boulevard of Broken Dreams",
+    "3": "Burn it Down"
+  },
+  "details": "Boulevard of Broken Dreams ist ein Song Green Day",
+  "source": "-",
+  "solution": "2"
+}

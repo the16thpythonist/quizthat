@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Hauptstädte",
+  "difficulty": 4,
+  "content": "Was ist die Hauptstadt von Laos?",
+  "options": {
+    "0": "Phonsavan",
+    "1": "Vientiane",
+    "2": "Mandalay",
+    "3": "Bangkok"
+  },
+  "details": "Vientiane ist die Hauptstadt von Laos mit ca 350.000 Einwohnern. Vientiane ist die international gängige Schreibweise aus der französischen Kolonialzeit. Der laotische Name Vieng Chan bedeutet in etwa 'Stadt des Sandelholzes'.",
+  "source": "https://de.wikipedia.org/wiki/Vientiane",
+  "solution": "1"
+}

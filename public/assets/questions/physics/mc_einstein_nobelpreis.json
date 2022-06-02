@@ -1,0 +1,14 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Ein Stein",
+  "difficulty": 2,
+  "content": "Für welche Entdeckung erhielt Albert Einstein den Nobelpreis für Physik?",
+  "options": {
+    "0": "Die Entdeckung des photoelektrischen Effekts",
+    "1": "Die allgemeine Relativitätstheorie",
+    "2": "E = mc^2",
+    "3": "Die spezielle Relativitätstheorie"
+  },
+  "details": "Obwohl die Relativitätstheorie heutzutage als bedeutenste Errungenschaft Einsteins verstanden wird, erhielt er 1921 den Nobelpreis für die Entdeckung des photoelektrischen Effekts",
+  "solution": "0"
+}

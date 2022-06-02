@@ -17,7 +17,7 @@
             </ion-header>
 
             <div id="container">
-                <player-header :player="player"></player-header>
+                <player-header class="header-container" :player="player"></player-header>
 
                 <question-select
                         class="question-selection"
@@ -115,23 +115,17 @@
 </script>
 
 <style scoped>
+
+    .header-container {
+        width: 100%;
+    }
+
     #container {
         display: flex;
         flex-direction: column;
         height: 100%;
         width: 100%;
-    }
-
-    #player-container {
-        display: flex;
-        flex-direction: column;
-        padding: 10px;
-    }
-
-    .row {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
+        align-items: center;
     }
 
     .question-selection {
@@ -141,9 +135,8 @@
     }
 
     #continue-btn {
-        margin: 10px;
-        margin-top: 5%;
-        margin-bottom: 5%;
+        width: 80%;
+        margin: 20px;
     }
 
 </style>

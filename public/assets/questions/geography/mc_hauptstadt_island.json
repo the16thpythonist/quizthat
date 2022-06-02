@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Hauptstädte",
+  "difficulty": 4,
+  "content": "Was ist die Hauptstadt von Island?",
+  "options": {
+    "0": "Reykjahlid",
+    "1": "Helsinki",
+    "2": "Reykjavik",
+    "3": "Hjadarholt"
+  },
+  "details": "Reykjavik ist die Hauptstadt von Island mit ca 200.000 Einwohnern.",
+  "source": "https://de.wikipedia.org/wiki/Reykjav%C3%ADk",
+  "solution": "2"
+}

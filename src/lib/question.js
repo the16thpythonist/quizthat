@@ -6,7 +6,13 @@ import { OPTIONS } from "@/lib/options";
 export const TOPIC_NAMES = {
     'mathematics': 'Mathematik',
     'physics': 'Physik',
-    'technology': 'Technologie'
+    'technology': 'Technologie',
+    'sports': 'Sport',
+    'history': 'Geschichte',
+    'geography': 'Geographie',
+    'culture': 'Kultur',
+    'internet': 'Internetkultur',
+    'gaming': 'Gaming'
 }
 
 export const QUESTION_TYPE_NAMES = {

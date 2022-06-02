@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Hauptstädte",
+  "difficulty": 1,
+  "content": "Was ist die Hauptstadt von Deutschland?",
+  "options": {
+    "0": "Berlin",
+    "1": "Mainz",
+    "2": "München",
+    "3": "Hamburg"
+  },
+  "details": "Berlin ist die Hauptstadt von Deutschland mit ca 6 Millionen Einwohnern.",
+  "source": "https://de.wikipedia.org/wiki/Berlin",
+  "solution": "0"
+}

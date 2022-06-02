@@ -1,0 +1,14 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Fat Boy",
+  "difficulty": 3,
+  "content": "Welcher der folgenden Physiker war NICHT an der Erfindung der Atombombe beteiligt?",
+  "options": {
+    "0": "Richard Feynman",
+    "1": "Robert Oppenheimer",
+    "2": "Enrico Fermi",
+    "3": "Albert Einstein"
+  },
+  "details": "Obwohl Einsteins berühmte Formel wichtig für die Entwicklung der Bombe war, hat dieser als überzeugter Pazifist nicht aktiv an dessen Entwicklung teilgenommen.",
+  "solution": "3"
+}
