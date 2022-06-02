@@ -33,11 +33,15 @@ const routes: Array<RouteRecordRaw> = [
     component: () => import('../views/OverviewPage.vue')
   },
   {
-    path: '/choice/:playerId',
+    path: '/end',
+    component: () => import('../views/EndPage.vue'),
+  },
+  {
+    path: '/choice/:playerId/:hash',
     component: () => import('../views/ChoicePage.vue'),
   },
   {
-    path: '/question/:topic/:name',
+    path: '/question/:topic/:name/:hash',
     component: () => import ('../views/QuestionPage.vue')
   }
 ]

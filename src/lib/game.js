@@ -6,7 +6,7 @@ import { OPTIONS } from "@/lib/options";
 import { ref, reactive } from 'vue';
 
 
-function sampleArray(arr: Array<any>, k: number) {
+function sampleArray(arr, k = 3) {
     let shuffled = arr.slice(0);
     let i = arr.length;
     let temp, index;
@@ -21,20 +21,20 @@ function sampleArray(arr: Array<any>, k: number) {
 
 
 export class GameState {
-    isRunning: boolean;
+    isRunning;
 
-    players: Record<string, Player>;
-    playerOrder: Array<string>;
-    currentIndex: number;
-    currentPlayer: Player;
+    players;
+    playerOrder;
+    currentIndex;
+    currentPlayer;
 
-    currentPath: string;
+    currentPath;
 
-    questions: Record<string, Array<string>>;
-    topics: Array<string>;
+    questions;
+    topics;
 
-    roundLimit: number;
-    roundIndex: number;
+    roundLimit;
+    roundIndex;
 
     constructor () {
         this.isRunning = false;
@@ -71,10 +71,17 @@ export class GameState {
         this.currentPlayer = this.players[playerId];
 
         this.roundIndex = 1;
-        OPTIONS.get('rounds').then((value) => {this.roundLimit = value; });
+        this.roundLimit = OPTIONS.get('rounds');
     }
 
-    nextPlayer(player: Player = this.currentPlayer) : Player {
+    endGame() {
+        this.isRunning = false;
+        this.playerOrder = [];
+        this.currentIndex = 0;
+        this.players = {}
+    }
+
+    nextPlayer(player = this.currentPlayer) {
         let found = false;
         for(let playerId of [...this.playerOrder, ...this.playerOrder]) {
             if (found) {
@@ -87,13 +94,13 @@ export class GameState {
         return player;
     }
 
-    sampleQuestions(player: Player, k: number = 3): Array<string> {
+    sampleQuestions(player, k) {
         // First of all we need to determine the topics for the questions.
         let randomTopics = sampleArray(this.topics, k);
         let strengthTopics = sampleArray(STRENGTH_TOPICS[player.strength], k);
         let topics = [...randomTopics, ...strengthTopics];
 
-        let questions: Array<string> = [];
+        let questions = [];
         for (let topic of topics) {
             let index = Math.floor((this.questions[topic].length) * Math.random())
             let name = this.questions[topic][index];
@@ -103,13 +110,14 @@ export class GameState {
         return sampleArray(questions, k);
     }
 
-    nextPath(): string {
+    nextPath()  {
         // First of we increment the player. This may of may not cause the increment of the round index as well.
         if (this.currentIndex === this.playerOrder.length - 1) {
             this.roundIndex += 1;
 
             if (this.roundIndex >= this.roundLimit) {
                 // End
+                return '/end';
             } else {
                 // reset to the first player
                 this.currentIndex = 0;
@@ -123,16 +131,18 @@ export class GameState {
         return this.choicePath(this.currentPlayer);
     }
 
-    choicePath(player: Player): string {
+    choicePath(player) {
         const questions = this.sampleQuestions(player);
         const questionString = questions.map((q) => `questions=${q}`).join('&');
-        let path =  `/choice/${player.id}/?${questionString}`;
+        const id = (Math.random() + 1).toString(36).substring(4);
+        let path =  `/choice/${player.id}/${id}/?${questionString}`;
 
         return path;
     }
 
-    questionPath(player: Player, question: Question): string {
-        const path = `/question/${question.topic}/${question.name}?playerId=${player.id}&isOpen=true`
+    questionPath(player, question) {
+        const id = (Math.random() + 1).toString(36).substring(4);
+        const path = `/question/${question.topic}/${question.name}/${id}?playerId=${player.id}&isOpen=true`
         return path;
     }
 }

@@ -38,3 +38,12 @@ test it...
 for usability I think I also need an end page which displays the winner.
 
 If I have all that I can move on to creating the first Duel game...
+
+01.06.2022
+----------
+
+So what is missing now? I think for the first version I will have to do the following things mainly:
+
+- A final screen
+- A solution screen
+

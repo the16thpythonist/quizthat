@@ -6,5 +6,8 @@
     ],
     "physics": [
         "mc_corioliskraft_definition"
+    ],
+    "technology": [
+        "mc_wann_computer"
     ]
 }

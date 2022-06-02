@@ -38,6 +38,9 @@
 <style scoped>
     #player-header {
         padding: 6px;
+        border-bottom-style: solid;
+        border-width: 1px;
+        border-color: dimgray;
     }
 
     .row {
@@ -49,6 +52,6 @@
     #player-strength, #player-education {
         font-variant: small-caps;
         font-size: 0.8em;
-        color: gray;
+        color: dimgray;
     }
 </style>

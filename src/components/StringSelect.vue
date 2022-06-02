@@ -12,6 +12,8 @@
 </template>
 
 <script>
+    import { AUDIO } from "@/lib/audio";
+
     export default {
         name: "StringSelect",
         props: {
@@ -34,6 +36,7 @@
             onSelect(key) {
                 this.key = key;
                 this.$emit('input', this.key);
+                AUDIO.playSelect();
             },
             classElement(key) {
                 return {
@@ -61,6 +64,7 @@
         border-radius: 3px;
         margin-bottom: 5%;
         text-align: center;
+        background-color: white;
         font-family: var(--ion-font-family);
         padding: 10px;
         letter-spacing: 0.84px;

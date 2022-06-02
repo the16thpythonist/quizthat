@@ -1,38 +1,39 @@
 /* eslint-disable */
-export const STRENGTH_NAMES: Record<string, string> = {
+export const STRENGTH_NAMES = {
     'science': 'Wissenschaft',
     'sports': 'Sport',
     'facts': 'Allgemeinwissen',
     'culture': 'Kultur',
 }
 
-export const STRENGTH_TOPICS: Record<string, Array<string>> = {
+export const STRENGTH_TOPICS = {
     'science': ['mathematics', 'physics'],
     'sports': ['sports'],
     'facts': ['geography', 'history'],
     'culture': ['culture'],
 }
 
-export const EDUCATION_NAMES: Record<string, string> = {
+export const EDUCATION_NAMES = {
     '1': 'Grundschule',
     '2': 'Abitur'
 }
 
 
 export class Player {
-    id: string;
-    name: string;
-    color: string;
-    strength: string;
-    education: number;
-    score: number;
+
+    id;
+    name;
+    color;
+    strength;
+    education;
+    score;
 
     constructor(
-        name: string = '',
-        color: string = '#000000',
-        strength: string = '',
-        education: number = 0,
-        score: number = 0,
+        name = '',
+        color = '#000000',
+        strength = '',
+        education = 0,
+        score = 0,
     ) {
         // The id is a randomly generated unique string which identifies the player. This makes it possible to have
         // players with the same name.
@@ -45,11 +46,19 @@ export class Player {
         this.score = score;
     }
 
-    getStrength(): string {
+    getStrength() {
         return STRENGTH_NAMES[this.strength];
     }
 
-    getEducation(): string {
+    getStrengthName() {
+        return STRENGTH_NAMES[this.strength];
+    }
+
+    getEducation() {
+        return EDUCATION_NAMES[this.education];
+    }
+
+    getEducationName() {
         return EDUCATION_NAMES[this.education];
     }
 }

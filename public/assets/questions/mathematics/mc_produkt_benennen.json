@@ -1,6 +1,6 @@
 {
   "type": "multiple-choice",
-  "teaser": "Kreuzkombinationen 2",
+  "teaser": "Grundschulterminologie",
   "difficulty": 1,
   "content": "Wie nennt man das Ergebnis einer Multiplikation",
   "options": {
@@ -9,5 +9,7 @@
     "2": "Produkt",
     "3": "Integral"
   },
+  "details": "Das Ergebnis einer Multiplikation wird Produkt genannt",
+  "source": "",
   "solution": "2"
 }

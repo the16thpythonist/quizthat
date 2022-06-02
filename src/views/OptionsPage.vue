@@ -18,17 +18,33 @@
 
             <div id="container">
                 <h1>Spieleinstellungen</h1>
-                <div id="game-options">
+                <div id="game-settings">
 
-                    <ion-item>
-                        <ion-label class="label">Rundenanzahl</ion-label>
+                    <ion-item
+                            v-for="[key, data] in config"
+                            :key="key">
+                        <ion-label class="label">{{ data['label'] }}</ion-label>
                         <ion-input
-                                type="number"
-                                ref="rounds"
-                                @input="OPTIONS.set('rounds', $event.target.value)">
+                                :key="key"
+                                :type="data['inputType']"
+                                :value="OPTIONS.get(key)"
+                                @input="OPTIONS.set(key, $event.target.value)">
                         </ion-input>
                     </ion-item>
 
+                </div>
+
+                <div id="game-settings-boolean">
+                    <ion-item
+                            v-for="[key, data] in configBoolean"
+                            :key="key">
+                        <ion-label class="label">{{ data['label'] }}</ion-label>
+                        <ion-checkbox
+                                :key="key"
+                                :modelValue="OPTIONS.get(key)"
+                                @update:modelValue="OPTIONS.set(key, $event);">
+                        </ion-checkbox>
+                    </ion-item>
                 </div>
             </div>
         </ion-content>
@@ -36,8 +52,8 @@
 </template>
 
 <script>
-    import { defineComponent } from 'vue';
-    import { IonButtons, IonContent, IonHeader, IonMenuButton, IonPage, IonTitle, IonToolbar, IonInput, IonItem, IonLabel } from '@ionic/vue';
+    import { defineComponent, ref, onMounted, computed } from 'vue';
+    import { IonButtons, IonContent, IonHeader, IonMenuButton, IonPage, IonTitle, IonToolbar, IonInput, IonItem, IonLabel, IonCheckbox } from '@ionic/vue';
     import { OPTIONS } from "../lib/options";
 
     export default defineComponent({
@@ -52,22 +68,29 @@
             IonToolbar,
             IonInput,
             IonItem,
-            IonLabel
+            IonLabel,
+            IonCheckbox
         },
-        data() {
+        setup(props, context) {
+
+            const config = computed(() => {
+                return Object.entries(OPTIONS.config).filter(([key, data]) => {
+                    return ['number'].includes(data['inputType']);
+                })
+            })
+
+            const configBoolean = computed(() => {
+                return Object.entries(OPTIONS.config).filter(([key, data]) => {
+                    return ['boolean'].includes(data['inputType']);
+                })
+            })
+
             return {
-                OPTIONS: OPTIONS,
-                console: console
+                config,
+                configBoolean,
+                OPTIONS,
+                console
             }
-        },
-        mounted() {
-            setTimeout(() => {
-                for (let key in this.$refs) {
-                    OPTIONS.get(key).then((value) => {
-                        this.$refs[key].$el.value = value;
-                    });
-                }
-            }, 100)
         }
     });
 </script>

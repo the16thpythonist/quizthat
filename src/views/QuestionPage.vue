@@ -23,8 +23,11 @@
                         :is="questionComponent"
                         :question="question"
                         :query="query"
+                        :state="state"
+                        :showDetails="showDetails"
                         @query="updateQuery($event)"
-                        @confirm="onQuestionConfirm($event)">
+                        @confirm="onQuestionConfirm($event)"
+                        @continue="onQuestionContinue($event)">
                 </component>
             </div>
         </ion-content>
@@ -33,11 +36,12 @@
 
 <script>
     /* eslint-disable */
-    import { defineComponent, ref } from 'vue';
+    import { defineComponent, ref, onMounted } from 'vue';
     import { useRoute } from 'vue-router';
     import { IonButtons, IonContent, IonHeader, IonMenuButton, IonPage, IonTitle, IonToolbar, alertController } from '@ionic/vue';
     import { useIonRouter } from '@ionic/vue';
     import { STATE } from "@/lib/game";
+    import { AUDIO} from "@/lib/audio";
     import { loadQuestion, Question } from "@/lib/question";
     import MultipleChoiceComponent from "@/components/MultipleChoiceComponent.vue";
     import PlayerHeader from "@/components/PlayerHeader.vue";
@@ -67,9 +71,17 @@
             const question = ref(null);
             const questionComponent = ref(null);
             loadQuestion(route.params.topic, route.params.name).then((_question) => {
+                _question.prepareAudio();
                 question.value = _question;
                 questionComponent.value = questionComponents[_question.type];
+
+                setTimeout(() => {
+                    if (question.value !== null) {
+                        question.value.playAudio();
+                    }
+                }, 500);
             })
+
 
             // The player for the question we get as a URL query parameter. Specifically this can also be none, in
             // which case there is no player and instead the view is simply used to look at the question outside of
@@ -86,55 +98,66 @@
             const isOpen = ref(false);
             if (Object.hasOwn(route.query, 'isOpen')) {
                 isOpen.value = (route.query.isOpen === 'true');
-                console.log('YEAH')
             }
 
             // Aside from the player, the URL query parameters also encode the current state of the input which we need
             // to pass to the corresponding question widget
             const query = ref(route.query);
 
-            function onContinue(outcome, points) {
+            // This is the state of the answer. If this is null it indicates that no answer has yet been
+            // given. If it is true then the answer was correct and if it is false the answer was wrong
+            const state = ref(null);
+            // This is a flag which indicates to the question component whether or not it should show the
+            // details aka the solution to the question on the screen.
+            const showDetails = ref(false);
+
+            function moveOn() {
+                question.value.close();
+                delete question.value;
+
+                const path = STATE.nextPath();
+                ionRouter.push(path)
+            }
+
+            function onQuestionContinue(points) {
                 // "outcome" true means that the player gave the correct answer. In that case we add the points to the
                 // score and move on to the next player and the next question.
-                if (outcome === true) {
+                if (state.value === true) {
                     player.value.score += points;
-                    const path = STATE.nextPath();
-                    ionRouter.push(path)
+                    moveOn();
                 }
                 // if the player was not correct then depending on the state of the "isOpen" flag, the next player in
                 // line gets the chance!
                 else {
-                    if (isOpen.value) {
+                    if (isOpen.value === true) {
                         // We set the next player so that he has a chance
                         player.value = STATE.nextPlayer(player.value);
                         // But then we also need to update the isOpen flag and the next player for potentially the
                         // the next chance.
                         isOpen.value = false;
+                        state.value = null;
+                        showDetails.value = false;
                         updateQuery();
+                    } else {
+                        moveOn();
                     }
                 }
             }
 
-            async function presentAlert(state, points) {
-                const alert = await alertController.create({
-                    cssClass: (state ? 'success-alert' : 'failure-alert'),
-                    header: (state ? 'Richtig!' : 'Falsch!'),
-                    message: `Du erhälst <strong>${points}</strong> Punkte!`,
-                    buttons: [
-                        {
-                            'text': 'Weiter',
-                            'cssClass': 'alert-continue-btn',
-                            'handler': blah => {
-                                onContinue(state, points);
-                            }
-                        }
-                    ]
-                });
-                return alert.present();
-            }
-
-            function onQuestionConfirm(state) {
-                presentAlert(state, (state ? question.value.difficulty : 0));
+            function onQuestionConfirm(_state) {
+                state.value = _state;
+                // We show the result if the question is either correct or if the question is no longer open
+                // for further answers.
+                if (state.value === true || isOpen.value === false) {
+                    showDetails.value = true;
+                }
+                // Depending on whether the question is correct or not we also play a corresponding sound
+                // effect
+                if (state.value === true) {
+                    AUDIO.playCorrect();
+                } else {
+                    AUDIO.playWrong()
+                }
             }
 
             function updateQuery(_query = {}) {
@@ -147,9 +170,11 @@
                 question,
                 player,
                 query,
+                state,
+                showDetails,
                 questionComponent,
-                presentAlert,
                 onQuestionConfirm,
+                onQuestionContinue,
                 updateQuery
             }
         },

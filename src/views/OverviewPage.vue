@@ -17,22 +17,8 @@
             </ion-header>
 
             <div id="container">
-                <div id="player-list">
-                    <div
-                            class="player-element"
-                            v-for="(player, playerId) in STATE.players"
-                            :key="playerId"
-                            :style="containerStyle(player)">
-                        <div class="row">
-                            <div class="player-name"> {{ player.name }} </div>
-                            <div class="player-score"> {{ player.score }} Punkte </div>
-                        </div>
-                        <div class="row">
-                            <div class="player-strength"> {{ STRENGTHS[player.strength] }} </div>
-                            <div class="player-education"> {{ EDUCATIONS[player.education] }} </div>
-                        </div>
-                    </div>
-                </div>
+                <player-overview :players="Object.values(STATE.players)">
+                </player-overview>
             </div>
         </ion-content>
     </ion-page>
@@ -44,6 +30,7 @@
     import { IonButtons, IonContent, IonHeader, IonMenuButton, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
     import { STATE } from '@/lib/game';
     import { EDUCATIONS, STRENGTHS } from "@/lib/player";
+    import PlayerOverview from '@/components/PlayerOverview.vue';
 
     export default defineComponent({
         name: 'OverviewPage',
@@ -54,7 +41,8 @@
             IonMenuButton,
             IonPage,
             IonTitle,
-            IonToolbar
+            IonToolbar,
+            PlayerOverview
         },
         setup() {
             return { STATE, EDUCATIONS, STRENGTHS }
@@ -70,6 +58,7 @@
 </script>
 
 <style scoped>
+
     #container {
         width: 100%;
         height: 100%;
@@ -77,33 +66,4 @@
         flex-direction: column;
     }
 
-    #player-list {
-        width: 100%;
-        height: 100%;
-        padding: 10px;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .player-element {
-        padding: 10px;
-        border-radius: 4px;
-        margin-bottom: 10px;
-        display: flex;
-        flex-direction: column;
-    }
-
-    .row {
-        display: flex;
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        width: 100%;
-    }
-
-    .player-strength, .player-education {
-        font-variant: small-caps;
-        font-size: 0.8em;
-        color: gray;
-    }
 </style>

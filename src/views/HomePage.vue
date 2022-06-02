@@ -54,7 +54,7 @@
     </ion-page>
 </template>
 
-<script lang="ts">
+<script>
     import { defineComponent } from 'vue';
     import { IonButton, IonButtons, IonContent, IonHeader, IonMenuButton, IonPage, IonTitle, IonToolbar } from '@ionic/vue';
     import { STATE } from "@/lib/game";

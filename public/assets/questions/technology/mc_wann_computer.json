@@ -1,0 +1,15 @@
+{
+  "type": "multiple-choice",
+  "teaser": "Der Anfang vom Ende",
+  "difficulty": 1,
+  "content": "Wann wurde mit dem Zuse Z3 erstmals ein als Computer bezeichenbares Gerät erfunden?",
+  "options": {
+    "0": "1899",
+    "1": "1943",
+    "2": "1964",
+    "3": "1978"
+  },
+  "solution": "1",
+  "details": "1943 entwickelte der deutsche Ingenieur Konrad Zuse den Zuse Z3 Computer, welcher damals aus nur insgesamt 2300 elektrischen Relays bestand",
+  "source": "https://www.computerhistory.org/timeline/computers/"
+}

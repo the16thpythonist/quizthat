@@ -1,13 +1,15 @@
 {
   "type": "multiple-choice",
-  "teaser": "Fachchinesisch",
+  "teaser": "Fachjargon",
   "difficulty": 3,
   "content": "Welches der folgenden Wörter wird in der Mathematik nicht verwendet?",
   "options": {
-    "0": "hermitisch",
+    "0": "hermitesch",
     "1": "Matrix",
     "2": "Bijektion",
     "3": "imponiert"
   },
-  "solution": "3"
+  "details": "Matrix: ~Tabellarische Anordnung von Elementen, meist Zahlen. Hermitesch: Eine komplexe quadratische Matrix welche gleich ihrer adjungierten ist. Bijektion: Eineindeutige Zuordnung",
+  "solution": "3",
+  "source": ""
 }
