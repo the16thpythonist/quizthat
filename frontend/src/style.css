@@ -853,16 +853,27 @@ html, body {
      of the identity we already have, rather than new artwork */
   .qt-drift {
     position: absolute;
-    inset: -20%;
+    /* Generous overhang so translating by a whole tile never exposes an edge. */
+    inset: -340px;
     background-image: url('/assets/pattern/doodles.svg');
     background-repeat: repeat;
     pointer-events: none;
     z-index: 0;
+    will-change: transform;
   }
+  /* Translated rather than scrolled by background-position: transform runs on
+     the compositor, so it cannot be dropped by a repaint-starved frame. Each
+     layer moves exactly one tile, which makes the loop seamless. */
   .qt-drift--far { background-size: 200px 200px; opacity: 0.10; animation: qt-drift-far 40s linear infinite; }
   .qt-drift--near { background-size: 260px 260px; opacity: 0.06; animation: qt-drift-near 25s linear infinite; }
-  @keyframes qt-drift-far { from { background-position: 0 0; } to { background-position: 200px -200px; } }
-  @keyframes qt-drift-near { from { background-position: 0 0; } to { background-position: -260px 260px; } }
+  @keyframes qt-drift-far {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(-200px, 200px, 0); }
+  }
+  @keyframes qt-drift-near {
+    from { transform: translate3d(0, 0, 0); }
+    to { transform: translate3d(260px, -260px, 0); }
+  }
   .qt-title-wrap > *:not(.qt-drift) { position: relative; z-index: 1; }
 
   .qt-game-title {
@@ -974,6 +985,16 @@ html, body {
   }
 }
 
+/*
+  Reduced motion stops the loud, attention-grabbing motion - the peg slam,
+  the confetti, the pulsing placement candidates. The title's ambient drift
+  and the wordmark's bob are deliberately left running: they are slow,
+  peripheral and part of the identity, and killing them made the title screen
+  look broken to anyone who has the OS setting on.
+*/
 @media (prefers-reduced-motion: reduce) {
-  .qt-drift, .qt-game-title, .qt-board .qt-cell--cand, .animate-confetti { animation: none; }
+  .qt-board .qt-cell--cand,
+  .animate-confetti,
+  .animate-peg-slam,
+  .animate-board-shake { animation: none; }
 }

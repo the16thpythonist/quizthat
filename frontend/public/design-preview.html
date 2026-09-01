@@ -477,18 +477,19 @@
      and scales. Parallax out of the identity we already have - nothing new to
      draw, and it cannot clash with the pattern elsewhere. */
   .drift {
-    position: absolute; inset: -20%;
+    position: absolute; inset: -340px;
     background-image: url('/assets/pattern/doodles.svg');
     background-repeat: repeat;
     pointer-events: none;
     z-index: 0;
+    will-change: transform;
   }
   /* Both layers stay close to the app's normal 200px tile - the parallax
      should come from the differing speeds, not from blowing the glyphs up. */
   .drift--far { background-size: 200px 200px; opacity: 0.10; animation: driftFar 40s linear infinite; }
   .drift--near { background-size: 260px 260px; opacity: 0.06; animation: driftNear 25s linear infinite; }
-  @keyframes driftFar  { from { background-position: 0 0; }   to { background-position: 200px -200px; } }
-  @keyframes driftNear { from { background-position: 0 0; }   to { background-position: -260px 260px; } }
+  @keyframes driftFar  { from { transform: translate3d(0,0,0); } to { transform: translate3d(-200px, 200px, 0); } }
+  @keyframes driftNear { from { transform: translate3d(0,0,0); } to { transform: translate3d(260px, -260px, 0); } }
 
   .title-wrap > *:not(.drift) { position: relative; z-index: 1; }
 
