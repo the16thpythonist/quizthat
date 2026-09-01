@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Die Körnige Schwelle",
+  "question_text": "Was ist der typische Böschungswinkel für trockenen Sand - der steilste Winkel, in dem Sandkörner aufgeschüttet werden können, bevor sie zu rutschen beginnen?",
+  "hint": "Denk daran, wie steil eine Sanddüne oder Sandburg-Wand sein kann, bevor sie zusammenfällt",
+  "answer_data": {
+    "correct_index": 1,
+    "options": [
+      "15 Grad",
+      "32 Grad",
+      "45 Grad",
+      "60 Grad"
+    ]
+  }
+}

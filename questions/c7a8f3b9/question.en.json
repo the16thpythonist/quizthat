@@ -1,0 +1,14 @@
+{
+  "teaser_title": "The Granular Threshold",
+  "question_text": "What is the typical angle of repose for dry sand - the steepest angle at which sand grains can be piled before they start to slide?",
+  "hint": "Think about how steep a sand dune or sandcastle wall can be before it collapses",
+  "answer_data": {
+    "correct_index": 1,
+    "options": [
+      "15 degrees",
+      "32 degrees",
+      "45 degrees",
+      "60 degrees"
+    ]
+  }
+}

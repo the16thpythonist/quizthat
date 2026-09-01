@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Rising Dough",
+  "question_text": "Which country is considered the birthplace of pizza?",
+  "hint": "Naples is the specific city where the modern version was born.",
+  "answer_data": {
+    "options": [
+      "Italy",
+      "Greece",
+      "Turkey",
+      "Spain"
+    ],
+    "correct_index": 0
+  }
+}

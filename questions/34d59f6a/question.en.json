@@ -1,0 +1,10 @@
+{
+  "teaser_title": "Our Pale Blue Dot",
+  "question_text": "What is the approximate mean radius of the Earth in kilometers?",
+  "hint": "It is a bit over 6,000 km but less than 7,000 km.",
+  "answer_data": {
+    "correct_value": 6371,
+    "tolerance": 0.02,
+    "unit": "km"
+  }
+}

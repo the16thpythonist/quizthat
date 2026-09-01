@@ -1,0 +1,1 @@
+The speed of light in vacuum is exactly 299,792,458 m/s, approximately 300,000 km/s. Source: NIST.

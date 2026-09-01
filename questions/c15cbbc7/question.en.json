@@ -1,0 +1,14 @@
+{
+  "teaser_title": "The Twelve Labors",
+  "question_text": "Which Greek hero was forced to complete twelve seemingly impossible labors as penance?",
+  "hint": "He was the son of Zeus and known for his extraordinary strength.",
+  "answer_data": {
+    "options": [
+      "Heracles",
+      "Perseus",
+      "Theseus",
+      "Achilles"
+    ],
+    "correct_index": 0
+  }
+}

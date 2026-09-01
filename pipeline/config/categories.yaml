@@ -1,0 +1,100 @@
+categories:
+  science:
+    name: Science
+    subcategories:
+      physics: Physics
+      chemistry: Chemistry
+      biology: Biology
+      mathematics: Mathematics
+      computer_science: Computer Science
+
+  history:
+    name: History
+    subcategories:
+      ancient: Ancient History
+      medieval: Medieval History
+      modern: Modern History
+      wars: Wars
+
+  geography:
+    name: Geography
+    subcategories:
+      countries: Countries
+      capitals: Capitals & Cities
+      rivers_lakes: Rivers & Lakes
+      mountains: Mountains
+      oceans_seas: Oceans & Seas
+
+  sports:
+    name: Sports
+    subcategories:
+      football: Football / Soccer
+      olympics: Olympics
+      tennis: Tennis
+      formula1: Formula 1
+
+  technology:
+    name: Technology
+    subcategories:
+      computing: Computing
+      internet: Internet
+      space_tech: Space Technology
+      inventions: Inventions
+
+  nature:
+    name: Nature
+    subcategories:
+      animals: Animals
+      plants: Plants
+      ecosystems: Ecosystems
+      weather: Weather
+      geology: Geology
+
+  pop_culture:
+    name: Pop Culture
+    subcategories:
+      tv_shows: TV Shows
+      music_popular: Popular Music
+      video_games: Video Games
+      celebrities: Celebrities
+
+  food_drink:
+    name: Food & Drink
+    subcategories:
+      cuisine: World Cuisine
+      beverages: Beverages
+      cooking: Cooking & Techniques
+      food_history: Food History
+
+  language_words:
+    name: Language & Words
+    subcategories:
+      etymology: Etymology
+      grammar: Grammar & Usage
+      idioms: Idioms & Expressions
+      famous_quotes: Famous Quotes
+
+  politics:
+    name: Politics
+    subcategories:
+      world_leaders: World Leaders
+      elections: Elections
+      international_orgs: International Organizations
+      political_systems: Political Systems
+
+  math_logic:
+    name: Math & Logic
+    subcategories:
+      numbers: Numbers & Constants
+      puzzles: Puzzles & Paradoxes
+      statistics: Statistics
+      geometry: Geometry
+
+  mythology:
+    name: Mythology
+    subcategories:
+      greek: Greek Mythology
+      norse: Norse Mythology
+      egyptian: Egyptian Mythology
+      asian: Asian Mythology
+      folklore: Folklore & Legends

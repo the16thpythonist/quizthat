@@ -1,0 +1,10 @@
+{
+  "teaser_title": "Unser blasser blauer Punkt",
+  "question_text": "Wie gross ist der ungefaehre mittlere Radius der Erde in Kilometern?",
+  "hint": "Er ist etwas ueber 6.000 km, aber unter 7.000 km.",
+  "answer_data": {
+    "correct_value": 6371,
+    "tolerance": 0.02,
+    "unit": "km"
+  }
+}

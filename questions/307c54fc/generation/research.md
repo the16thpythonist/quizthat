@@ -1,0 +1,1 @@
+Poland invasion: Sep 1939, Pearl Harbor: Dec 1941, D-Day: Jun 1944, Hiroshima: Aug 1945. Source: Encyclopedia Britannica.

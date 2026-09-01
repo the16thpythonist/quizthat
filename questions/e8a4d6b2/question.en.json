@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Sound Through the Grain",
+  "question_text": "In solid wood, sound waves travel at significantly different speeds depending on direction. How does the speed of sound parallel to the wood grain compare to the speed perpendicular to the grain?",
+  "hint": "Think about how wood fibers are oriented and how this affects wave propagation.",
+  "answer_data": {
+    "options": [
+      "Sound travels about 5-6 times faster parallel to the grain than perpendicular to it",
+      "Sound travels about 2 times faster perpendicular to the grain than parallel to it",
+      "Sound travels at essentially the same speed in both directions",
+      "Sound travels about 10-15 times faster perpendicular to the grain than parallel to it"
+    ],
+    "correct_index": 0
+  }
+}

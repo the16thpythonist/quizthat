@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Lichtgeschwindigkeit",
+  "question_text": "Wie schnell bewegt sich Licht im Vakuum pro Sekunde (ungefaehr)?",
+  "hint": "Es ist die universelle Geschwindigkeitsbegrenzung und nichts mit Masse kann sie erreichen.",
+  "answer_data": {
+    "options": [
+      "300.000 km/s",
+      "150.000 km/s",
+      "1.000.000 km/s",
+      "30.000 km/s"
+    ],
+    "correct_index": 0
+  }
+}

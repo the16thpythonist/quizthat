@@ -1,0 +1,15 @@
+{
+  "id": "26d37020",
+  "languages": [
+    "en",
+    "de"
+  ],
+  "major_category": "Geography",
+  "subcategory": "Mountains",
+  "difficulty": "medium",
+  "question_type": "map_location",
+  "time_limit_seconds": null,
+  "version": 1,
+  "created_at": "2026-03-01T10:07:17.579487Z",
+  "generation_batch": "test-corpus-initial"
+}

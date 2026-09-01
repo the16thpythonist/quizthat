@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Unterwasser-Symphonie",
+  "question_text": "Wie verhält sich die Schallgeschwindigkeit in Meerwasser im Vergleich zur Schallgeschwindigkeit in Luft?",
+  "hint": "Denke an den Dichteunterschied zwischen Wasser und Luft",
+  "answer_data": {
+    "options": [
+      "Schall reist etwa 5-mal schneller in Meerwasser als in Luft",
+      "Schall reist etwa gleich schnell in Meerwasser und in Luft",
+      "Schall reist etwa 2-mal langsamer in Meerwasser als in Luft",
+      "Schall reist etwa 10-mal langsamer in Meerwasser als in Luft"
+    ],
+    "correct_index": 0
+  }
+}

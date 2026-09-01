@@ -1,0 +1,18 @@
+services:
+  frontend:
+    build: ./frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - CORPUS_PROXY_TARGET=http://corpus:80
+    command: npm run dev -- --host 0.0.0.0
+
+  corpus:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./questions:/usr/share/nginx/html:ro

@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Nature's Skyscraper Limit",
+  "question_text": "According to physics research on water transport, what is the approximate theoretical maximum height that trees can reach?",
+  "hint": "Think about the physics of water being transported from roots to leaves against gravity.",
+  "answer_data": {
+    "options": [
+      "About 50 meters (164 feet)",
+      "About 80 meters (262 feet)",
+      "About 125 meters (410 feet)",
+      "About 200 meters (656 feet)"
+    ],
+    "correct_index": 2
+  }
+}

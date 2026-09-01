@@ -1,0 +1,1 @@
+Hamlet was written by William Shakespeare around 1600-1601. Source: Folger Shakespeare Library.

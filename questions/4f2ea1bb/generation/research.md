@@ -1,0 +1,1 @@
+The blue whale (Balaenoptera musculus) is the largest animal ever known. Adults can reach up to 30m in length. Source: NOAA.

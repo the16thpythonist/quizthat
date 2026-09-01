@@ -1,0 +1,14 @@
+{
+  "teaser_title": "The Land Down Under",
+  "question_text": "What is the capital city of Australia?",
+  "hint": "It is not the largest city in the country.",
+  "answer_data": {
+    "options": [
+      "Canberra",
+      "Sydney",
+      "Melbourne",
+      "Brisbane"
+    ],
+    "correct_index": 0
+  }
+}

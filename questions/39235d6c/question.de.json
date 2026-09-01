@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Der daenische Prinz",
+  "question_text": "Wer schrieb das Theaterstueck 'Hamlet'?",
+  "hint": "Dieser Dramatiker wurde in Stratford-upon-Avon geboren.",
+  "answer_data": {
+    "options": [
+      "William Shakespeare",
+      "Christopher Marlowe",
+      "Ben Jonson",
+      "John Milton"
+    ],
+    "correct_index": 0
+  }
+}

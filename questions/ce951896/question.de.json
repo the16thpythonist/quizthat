@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Die dunkle Seite",
+  "question_text": "Wie viele aufeinanderfolgende Wochen war Pink Floyds 'The Dark Side of the Moon' in den Billboard-200-Charts?",
+  "hint": "Die Zahl liegt im Hunderterbereich und umfasst ueber ein Jahrzehnt.",
+  "answer_data": {
+    "options": [
+      "591",
+      "741",
+      "420",
+      "352"
+    ],
+    "correct_index": 0
+  }
+}

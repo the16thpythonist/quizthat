@@ -1,0 +1,1 @@
+Heracles (Hercules in Roman mythology) completed 12 labors for King Eurystheus as penance for killing his family in a fit of madness induced by Hera. Source: Apollodorus' Bibliotheca.

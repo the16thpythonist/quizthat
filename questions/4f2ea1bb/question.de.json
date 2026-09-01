@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Sanfte Riesen",
+  "question_text": "Was ist das groesste Tier, das jemals auf der Erde gelebt hat?",
+  "hint": "Dieses Tier lebt noch heute und ist im Ozean zu finden.",
+  "answer_data": {
+    "options": [
+      "Blauwal",
+      "Afrikanischer Elefant",
+      "Tyrannosaurus Rex",
+      "Koloss-Kalmar"
+    ],
+    "correct_index": 0
+  }
+}

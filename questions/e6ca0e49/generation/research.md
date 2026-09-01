@@ -1,0 +1,1 @@
+The Olympic flag has 5 interlocking rings representing Africa, the Americas, Asia, Europe, and Oceania. Source: IOC.

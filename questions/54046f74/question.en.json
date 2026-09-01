@@ -1,0 +1,20 @@
+{
+  "teaser_title": "River Run",
+  "question_text": "Sort these rivers from longest to shortest.",
+  "hint": "The longest one flows through northeastern Africa.",
+  "answer_data": {
+    "items": [
+      "Nile",
+      "Amazon",
+      "Yangtze",
+      "Mississippi"
+    ],
+    "correct_order": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "metric": "length in km"
+  }
+}

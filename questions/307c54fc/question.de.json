@@ -1,0 +1,20 @@
+{
+  "teaser_title": "Zeitstrahl des Konflikts",
+  "question_text": "Sortiere diese Ereignisse des Zweiten Weltkriegs in chronologischer Reihenfolge.",
+  "hint": "Der Ueberfall auf Polen war der Anfang.",
+  "answer_data": {
+    "items": [
+      "Ueberfall auf Polen",
+      "Angriff auf Pearl Harbor",
+      "D-Day (Normandie)",
+      "Atombombe auf Hiroshima"
+    ],
+    "correct_order": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "metric": "chronologische Reihenfolge"
+  }
+}

@@ -1,0 +1,21 @@
+narrators:
+  en:
+    voice_id: EXAVITQu4vr4xnSDxMaL
+    name: English Narrator
+    model_id: eleven_multilingual_v2
+    settings:
+      stability: 0.55
+      similarity_boost: 0.80
+      style: 0.00
+      use_speaker_boost: true
+    output_format: mp3_44100_64
+  de:
+    voice_id: pNInz6obpgDQGcFmaJgB
+    name: German Narrator
+    model_id: eleven_multilingual_v2
+    settings:
+      stability: 0.55
+      similarity_boost: 0.80
+      style: 0.00
+      use_speaker_boost: true
+    output_format: mp3_44100_64

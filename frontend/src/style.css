@@ -1,0 +1,131 @@
+@import "leaflet/dist/leaflet.css";
+@import "tailwindcss";
+
+/* Prevent text selection on game screens (shared-device usage) */
+.select-none {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Large touch targets — ensure minimum 44px for accessibility */
+.touch-manipulation {
+  touch-action: manipulation;
+  min-height: 44px;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  height: 100%;
+  background-color: #060610;
+  font-family: 'Roboto Condensed', system-ui, -apple-system, sans-serif;
+}
+
+#app {
+  height: 100%;
+}
+
+/* === Reusable utility classes === */
+@layer utilities {
+  /* Clean material surface for headers/trays */
+  .glass-surface {
+    background: rgba(14, 14, 22, 0.95);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+
+  /* Glass card surface */
+  .glass-card {
+    background: linear-gradient(
+      135deg,
+      rgba(22, 22, 35, 0.92) 0%,
+      rgba(15, 15, 25, 0.95) 100%
+    );
+    border: 1px solid rgba(255, 255, 255, 0.06);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Subtle inner highlight on the top edge of cards */
+  .inner-shine {
+    position: relative;
+  }
+  .inner-shine::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  /* Page background gradient */
+  .bg-game-dark {
+    background: linear-gradient(180deg, #0a0a14 0%, #0d0d1a 40%, #0a0a14 100%);
+  }
+
+  /* Correct result background */
+  .bg-result-correct {
+    background: radial-gradient(ellipse at center, rgba(22, 101, 52, 0.8) 0%, rgba(5, 46, 22, 0.95) 70%);
+  }
+
+  /* Incorrect result background */
+  .bg-result-incorrect {
+    background: radial-gradient(ellipse at center, rgba(127, 29, 29, 0.8) 0%, rgba(68, 10, 10, 0.95) 70%);
+  }
+}
+
+/* Gentle candidate cell pulse */
+@keyframes cell-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 0.6; }
+}
+.animate-cell-pulse {
+  animation: cell-pulse 2s ease-in-out infinite;
+}
+
+/* Peg slam: scale overshoot + settle */
+@keyframes peg-slam {
+  0% { transform: scale(0); opacity: 0; }
+  40% { transform: scale(1.35); opacity: 1; }
+  60% { transform: scale(0.9); }
+  80% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.animate-peg-slam {
+  animation: peg-slam 0.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+/* Board shake on peg slam */
+@keyframes board-shake {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-3px, 2px); }
+  30% { transform: translate(3px, -2px); }
+  45% { transform: translate(-2px, -1px); }
+  60% { transform: translate(2px, 1px); }
+  75% { transform: translate(-1px, 1px); }
+}
+.animate-board-shake {
+  animation: board-shake 0.35s ease-out;
+}
+
+/* Cell flash when peg lands */
+@keyframes cell-flash {
+  0% { opacity: 0.8; }
+  100% { opacity: 0; }
+}
+.animate-cell-flash {
+  animation: cell-flash 0.5s ease-out forwards;
+}
+
+/* Reveal cycling highlight */
+@keyframes reveal-glow {
+  0% { opacity: 0; }
+  50% { opacity: 1; }
+  100% { opacity: 0; }
+}
+.animate-reveal-glow {
+  animation: reveal-glow 0.15s ease-in-out;
+}

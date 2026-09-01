@@ -1,0 +1,25 @@
+{
+  "teaser_title": "Eternal City",
+  "question_text": "Point to the location of the ancient city of Rome on the map.",
+  "hint": "Legend says it was founded by Romulus on seven hills.",
+  "answer_data": {
+    "target": {
+      "lat": 41.9028,
+      "lng": 12.4964
+    },
+    "scoring": [
+      {
+        "radius_km": 50,
+        "label": "exact"
+      },
+      {
+        "radius_km": 200,
+        "label": "close"
+      },
+      {
+        "radius_km": 500,
+        "label": "region"
+      }
+    ]
+  }
+}

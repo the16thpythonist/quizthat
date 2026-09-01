@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Aufgehender Teig",
+  "question_text": "Welches Land gilt als Geburtsstaette der Pizza?",
+  "hint": "Neapel ist die Stadt, in der die moderne Version entstand.",
+  "answer_data": {
+    "options": [
+      "Italien",
+      "Griechenland",
+      "Tuerkei",
+      "Spanien"
+    ],
+    "correct_index": 0
+  }
+}

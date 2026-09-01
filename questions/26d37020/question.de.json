@@ -1,0 +1,25 @@
+{
+  "teaser_title": "Auf dem Dach der Welt",
+  "question_text": "Zeige auf der Karte, wo der Mount Everest liegt.",
+  "hint": "Er liegt an der Grenze zwischen Nepal und Tibet.",
+  "answer_data": {
+    "target": {
+      "lat": 27.9881,
+      "lng": 86.925
+    },
+    "scoring": [
+      {
+        "radius_km": 50,
+        "label": "exact"
+      },
+      {
+        "radius_km": 200,
+        "label": "close"
+      },
+      {
+        "radius_km": 500,
+        "label": "region"
+      }
+    ]
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Gentle Giants",
+  "question_text": "What is the largest animal to have ever lived on Earth?",
+  "hint": "This animal is still alive today and lives in the ocean.",
+  "answer_data": {
+    "options": [
+      "Blue whale",
+      "African elephant",
+      "Tyrannosaurus rex",
+      "Colossal squid"
+    ],
+    "correct_index": 0
+  }
+}

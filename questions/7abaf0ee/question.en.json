@@ -1,0 +1,14 @@
+{
+  "teaser_title": "The Wall Comes Down",
+  "question_text": "In which year did the Berlin Wall fall?",
+  "hint": "It happened during a press conference that spiraled out of control.",
+  "answer_data": {
+    "options": [
+      "1989",
+      "1991",
+      "1987",
+      "1990"
+    ],
+    "correct_index": 0
+  }
+}

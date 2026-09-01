@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Am anderen Ende der Welt",
+  "question_text": "Was ist die Hauptstadt von Australien?",
+  "hint": "Es ist nicht die groesste Stadt des Landes.",
+  "answer_data": {
+    "options": [
+      "Canberra",
+      "Sydney",
+      "Melbourne",
+      "Brisbane"
+    ],
+    "correct_index": 0
+  }
+}

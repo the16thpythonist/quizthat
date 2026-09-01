@@ -1,0 +1,157 @@
+{
+  "app": {
+    "title": "QuizThat!"
+  },
+  "start": {
+    "newGame": "New Game",
+    "settings": "Settings",
+    "howToPlay": "How to Play",
+    "resumeGame": "Resume Game",
+    "resumePrompt": "You have an unfinished game. Resume?",
+    "resumeYes": "Resume",
+    "resumeNo": "Start Fresh"
+  },
+  "setup": {
+    "title": "Player Setup",
+    "addPlayer": "Add Player",
+    "removePlayer": "Remove",
+    "playerName": "Player Name",
+    "playerColor": "Color",
+    "expertise": "Expertise",
+    "expertiseMajor": "Major Categories (up to 2)",
+    "expertiseSub": "Subcategories (up to 2)",
+    "quickStart": "Quick Start Presets",
+    "startGame": "Start Game",
+    "backToMenu": "Back to Menu",
+    "minPlayers": "At least 2 players required",
+    "gameSettings": "Game Settings",
+    "boardSize": "Board Size",
+    "placementCandidates": "Placement Candidates",
+    "startingPegs": "Starting Pegs"
+  },
+  "colors": {
+    "red": "Red",
+    "blue": "Blue",
+    "green": "Green",
+    "yellow": "Yellow",
+    "purple": "Purple",
+    "orange": "Orange"
+  },
+  "turnGate": {
+    "yourTurn": "{name}'s Turn",
+    "tapToContinue": "Tap to continue"
+  },
+  "selection": {
+    "title": "Choose Your Question",
+    "slot1Label": "Expertise",
+    "slot2Label": "Standard",
+    "slot3Label": "Standard",
+    "slot4Label": "Choose your placement",
+    "twoXBadge": "2x",
+    "jokers": "Jokers",
+    "constraintRandom": "Random",
+    "constraintFree": "Free Placement"
+  },
+  "question": {
+    "hint": "Hint",
+    "submit": "Submit",
+    "confirm": "Confirm",
+    "sortInstruction": "Arrange in the correct order ({metric})",
+    "mapInstruction": "Tap the correct location on the map",
+    "calcInstruction": "Enter your answer",
+    "doubleDownActive": "Double Down Active!"
+  },
+  "answer": {
+    "correct": "Correct!",
+    "incorrect": "Incorrect!",
+    "continue": "Continue",
+    "correctAnswerWas": "The correct answer was: {answer}"
+  },
+  "passGate": {
+    "yourChance": "{name}, your chance!",
+    "tapToContinue": "Tap to continue"
+  },
+  "passResolve": {
+    "declined": "Declined",
+    "reveal": "The correct answer was: {answer}"
+  },
+  "board": {
+    "title": "{name}'s Board",
+    "pegs": "{count} pegs",
+    "viewBoards": "Boards",
+    "placePeg": "Place your peg!",
+    "tapToPlace": "Tap a glowing field to place your peg",
+    "autoPlaced": "Peg placed!",
+    "pegsRemaining": "{count} pegs remaining"
+  },
+  "victory": {
+    "wins": "{name} wins!",
+    "congratulations": "Congratulations!",
+    "playAgain": "Play Again",
+    "backToMenu": "Back to Menu"
+  },
+  "jokerNames": {
+    "reshuffle_selection": "Reshuffle Selection",
+    "reshuffle_question": "Reshuffle Question",
+    "reveal_hint": "Reveal Hint",
+    "the_gambler": "The Gambler",
+    "steal": "Steal",
+    "curse": "Curse",
+    "snipe": "Snipe",
+    "double_down": "Double Down"
+  },
+  "difficulty": {
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard",
+    "very_hard": "Very Hard"
+  },
+  "categories": {
+    "science": "Science",
+    "history": "History",
+    "geography": "Geography",
+    "entertainment": "Entertainment",
+    "sports": "Sports",
+    "art": "Art & Literature"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "volume": "Volume",
+    "musicVolume": "Music Volume",
+    "mute": "Mute",
+    "musicOn": "Music",
+    "sfxOn": "Sound Effects"
+  },
+  "gambler": {
+    "title": "The Gambler",
+    "stakedPeg": "Your staked peg: {field}",
+    "confirm": "Risk it!",
+    "cancel": "Back out",
+    "correct": "You win 3 pegs!",
+    "wrong": "You lose your staked peg!"
+  },
+  "narrator": {
+    "playerTurn": "Player {color}, your turn.",
+    "playerChance": "{color}, your chance!",
+    "correct1": "Well done!",
+    "correct2": "Excellent!",
+    "correct3": "That's right!",
+    "correct4": "Brilliant!",
+    "correct5": "Nailed it!",
+    "incorrect1": "Not quite!",
+    "incorrect2": "Wrong answer!",
+    "incorrect3": "Better luck next time!",
+    "incorrect4": "That's incorrect!",
+    "incorrect5": "Oops!",
+    "victory": "Congratulations!",
+    "jokerReshuffle": "Reshuffle!",
+    "jokerGambler": "The Gambler!",
+    "jokerSteal": "Steal!",
+    "jokerCurse": "Curse!",
+    "jokerSnipe": "Snipe!",
+    "jokerDoubleDown": "Double Down!",
+    "jokerHint": "Here's a hint!",
+    "earnedJoker": "Earned: {joker}!"
+  }
+}

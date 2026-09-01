@@ -1,0 +1,1 @@
+Rome coordinates: 41.9028 N, 12.4964 E. Traditional founding date: 753 BC. Source: Encyclopedia Britannica.

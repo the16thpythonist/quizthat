@@ -1,0 +1,1 @@
+Canberra is the capital of Australia, chosen as a compromise between Sydney and Melbourne. Source: Australian Government.

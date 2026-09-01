@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Olympische Ringe",
+  "question_text": "Wie viele Ringe befinden sich auf der olympischen Flagge, und was stellen sie dar?",
+  "hint": "Zaehle die Kontinente, aber fasse Amerika zusammen.",
+  "answer_data": {
+    "options": [
+      "5 Ringe, fuer die fuenf Kontinente",
+      "6 Ringe, fuer die sechs bewohnten Kontinente",
+      "4 Ringe, fuer die vier Himmelsrichtungen",
+      "7 Ringe, fuer die sieben Kontinente"
+    ],
+    "correct_index": 0
+  }
+}

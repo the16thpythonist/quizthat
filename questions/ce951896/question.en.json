@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Dark Side",
+  "question_text": "How many consecutive weeks did Pink Floyd's 'The Dark Side of the Moon' spend on the Billboard 200 chart?",
+  "hint": "The number is in the hundreds and spans over a decade.",
+  "answer_data": {
+    "options": [
+      "591",
+      "741",
+      "420",
+      "352"
+    ],
+    "correct_index": 0
+  }
+}

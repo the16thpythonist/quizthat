@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Build corpus-index.json from all questions/*/meta.json files.
+
+Scans the questions directory, reads each meta.json, and generates
+a single corpus-index.json that the game frontend uses to discover
+available questions at startup.
+
+Usage:
+    scripts/build-corpus-index [--questions-dir DIR] [--output FILE]
+"""
+
+import argparse
+import json
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+
+def build_index(questions_dir: Path) -> dict:
+    """Scan all meta.json files and build the corpus index."""
+    entries = []
+
+    if not questions_dir.exists():
+        print(f"Error: questions directory does not exist: {questions_dir}", file=sys.stderr)
+        sys.exit(1)
+
+    for item in sorted(questions_dir.iterdir()):
+        if not item.is_dir():
+            continue
+        if item.name.startswith("."):
+            continue
+
+        meta_path = item / "meta.json"
+        if not meta_path.exists():
+            print(f"  Warning: skipping {item.name}/ (no meta.json)", file=sys.stderr)
+            continue
+
+        try:
+            meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as e:
+            print(f"  Warning: skipping {item.name}/ (invalid JSON: {e})", file=sys.stderr)
+            continue
+
+        entry = {
+            "id": meta.get("id", item.name),
+            "major_category": meta.get("major_category", ""),
+            "subcategory": meta.get("subcategory", ""),
+            "difficulty": meta.get("difficulty", "medium"),
+            "question_type": meta.get("question_type", "multiple_choice"),
+            "languages": meta.get("languages", []),
+            "time_limit_seconds": meta.get("time_limit_seconds"),
+            "path": f"{item.name}/",
+        }
+        entries.append(entry)
+
+    index = {
+        "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
+        "question_count": len(entries),
+        "questions": entries,
+    }
+
+    return index
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Build corpus-index.json")
+    parser.add_argument(
+        "--questions-dir",
+        default="questions",
+        help="Path to the questions directory (default: questions)",
+    )
+    parser.add_argument(
+        "--output",
+        default=None,
+        help="Output file path (default: <questions-dir>/corpus-index.json)",
+    )
+    args = parser.parse_args()
+
+    questions_dir = Path(args.questions_dir)
+    output_path = Path(args.output) if args.output else questions_dir / "corpus-index.json"
+
+    print(f"Scanning {questions_dir}/ ...")
+    index = build_index(questions_dir)
+    print(f"Found {index['question_count']} questions.")
+
+    output_path.write_text(
+        json.dumps(index, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )
+    print(f"Wrote {output_path}")
+
+
+if __name__ == "__main__":
+    main()

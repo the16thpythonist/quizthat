@@ -1,0 +1,1 @@
+Mercury: 0.39 AU, Earth: 1.0 AU, Jupiter: 5.2 AU, Neptune: 30.1 AU. Source: NASA.

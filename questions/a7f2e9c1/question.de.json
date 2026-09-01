@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Das Golden Set vervollständigt",
+  "question_text": "Welches ATP Masters 1000 Turnier gewann Novak Djokovic 2018, um als erster Spieler überhaupt den Career Golden Masters zu vollenden (alle neun Masters 1000 Events zu gewinnen)?",
+  "hint": "Dieses Turnier findet jährlich in Ohio statt und war das letzte Puzzleteil seines historischen Erfolgs.",
+  "answer_data": {
+    "correct_index": 2,
+    "options": [
+      "Paris Masters",
+      "Shanghai Masters",
+      "Cincinnati Masters",
+      "Canada Masters"
+    ]
+  }
+}

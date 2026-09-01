@@ -1,0 +1,1 @@
+Paris coordinates: 48.8566 N, 2.3522 E. Source: GeoNames.

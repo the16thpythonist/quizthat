@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Olympic Rings",
+  "question_text": "How many rings are on the Olympic flag, and what do they represent?",
+  "hint": "Count the continents, but group the Americas together.",
+  "answer_data": {
+    "options": [
+      "5 rings, representing the five continents",
+      "6 rings, representing the six inhabited continents",
+      "4 rings, representing the four cardinal directions",
+      "7 rings, representing the seven continents"
+    ],
+    "correct_index": 0
+  }
+}

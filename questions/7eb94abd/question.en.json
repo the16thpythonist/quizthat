@@ -1,0 +1,10 @@
+{
+  "teaser_title": "Circle Constant",
+  "question_text": "What is the value of Pi (to two decimal places)?",
+  "hint": "It is the ratio of a circle's circumference to its diameter.",
+  "answer_data": {
+    "correct_value": 3.14,
+    "tolerance": 0.01,
+    "unit": ""
+  }
+}

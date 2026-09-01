@@ -1,0 +1,14 @@
+{
+  "teaser_title": "The Speed of Light",
+  "question_text": "In a vacuum, approximately how fast does light travel per second?",
+  "hint": "It is the universal speed limit and nothing with mass can reach it.",
+  "answer_data": {
+    "options": [
+      "300,000 km/s",
+      "150,000 km/s",
+      "1,000,000 km/s",
+      "30,000 km/s"
+    ],
+    "correct_index": 0
+  }
+}

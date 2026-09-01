@@ -1,0 +1,1 @@
+Earth's mean radius is 6,371 km. Source: NASA Earth Fact Sheet.

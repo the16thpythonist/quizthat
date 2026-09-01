@@ -1,0 +1,20 @@
+{
+  "teaser_title": "Flusslaeufe",
+  "question_text": "Sortiere diese Fluesse vom laengsten zum kuerzesten.",
+  "hint": "Der laengste fliesst durch Nordostafrika.",
+  "answer_data": {
+    "items": [
+      "Nil",
+      "Amazonas",
+      "Jangtsekiang",
+      "Mississippi"
+    ],
+    "correct_order": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "metric": "Laenge in km"
+  }
+}

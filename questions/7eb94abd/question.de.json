@@ -1,0 +1,10 @@
+{
+  "teaser_title": "Kreiskonstante",
+  "question_text": "Was ist der Wert von Pi (auf zwei Dezimalstellen)?",
+  "hint": "Es ist das Verhaeltnis des Umfangs eines Kreises zu seinem Durchmesser.",
+  "answer_data": {
+    "correct_value": 3.14,
+    "tolerance": 0.01,
+    "unit": ""
+  }
+}

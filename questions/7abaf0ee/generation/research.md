@@ -1,0 +1,1 @@
+The Berlin Wall fell on November 9, 1989. The opening was triggered by a press conference by Guenter Schabowski. Source: German Historical Museum.

@@ -1,0 +1,14 @@
+{
+  "teaser_title": "The First Bug",
+  "question_text": "In which year was the first actual computer bug (a moth) found in a relay of the Harvard Mark II?",
+  "hint": "Grace Hopper's team documented this famous incident.",
+  "answer_data": {
+    "options": [
+      "1947",
+      "1952",
+      "1943",
+      "1955"
+    ],
+    "correct_index": 0
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "307c54fc",
+  "languages": [
+    "en",
+    "de"
+  ],
+  "major_category": "History",
+  "subcategory": "World Wars",
+  "difficulty": "medium",
+  "question_type": "sorting",
+  "time_limit_seconds": null,
+  "version": 1,
+  "created_at": "2026-03-01T10:07:17.578601Z",
+  "generation_batch": "test-corpus-initial"
+}

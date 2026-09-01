@@ -1,0 +1,1 @@
+Nile: ~6,650 km, Amazon: ~6,400 km, Yangtze: ~6,300 km, Mississippi: ~3,730 km. Source: World Atlas.

@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Schall durch die Maserung",
+  "question_text": "In massivem Holz bewegen sich Schallwellen je nach Richtung mit deutlich unterschiedlichen Geschwindigkeiten. Wie verhält sich die Schallgeschwindigkeit parallel zur Holzmaserung im Vergleich zur Geschwindigkeit senkrecht zur Maserung?",
+  "hint": "Denke daran, wie Holzfasern ausgerichtet sind und wie sich das auf die Wellenausbreitung auswirkt.",
+  "answer_data": {
+    "options": [
+      "Schall bewegt sich etwa 5-6 mal schneller parallel zur Maserung als senkrecht dazu",
+      "Schall bewegt sich etwa 2 mal schneller senkrecht zur Maserung als parallel dazu",
+      "Schall bewegt sich in beiden Richtungen mit im Wesentlichen der gleichen Geschwindigkeit",
+      "Schall bewegt sich etwa 10-15 mal schneller senkrecht zur Maserung als parallel dazu"
+    ],
+    "correct_index": 0
+  }
+}

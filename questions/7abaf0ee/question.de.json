@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Die Mauer faellt",
+  "question_text": "In welchem Jahr fiel die Berliner Mauer?",
+  "hint": "Es passierte waehrend einer Pressekonferenz, die ausser Kontrolle geriet.",
+  "answer_data": {
+    "options": [
+      "1989",
+      "1991",
+      "1987",
+      "1990"
+    ],
+    "correct_index": 0
+  }
+}

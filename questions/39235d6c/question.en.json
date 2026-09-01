@@ -1,0 +1,14 @@
+{
+  "teaser_title": "The Danish Prince",
+  "question_text": "Who wrote the play 'Hamlet'?",
+  "hint": "This playwright was born in Stratford-upon-Avon.",
+  "answer_data": {
+    "options": [
+      "William Shakespeare",
+      "Christopher Marlowe",
+      "Ben Jonson",
+      "John Milton"
+    ],
+    "correct_index": 0
+  }
+}

@@ -1,0 +1,1 @@
+The Dark Side of the Moon spent 591 consecutive weeks on the Billboard 200 (1973-1988). Total chart appearances exceed 950 weeks. Source: Billboard.

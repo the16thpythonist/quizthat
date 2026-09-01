@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Die zwoelf Aufgaben",
+  "question_text": "Welcher griechische Held musste zwoelf scheinbar unmoegliche Aufgaben als Busse erfuellen?",
+  "hint": "Er war der Sohn des Zeus und bekannt fuer seine aussergewoehnliche Staerke.",
+  "answer_data": {
+    "options": [
+      "Herakles",
+      "Perseus",
+      "Theseus",
+      "Achilles"
+    ],
+    "correct_index": 0
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Underwater Symphony",
+  "question_text": "How does the speed of sound in seawater compare to the speed of sound in air?",
+  "hint": "Think about the density difference between water and air",
+  "answer_data": {
+    "options": [
+      "Sound travels about 5 times faster in seawater than in air",
+      "Sound travels about the same speed in both seawater and air",
+      "Sound travels about 2 times slower in seawater than in air",
+      "Sound travels about 10 times slower in seawater than in air"
+    ],
+    "correct_index": 0
+  }
+}

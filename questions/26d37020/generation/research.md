@@ -1,0 +1,1 @@
+Mount Everest coordinates: 27.9881 N, 86.9250 E. Height: 8,849m. Source: Survey Department of Nepal.

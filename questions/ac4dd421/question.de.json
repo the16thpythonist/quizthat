@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Der erste Bug",
+  "question_text": "In welchem Jahr wurde der erste tatsaechliche Computer-Bug (eine Motte) in einem Relais des Harvard Mark II gefunden?",
+  "hint": "Grace Hoppers Team dokumentierte diesen beruehmten Vorfall.",
+  "answer_data": {
+    "options": [
+      "1947",
+      "1952",
+      "1943",
+      "1955"
+    ],
+    "correct_index": 0
+  }
+}

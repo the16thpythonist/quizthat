@@ -1,0 +1,15 @@
+{
+  "id": "7abaf0ee",
+  "languages": [
+    "en",
+    "de"
+  ],
+  "major_category": "History",
+  "subcategory": "Modern History",
+  "difficulty": "medium",
+  "question_type": "multiple_choice",
+  "time_limit_seconds": null,
+  "version": 1,
+  "created_at": "2026-03-01T10:07:17.573372Z",
+  "generation_batch": "test-corpus-initial"
+}

@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Kosmische Geometrie",
+  "question_text": "Was repräsentiert die Zahl in Edwin Hubbles Klassifikationssystem für elliptische Galaxien (E0 bis E7)?",
+  "hint": "Denken Sie an die Form und das Erscheinungsbild dieser Galaxien",
+  "answer_data": {
+    "options": [
+      "Die Elliptizität der Galaxie (wie rund vs. länglich sie erscheint)",
+      "Das Alter der Galaxie in Milliarden Jahren",
+      "Die Anzahl der Spiralarme, die die Galaxie ursprünglich hatte",
+      "Die Entfernung der Galaxie zur Erde in Millionen Lichtjahren"
+    ],
+    "correct_index": 0
+  }
+}

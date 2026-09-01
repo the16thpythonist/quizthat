@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Natürliche Höhengrenze",
+  "question_text": "Laut physikalischer Forschung zum Wassertransport: Welche theoretische Maximalhöhe können Bäume etwa erreichen?",
+  "hint": "Denke an die Physik des Wassertransports von den Wurzeln zu den Blättern gegen die Schwerkraft.",
+  "answer_data": {
+    "options": [
+      "Etwa 50 Meter",
+      "Etwa 80 Meter",
+      "Etwa 125 Meter",
+      "Etwa 200 Meter"
+    ],
+    "correct_index": 2
+  }
+}

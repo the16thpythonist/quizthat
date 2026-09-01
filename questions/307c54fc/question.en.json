@@ -1,0 +1,20 @@
+{
+  "teaser_title": "Timeline of Conflict",
+  "question_text": "Sort these World War II events in chronological order.",
+  "hint": "The invasion of Poland started it all.",
+  "answer_data": {
+    "items": [
+      "Invasion of Poland",
+      "Attack on Pearl Harbor",
+      "D-Day (Normandy)",
+      "Hiroshima bombing"
+    ],
+    "correct_order": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "metric": "chronological order"
+  }
+}

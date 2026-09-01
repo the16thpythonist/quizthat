@@ -1,0 +1,20 @@
+{
+  "teaser_title": "Planetary Parade",
+  "question_text": "Sort these planets from closest to farthest from the Sun.",
+  "hint": "The smallest planet is also the closest.",
+  "answer_data": {
+    "items": [
+      "Mercury",
+      "Earth",
+      "Jupiter",
+      "Neptune"
+    ],
+    "correct_order": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "metric": "distance from Sun"
+  }
+}

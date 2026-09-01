@@ -1,0 +1,25 @@
+{
+  "teaser_title": "Stadt des Lichts",
+  "question_text": "Zeige auf der Karte, wo Paris, Frankreich liegt.",
+  "hint": "Es liegt an der Seine in Nordfrankreich.",
+  "answer_data": {
+    "target": {
+      "lat": 48.8566,
+      "lng": 2.3522
+    },
+    "scoring": [
+      {
+        "radius_km": 50,
+        "label": "exact"
+      },
+      {
+        "radius_km": 200,
+        "label": "close"
+      },
+      {
+        "radius_km": 500,
+        "label": "region"
+      }
+    ]
+  }
+}

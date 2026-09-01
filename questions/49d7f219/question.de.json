@@ -1,0 +1,20 @@
+{
+  "teaser_title": "Planetenparade",
+  "question_text": "Sortiere diese Planeten vom naechsten zum entferntesten von der Sonne.",
+  "hint": "Der kleinste Planet ist auch der naechste.",
+  "answer_data": {
+    "items": [
+      "Merkur",
+      "Erde",
+      "Jupiter",
+      "Neptun"
+    ],
+    "correct_order": [
+      0,
+      1,
+      2,
+      3
+    ],
+    "metric": "Entfernung von der Sonne"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "teaser_title": "Cosmic Geometry",
+  "question_text": "In Edwin Hubble's classification system, what does the number in elliptical galaxy designations (E0 through E7) represent?",
+  "hint": "Think about the shape and appearance of these galaxies",
+  "answer_data": {
+    "options": [
+      "The galaxy's ellipticity (how round vs. elongated it appears)",
+      "The galaxy's age in billions of years",
+      "The number of spiral arms the galaxy originally had",
+      "The galaxy's distance from Earth in millions of light-years"
+    ],
+    "correct_index": 0
+  }
+}

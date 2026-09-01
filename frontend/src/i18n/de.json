@@ -1,0 +1,157 @@
+{
+  "app": {
+    "title": "QuizThat!"
+  },
+  "start": {
+    "newGame": "Neues Spiel",
+    "settings": "Einstellungen",
+    "howToPlay": "Spielanleitung",
+    "resumeGame": "Spiel fortsetzen",
+    "resumePrompt": "Du hast ein unvollendetes Spiel. Fortsetzen?",
+    "resumeYes": "Fortsetzen",
+    "resumeNo": "Neu starten"
+  },
+  "setup": {
+    "title": "Spieler-Einrichtung",
+    "addPlayer": "Spieler hinzuf\u00fcgen",
+    "removePlayer": "Entfernen",
+    "playerName": "Spielername",
+    "playerColor": "Farbe",
+    "expertise": "Expertise",
+    "expertiseMajor": "Hauptkategorien (bis zu 2)",
+    "expertiseSub": "Unterkategorien (bis zu 2)",
+    "quickStart": "Schnellstart-Vorlagen",
+    "startGame": "Spiel starten",
+    "backToMenu": "Zur\u00fcck zum Men\u00fc",
+    "minPlayers": "Mindestens 2 Spieler erforderlich",
+    "gameSettings": "Spieleinstellungen",
+    "boardSize": "Spielfeldgr\u00f6\u00dfe",
+    "placementCandidates": "Platzierungskandidaten",
+    "startingPegs": "Start-Stifte"
+  },
+  "colors": {
+    "red": "Rot",
+    "blue": "Blau",
+    "green": "Gr\u00fcn",
+    "yellow": "Gelb",
+    "purple": "Lila",
+    "orange": "Orange"
+  },
+  "turnGate": {
+    "yourTurn": "{name} ist dran",
+    "tapToContinue": "Tippen zum Fortfahren"
+  },
+  "selection": {
+    "title": "W\u00e4hle deine Frage",
+    "slot1Label": "Expertise",
+    "slot2Label": "Standard",
+    "slot3Label": "Standard",
+    "slot4Label": "Freie Platzierung",
+    "twoXBadge": "2x",
+    "jokers": "Joker",
+    "constraintRandom": "Zuf\u00e4llig",
+    "constraintFree": "Freie Platzierung"
+  },
+  "question": {
+    "hint": "Hinweis",
+    "submit": "Abschicken",
+    "confirm": "Best\u00e4tigen",
+    "sortInstruction": "In die richtige Reihenfolge bringen ({metric})",
+    "mapInstruction": "Tippe auf die richtige Stelle auf der Karte",
+    "calcInstruction": "Gib deine Antwort ein",
+    "doubleDownActive": "Double Down aktiv!"
+  },
+  "answer": {
+    "correct": "Richtig!",
+    "incorrect": "Falsch!",
+    "continue": "Weiter",
+    "correctAnswerWas": "Die richtige Antwort war: {answer}"
+  },
+  "passGate": {
+    "yourChance": "{name}, deine Chance!",
+    "tapToContinue": "Tippen zum Fortfahren"
+  },
+  "passResolve": {
+    "declined": "Abgelehnt",
+    "reveal": "Die richtige Antwort war: {answer}"
+  },
+  "board": {
+    "title": "{name}s Spielfeld",
+    "pegs": "{count} Stifte",
+    "viewBoards": "Spielfelder",
+    "placePeg": "Setze deinen Stift!",
+    "tapToPlace": "Tippe auf ein leuchtendes Feld, um deinen Stift zu setzen",
+    "autoPlaced": "Stift gesetzt!",
+    "pegsRemaining": "{count} Stifte \u00fcbrig"
+  },
+  "victory": {
+    "wins": "{name} gewinnt!",
+    "congratulations": "Herzlichen Gl\u00fcckwunsch!",
+    "playAgain": "Nochmal spielen",
+    "backToMenu": "Zur\u00fcck zum Men\u00fc"
+  },
+  "jokerNames": {
+    "reshuffle_selection": "Auswahl neu mischen",
+    "reshuffle_question": "Frage neu mischen",
+    "reveal_hint": "Hinweis zeigen",
+    "the_gambler": "Der Spieler",
+    "steal": "Steal",
+    "curse": "Curse",
+    "snipe": "Snipe",
+    "double_down": "Double Down"
+  },
+  "difficulty": {
+    "easy": "Leicht",
+    "medium": "Mittel",
+    "hard": "Schwer",
+    "very_hard": "Sehr Schwer"
+  },
+  "categories": {
+    "science": "Wissenschaft",
+    "history": "Geschichte",
+    "geography": "Geographie",
+    "entertainment": "Unterhaltung",
+    "sports": "Sport",
+    "art": "Kunst & Literatur"
+  },
+  "settings": {
+    "title": "Einstellungen",
+    "language": "Sprache",
+    "volume": "Lautst\u00e4rke",
+    "musicVolume": "Musiklautst\u00e4rke",
+    "mute": "Stumm",
+    "musicOn": "Musik",
+    "sfxOn": "Soundeffekte"
+  },
+  "gambler": {
+    "title": "The Gambler",
+    "stakedPeg": "Dein eingesetzter Stift: {field}",
+    "confirm": "Riskieren!",
+    "cancel": "Zur\u00fcckziehen",
+    "correct": "Du gewinnst 3 Stifte!",
+    "wrong": "Du verlierst deinen eingesetzten Stift!"
+  },
+  "narrator": {
+    "playerTurn": "Spieler {color}, du bist dran.",
+    "playerChance": "{color}, deine Chance!",
+    "correct1": "Gut gemacht!",
+    "correct2": "Ausgezeichnet!",
+    "correct3": "Das stimmt!",
+    "correct4": "Brillant!",
+    "correct5": "Genau richtig!",
+    "incorrect1": "Knapp daneben!",
+    "incorrect2": "Falsche Antwort!",
+    "incorrect3": "N\u00e4chstes Mal besser!",
+    "incorrect4": "Das ist leider falsch!",
+    "incorrect5": "Ups!",
+    "victory": "Herzlichen Gl\u00fcckwunsch!",
+    "jokerReshuffle": "Neu mischen!",
+    "jokerGambler": "The Gambler!",
+    "jokerSteal": "Steal!",
+    "jokerCurse": "Curse!",
+    "jokerSnipe": "Snipe!",
+    "jokerDoubleDown": "Double Down!",
+    "jokerHint": "Hier ist ein Hinweis!",
+    "earnedJoker": "Erhalten: {joker}!"
+  }
+}

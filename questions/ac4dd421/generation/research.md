@@ -1,0 +1,1 @@
+On September 9, 1947, a moth was found trapped in a relay of the Harvard Mark II computer. It was taped into the log book. Source: Smithsonian National Museum of American History.

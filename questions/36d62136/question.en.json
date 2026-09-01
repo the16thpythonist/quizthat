@@ -1,0 +1,25 @@
+{
+  "teaser_title": "City of Light",
+  "question_text": "Point to the location of Paris, France on the map.",
+  "hint": "It sits on the River Seine in northern France.",
+  "answer_data": {
+    "target": {
+      "lat": 48.8566,
+      "lng": 2.3522
+    },
+    "scoring": [
+      {
+        "radius_km": 50,
+        "label": "exact"
+      },
+      {
+        "radius_km": 200,
+        "label": "close"
+      },
+      {
+        "radius_km": 500,
+        "label": "region"
+      }
+    ]
+  }
+}
