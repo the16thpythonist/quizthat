@@ -13,10 +13,9 @@ import type {
   OfferedSlot,
   QuestionData,
   JokerType,
-  BoardSize,
   SessionStatus,
 } from '../types/session'
-import { PLAYER_COLORS } from '../types/session'
+import { PLAYER_COLORS, BOARD_SIZE } from '../types/session'
 import { checkWin, generateSlots, assignBoostSlots, isBoostEligible, placementRuleForSlot, generateCandidates, passPlacementRule } from '../engine/algorithms'
 import { GameRng } from '../engine/rng'
 import { useCorpusStore } from './corpus'
@@ -53,10 +52,6 @@ function createStats(): PlayerStats {
   }
 }
 
-function boardSizeToNumber(size: BoardSize): number {
-  return parseInt(size.charAt(0))
-}
-
 export const useGameStore = defineStore('game', () => {
   // Core session state
   const state = ref<GameState>('setup')
@@ -70,7 +65,6 @@ export const useGameStore = defineStore('game', () => {
   const winningLine = ref<[number, number][] | null>(null)
   const usedQuestionIds = ref<Set<string>>(new Set())
   const settings = ref<GameSettings>({
-    board_size: '4x4',
     placement_candidates: 2,
     starting_pegs: 0,
     language: 'en',
@@ -102,13 +96,12 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function addPlayer(name: string, color: PlayerColor, expertise: Expertise) {
-    const boardSize = boardSizeToNumber(settings.value.board_size)
     const player: Player = {
       index: players.value.length,
       name: name || color.charAt(0).toUpperCase() + color.slice(1),
       color,
       expertise,
-      board: createBoard(boardSize),
+      board: createBoard(BOARD_SIZE),
       jokers: createJokerInventory(),
       stats: createStats(),
       is_cursed: false,

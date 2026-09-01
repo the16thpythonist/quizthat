@@ -17,7 +17,13 @@ export type GameState =
   | 'victory'
   | 'turn_end'
 
-export type BoardSize = '3x3' | '4x4' | '5x5'
+/**
+ * The board is always 4x4. It was configurable (3x3/4x4/5x5) early on, but a
+ * fixed grid keeps the win condition, the placement constraints and the
+ * difficulty of a line comparable between games. Game length is varied through
+ * `starting_pegs` instead.
+ */
+export const BOARD_SIZE = 4
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'very_hard'
 export type PlayerColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange'
 export type QuestionType = 'multiple_choice' | 'sorting' | 'map_location' | 'calculation'
@@ -159,7 +165,6 @@ export interface TurnState {
 }
 
 export interface GameSettings {
-  board_size: BoardSize
   placement_candidates: number
   starting_pegs: number
   language: string

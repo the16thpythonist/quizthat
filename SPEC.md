@@ -307,7 +307,7 @@ The game should ship with **strong defaults** so that most groups can skip confi
 
 | Setting | Default | Options |
 |---------|---------|---------|
-| Board size | 4x4 | 3x3, 4x4, 5x5 |
+| Board size | 4x4 | fixed — not configurable |
 | Placement candidates | 2 | 1–4 |
 | Starting pegs | 0 | 0–N (configurable) |
 | Language | Device language | en, de |
@@ -337,9 +337,8 @@ Reached from "New Game". Players configure their session:
   - Select **expertise**: up to 2 major categories + up to 2 subcategories. Use tappable category cards that expand to show subcategories.
 - **Quick Start presets** for expertise selection (e.g. "History Buff", "Science Nerd", "Pop Culture Fan") to speed up setup.
 - **Game settings** section (collapsible, defaults pre-filled):
-  - Board size
   - Placement candidates
-  - Starting pegs
+  - Starting pegs (the only game-length dial, since the board is fixed at 4x4)
 - **"Start Game"** button at the bottom.
 
 ### 5.3 Turn Gate Screen
@@ -862,7 +861,7 @@ Configuration chosen during setup. Immutable once the game starts.
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| board_size | enum | `4x4` | `3x3`, `4x4`, or `5x5` |
+| ~~board_size~~ | — | — | Removed. The board is always 4x4; see `BOARD_SIZE` in `types/session.ts`. |
 | placement_candidates | int | 2 | 1–4; how many candidate fields to offer per peg placement |
 | starting_pegs | int | 0 | 0–N; pre-populated pegs per player |
 | language | string | device lang | `en`, `de`, etc. |
@@ -891,7 +890,7 @@ Per-player state that persists throughout the game.
 
 #### Board
 
-The board is an N×N grid where N is determined by `board_size`.
+The board is a 4×4 grid (`BOARD_SIZE` in `types/session.ts`).
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -1149,7 +1148,7 @@ When `starting_pegs > 0` in game settings, the game pre-populates each player's 
 ### Algorithm
 
 1. Generate a single random pattern of K pegs on the board (where K = `starting_pegs`).
-2. **Constraint**: No line (row, column, or diagonal) may have more than `floor(board_size / 2)` starting pegs. This prevents trivially completable lines from the start.
+2. **Constraint**: No line (row, column, or diagonal) may have more than 2 starting pegs (`floor(BOARD_SIZE / 2)`). This prevents trivially completable lines from the start.
 3. **Identical pattern**: All players receive the **exact same starting pattern** — no rotation or mirroring. Since boards are independently owned and have no inherent asymmetry, identical placement is equally fair and simpler to implement.
 4. Apply the pattern to every player's board simultaneously.
 

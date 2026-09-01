@@ -13,8 +13,8 @@ A multiplayer quiz game for mobile and web, designed to fix common frustrations 
 - **Player count**: 2–6 players. Players share a single device (e.g. a tablet placed in the center).
 - **Player identity**: Each player picks a **color**. The game refers to them by color throughout (e.g. "Player Red has won").
 - **Expertise selection**: Each player selects up to 2 **major categories** and up to 2 **specific subcategories** they feel strongest in. Expertise questions are drawn from these with a weighted probability favoring the specific subcategories.
-- **Board size**: Configurable — 3x3 (short game), 4x4 (standard), or 5x5 (long game). A full line is always required to win (3, 4, or 5 pegs respectively).
-- **Starting pegs**: Optionally, boards can be **pre-populated** with a configurable number of random pegs during setup to shorten game length. All players receive the **same pattern**, mirrored or rotated, so no player gets a positional advantage from the pre-population.
+- **Board size**: Always 4x4. A full line — 4 pegs — is required to win. The grid is deliberately not configurable: a fixed size keeps the win condition, the placement constraints and the worth of a single peg comparable between games. Game length is varied through starting pegs instead.
+- **Starting pegs**: Boards can be **pre-populated** with a configurable number of random pegs during setup. This is the game's only length dial, since the board size is fixed. All players receive the **same pattern**, mirrored or rotated, so no player gets a positional advantage from the pre-population.
 - **Placement candidates**: Configurable (1–4). Controls how many candidate fields the game offers when placing a peg (see Peg Placement Rules). At 1, placement is purely random (no choice). At 2–4, the player picks from that many randomly selected candidates. This dial controls the balance between luck and strategy — lower values for a more luck-based game, higher values for more player control.
 
 ## Question Categories
@@ -64,7 +64,7 @@ The player answers the selected question. Correct answers award pegs according t
 
 ## Win Condition — The Bingo Board
 
-Each player has their own bingo board (3x3, 4x4, or 5x5). Columns are labeled with letters, rows with numbers (e.g. field "A3").
+Each player has their own 4x4 bingo board. Columns are labeled with letters, rows with numbers (e.g. field "A3").
 
 A player wins by completing a **full line** of pegs — horizontal, vertical, or diagonal.
 

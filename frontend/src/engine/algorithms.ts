@@ -11,6 +11,7 @@ import type {
   SpecialJokerType,
 } from '../types/session'
 import { GameRng } from './rng'
+import { BOARD_SIZE } from '../types/session'
 
 // ─── Win Detection ──────────────────────────────────────────────
 
@@ -362,7 +363,7 @@ export function generateSlots(
   boostSlots: number[],
 ): OfferedSlot[] {
   const lang = settings.language
-  const boardSize = parseInt(settings.board_size.charAt(0))
+  const boardSize = BOARD_SIZE
   const excludeIds = new Set(usedIds)
   const slots: OfferedSlot[] = []
 
@@ -572,10 +573,6 @@ export function gamblerPlacementRule(settings: GameSettings): PlacementRule {
 }
 
 // ─── Board Helpers ──────────────────────────────────────────────
-
-export function boardSizeToNumber(size: string): number {
-  return parseInt(size.charAt(0))
-}
 
 export function createEmptyBoard(size: number): Board {
   return {

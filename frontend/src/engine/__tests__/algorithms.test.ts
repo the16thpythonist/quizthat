@@ -411,7 +411,6 @@ describe('scrambleAnswerOrder', () => {
 
 describe('placementRuleForSlot', () => {
   const settings = {
-    board_size: '4x4' as const,
     placement_candidates: 2,
     starting_pegs: 0,
     language: 'en',
