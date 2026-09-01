@@ -10,7 +10,8 @@ import { useCorpusStore } from './stores/corpus'
 
 const i18n = createI18n({
   legacy: false,
-  locale: navigator.language.startsWith('de') ? 'de' : 'en',
+  // German is the project's default; English stays available as fallback.
+  locale: 'de',
   fallbackLocale: 'en',
   messages: { en, de },
 })

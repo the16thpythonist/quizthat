@@ -41,6 +41,18 @@ function createJokerInventory(): JokerInventory {
   }
 }
 
+/**
+ * crypto.randomUUID() only exists in a secure context, so it is missing over
+ * plain HTTP on anything but localhost — which is exactly how the game gets
+ * opened on a tablet on the local network. Falls back to a random id there.
+ */
+function newSessionId(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  return 'session-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10)
+}
+
 function createStats(): PlayerStats {
   return {
     questions_attempted: 0,
@@ -67,7 +79,7 @@ export const useGameStore = defineStore('game', () => {
   const settings = ref<GameSettings>({
     placement_candidates: 2,
     starting_pegs: 0,
-    language: 'en',
+    language: 'de',
   })
 
   // Current question data (loaded on demand)
@@ -127,7 +139,7 @@ export const useGameStore = defineStore('game', () => {
   function startGame() {
     if (players.value.length < 2) return
     rng.value = new GameRng(Date.now())
-    sessionId.value = crypto.randomUUID()
+    sessionId.value = newSessionId()
     status.value = 'in_progress'
     currentPlayerIndex.value = 0
     round.value = 1
