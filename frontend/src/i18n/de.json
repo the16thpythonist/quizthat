@@ -13,7 +13,7 @@
   },
   "setup": {
     "title": "Spieler-Einrichtung",
-    "addPlayer": "Spieler hinzuf\u00fcgen",
+    "addPlayer": "Spieler hinzufügen",
     "removePlayer": "Entfernen",
     "playerName": "Spielername",
     "playerColor": "Farbe",
@@ -22,17 +22,19 @@
     "expertiseSub": "Unterkategorien (bis zu 2)",
     "quickStart": "Schnellstart-Vorlagen",
     "startGame": "Spiel starten",
-    "backToMenu": "Zur\u00fcck zum Men\u00fc",
+    "backToMenu": "Zurück zum Menü",
     "minPlayers": "Mindestens 2 Spieler erforderlich",
     "gameSettings": "Spieleinstellungen",
-    "boardSize": "Spielfeldgr\u00f6\u00dfe",
+    "boardSize": "Spielfeldgröße",
     "placementCandidates": "Platzierungskandidaten",
-    "startingPegs": "Start-Stifte"
+    "startingPegs": "Start-Stifte",
+    "boardFixed": "4×4 — immer",
+    "boardFixedHint": "Eine Reihe, Spalte oder Diagonale gewinnt."
   },
   "colors": {
     "red": "Rot",
     "blue": "Blau",
-    "green": "Gr\u00fcn",
+    "green": "Grün",
     "yellow": "Gelb",
     "purple": "Lila",
     "orange": "Orange"
@@ -42,20 +44,21 @@
     "tapToContinue": "Tippen zum Fortfahren"
   },
   "selection": {
-    "title": "W\u00e4hle deine Frage",
+    "title": "Wähle deine Frage",
     "slot1Label": "Expertise",
     "slot2Label": "Standard",
     "slot3Label": "Standard",
     "slot4Label": "Freie Platzierung",
     "twoXBadge": "2x",
     "jokers": "Joker",
-    "constraintRandom": "Zuf\u00e4llig",
-    "constraintFree": "Freie Platzierung"
+    "constraintRandom": "Zufällig",
+    "constraintFree": "Freie Platzierung",
+    "specialJoker": "Joker"
   },
   "question": {
     "hint": "Hinweis",
     "submit": "Abschicken",
-    "confirm": "Best\u00e4tigen",
+    "confirm": "Bestätigen",
     "sortInstruction": "In die richtige Reihenfolge bringen ({metric})",
     "mapInstruction": "Tippe auf die richtige Stelle auf der Karte",
     "calcInstruction": "Gib deine Antwort ein",
@@ -82,13 +85,17 @@
     "placePeg": "Setze deinen Stift!",
     "tapToPlace": "Tippe auf ein leuchtendes Feld, um deinen Stift zu setzen",
     "autoPlaced": "Stift gesetzt!",
-    "pegsRemaining": "{count} Stifte \u00fcbrig"
+    "pegsRemaining": "{count} Stifte übrig",
+    "onTurn": "Am Zug",
+    "pegsLabel": "Stifte",
+    "correctLabel": "Richtig",
+    "jokersLabel": "Joker"
   },
   "victory": {
     "wins": "{name} gewinnt!",
-    "congratulations": "Herzlichen Gl\u00fcckwunsch!",
+    "congratulations": "Herzlichen Glückwunsch!",
     "playAgain": "Nochmal spielen",
-    "backToMenu": "Zur\u00fcck zum Men\u00fc"
+    "backToMenu": "Zurück zum Menü"
   },
   "jokerNames": {
     "reshuffle_selection": "Auswahl neu mischen",
@@ -117,8 +124,8 @@
   "settings": {
     "title": "Einstellungen",
     "language": "Sprache",
-    "volume": "Lautst\u00e4rke",
-    "musicVolume": "Musiklautst\u00e4rke",
+    "volume": "Lautstärke",
+    "musicVolume": "Musiklautstärke",
     "mute": "Stumm",
     "musicOn": "Musik",
     "sfxOn": "Soundeffekte"
@@ -127,7 +134,7 @@
     "title": "The Gambler",
     "stakedPeg": "Dein eingesetzter Stift: {field}",
     "confirm": "Riskieren!",
-    "cancel": "Zur\u00fcckziehen",
+    "cancel": "Zurückziehen",
     "correct": "Du gewinnst 3 Stifte!",
     "wrong": "Du verlierst deinen eingesetzten Stift!"
   },
@@ -141,10 +148,10 @@
     "correct5": "Genau richtig!",
     "incorrect1": "Knapp daneben!",
     "incorrect2": "Falsche Antwort!",
-    "incorrect3": "N\u00e4chstes Mal besser!",
+    "incorrect3": "Nächstes Mal besser!",
     "incorrect4": "Das ist leider falsch!",
     "incorrect5": "Ups!",
-    "victory": "Herzlichen Gl\u00fcckwunsch!",
+    "victory": "Herzlichen Glückwunsch!",
     "jokerReshuffle": "Neu mischen!",
     "jokerGambler": "The Gambler!",
     "jokerSteal": "Steal!",
@@ -153,5 +160,19 @@
     "jokerDoubleDown": "Double Down!",
     "jokerHint": "Hier ist ein Hinweis!",
     "earnedJoker": "Erhalten: {joker}!"
+  },
+  "joker": {
+    "use": "Einsetzen",
+    "cancel": "Zurück"
+  },
+  "jokerDesc": {
+    "reshuffle_selection": "Verwirft die vier angebotenen Fragen und zieht vier neue. Dieser Joker ist danach verbraucht.",
+    "reshuffle_question": "Ersetzt die aktuelle Frage durch eine andere aus derselben Kategorie. Dieser Joker ist danach verbraucht.",
+    "reveal_hint": "Zeigt einen Hinweis zur aktuellen Frage. Dieser Joker ist danach verbraucht.",
+    "the_gambler": "Setzt einen deiner Stifte aufs Spiel. Bei richtiger Antwort bekommst du drei neue Stifte, bei falscher verlierst du den eingesetzten.",
+    "steal": "Nimmt einem anderen Spieler einen zufälligen Stift weg.",
+    "curse": "Die nächste Frage des gewählten Spielers wird schwer, egal welchen Slot er wählt.",
+    "snipe": "Entfernt einen bestimmten Stift vom Spielfeld eines Gegners.",
+    "double_down": "Deine nächste richtige Antwort bringt zwei Stifte statt einem."
   }
 }

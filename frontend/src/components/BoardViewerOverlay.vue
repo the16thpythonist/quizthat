@@ -1,139 +1,149 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useBoardSheet } from '../composables/useBoardSheet'
 import BoardGrid from './BoardGrid.vue'
+import JokerIcon from './JokerIcon.vue'
 import { COLOR_HEX } from '../types/session'
+import type { JokerType } from '../types/session'
 
+/**
+ * The board sheet: one player per slide, dropping down from under the bar.
+ *
+ * Opened by the round badge in GameBar. The active player is always the first
+ * slide, so the sheet answers "where do I stand" before "where does everyone
+ * else stand".
+ */
 const { t } = useI18n()
 const game = useGameStore()
+const sheet = useBoardSheet()
 
-const isOpen = ref(false)
-const zoomedPlayerIndex = ref<number | null>(null)
+const JOKER_ORDER: JokerType[] = [
+  'reshuffle_selection',
+  'reshuffle_question',
+  'reveal_hint',
+  'the_gambler',
+  'steal',
+  'curse',
+  'snipe',
+  'double_down',
+]
 
-const showOverlay = computed(() => game.status === 'in_progress')
-
-function toggle() {
-  isOpen.value = !isOpen.value
-  zoomedPlayerIndex.value = null
-}
-
-function zoomPlayer(index: number) {
-  zoomedPlayerIndex.value = zoomedPlayerIndex.value === index ? null : index
-}
-
-const zoomedPlayer = computed(() => {
-  if (zoomedPlayerIndex.value === null) return null
-  return game.players[zoomedPlayerIndex.value] ?? null
+/** Players rotated so the one at the device comes first. */
+const ordered = computed(() => {
+  const list = game.players
+  if (list.length === 0) return []
+  const start = game.currentPlayerIndex
+  return [...list.slice(start), ...list.slice(0, start)]
 })
+
+const slide = ref(0)
+const current = computed(() => ordered.value[slide.value] ?? null)
+
+// always reopen on the active player
+watch(() => sheet.isOpen.value, (open) => {
+  if (open) slide.value = 0
+})
+
+function go(delta: number) {
+  const n = ordered.value.length
+  if (n === 0) return
+  slide.value = (slide.value + delta + n) % n
+}
+
+/** Jokers this player still holds, in a stable order. */
+function heldJokers(jokers: Record<JokerType, number>) {
+  return JOKER_ORDER.map((type) => ({ type, count: jokers[type] })).filter((j) => j.count > 0)
+}
+
+function jokerTotal(jokers: Record<JokerType, number>): number {
+  return JOKER_ORDER.reduce((sum, type) => sum + jokers[type], 0)
+}
+
+// --- swipe between slides ---
+const touchStartX = ref<number | null>(null)
+
+function onTouchStart(e: TouchEvent) {
+  touchStartX.value = e.touches[0]?.clientX ?? null
+}
+
+function onTouchEnd(e: TouchEvent) {
+  if (touchStartX.value === null) return
+  const dx = (e.changedTouches[0]?.clientX ?? 0) - touchStartX.value
+  if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1)
+  touchStartX.value = null
+}
 </script>
 
 <template>
-  <!-- Board viewer button (always visible during game) -->
-  <button
-    v-if="showOverlay"
-    class="fixed top-0 right-0 z-40 px-4 py-3 text-white/50 text-xs uppercase tracking-wider touch-manipulation transition-colors duration-200 hover:text-white/80"
-    @click="toggle"
-  >
-    {{ t('board.viewBoards') }}
-  </button>
+  <template v-if="sheet.isOpen.value && game.status === 'in_progress'">
+    <div class="qt-backdrop" @click="sheet.close()"></div>
 
-  <!-- Overlay -->
-  <div
-    v-if="isOpen"
-    class="fixed inset-0 z-50 flex items-center justify-center"
-  >
-    <!-- Backdrop -->
     <div
-      class="absolute inset-0 bg-black/70 backdrop-blur-sm"
-      @click="toggle"
-    ></div>
-
-    <!-- Content -->
-    <div
-      class="relative z-10 rounded-2xl p-6 max-w-5xl w-full mx-4 max-h-[90vh] overflow-y-auto"
-      :style="{
-        background: 'linear-gradient(135deg, rgba(12, 12, 20, 0.95) 0%, rgba(8, 8, 15, 0.98) 100%)',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
-        boxShadow: '0 24px 64px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.04)',
-      }"
+      class="qt-sheet qt-doodles qt-doodles--deep"
+      @touchstart="onTouchStart"
+      @touchend="onTouchEnd"
     >
-      <div class="flex items-center justify-between mb-6">
-        <h2
-          class="text-2xl font-bold text-white"
-          :style="{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)' }"
-        >
-          {{ t('board.viewBoards') }}
-        </h2>
-        <button
-          class="text-gray-500 hover:text-white text-2xl touch-manipulation transition-colors"
-          @click="toggle"
-        >
-          ✕
-        </button>
-      </div>
+      <div class="qt-sheet-title">{{ t('board.viewBoards') }}</div>
 
-      <!-- Zoomed view -->
-      <div v-if="zoomedPlayer" class="flex flex-col items-center">
-        <button
-          class="text-gray-400 hover:text-white mb-4 touch-manipulation transition-colors"
-          @click="zoomedPlayerIndex = null"
-        >
-          ← Back to all boards
-        </button>
-        <div class="flex items-center gap-3 mb-4">
-          <div
-            class="w-8 h-8 rounded-full ring-2 ring-white/10"
-            :style="{
-              background: `radial-gradient(circle at 35% 35%, ${COLOR_HEX[zoomedPlayer.color]}dd, ${COLOR_HEX[zoomedPlayer.color]})`,
-              boxShadow: `0 0 12px ${COLOR_HEX[zoomedPlayer.color]}50`,
-            }"
-          ></div>
-          <span class="text-xl font-bold text-white">
-            {{ t('board.title', { name: zoomedPlayer.name }) }}
-          </span>
-          <span class="text-gray-500">
-            {{ t('board.pegs', { count: zoomedPlayer.board.peg_count }) }}
-          </span>
-        </div>
-        <BoardGrid
-          :board="zoomedPlayer.board"
-          :player-color="zoomedPlayer.color"
-        />
-      </div>
+      <div class="qt-slide-nav">
+        <button class="qt-arrow" :disabled="ordered.length < 2" aria-label="Zurück" @click="go(-1)">‹</button>
 
-      <!-- Grid of all boards -->
-      <div v-else class="grid grid-cols-2 md:grid-cols-3 gap-6">
-        <button
-          v-for="player in game.players"
-          :key="player.index"
-          class="flex flex-col items-center p-4 rounded-xl transition-all duration-200 touch-manipulation hover:scale-[1.02] active:scale-[0.98]"
-          :style="{
-            background: `linear-gradient(135deg, ${COLOR_HEX[player.color]}10 0%, rgba(15, 15, 25, 0.8) 100%)`,
-            border: `1px solid ${COLOR_HEX[player.color]}20`,
-            boxShadow: `0 4px 16px rgba(0, 0, 0, 0.3), 0 0 12px ${COLOR_HEX[player.color]}08`,
-          }"
-          @click="zoomPlayer(player.index)"
-        >
-          <div class="flex items-center gap-2 mb-3">
-            <div
-              class="w-6 h-6 rounded-full ring-1 ring-white/10"
-              :style="{
-                background: `radial-gradient(circle at 35% 35%, ${COLOR_HEX[player.color]}dd, ${COLOR_HEX[player.color]})`,
-                boxShadow: `0 0 8px ${COLOR_HEX[player.color]}40`,
-              }"
-            ></div>
-            <span class="text-white font-semibold text-sm">{{ player.name }}</span>
-            <span class="text-gray-500 text-xs">
-              {{ t('board.pegs', { count: player.board.peg_count }) }}
-            </span>
+        <div v-if="current" class="qt-slide">
+          <div class="qt-slide-head">
+            <span class="qt-chip" :style="{ backgroundColor: COLOR_HEX[current.color] }"></span>
+            <span class="qt-slide-name">{{ current.name }}</span>
+            <span v-if="slide === 0" class="qt-slide-badge">{{ t('board.onTurn') }}</span>
           </div>
+
           <BoardGrid
-            :board="player.board"
-            :player-color="player.color"
+            :board="current.board"
+            :player-color="current.color"
+            :winning-line="game.winnerPlayerIndex === current.index ? game.winningLine : null"
           />
-        </button>
+
+          <div class="qt-slide-stats">
+            <div class="qt-stat">
+              <span class="qt-stat-value">{{ current.board.peg_count }}</span>
+              <span class="qt-stat-label">{{ t('board.pegsLabel') }}</span>
+            </div>
+            <div class="qt-stat">
+              <span class="qt-stat-value">
+                {{ current.stats.questions_correct }}/{{ current.stats.questions_attempted }}
+              </span>
+              <span class="qt-stat-label">{{ t('board.correctLabel') }}</span>
+            </div>
+            <div class="qt-stat">
+              <span class="qt-stat-value">{{ jokerTotal(current.jokers) }}</span>
+              <span class="qt-stat-label">{{ t('board.jokersLabel') }}</span>
+            </div>
+          </div>
+
+          <div v-if="heldJokers(current.jokers).length" class="qt-slide-jokers">
+            <div
+              v-for="j in heldJokers(current.jokers)"
+              :key="j.type"
+              class="qt-mini-joker"
+              :title="t('jokerNames.' + j.type)"
+            >
+              <JokerIcon :type="j.type" :size="15" />
+              <span v-if="j.count > 1" class="qt-mini-count">{{ j.count }}</span>
+            </div>
+          </div>
+
+          <div v-if="ordered.length > 1" class="qt-slide-foot">
+            <span
+              v-for="(p, i) in ordered"
+              :key="p.index"
+              class="qt-dot"
+              :class="i === slide ? 'qt-dot--on' : ''"
+            ></span>
+          </div>
+        </div>
+
+        <button class="qt-arrow" :disabled="ordered.length < 2" aria-label="Weiter" @click="go(1)">›</button>
       </div>
     </div>
-  </div>
+  </template>
 </template>

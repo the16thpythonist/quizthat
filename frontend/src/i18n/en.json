@@ -27,7 +27,9 @@
     "gameSettings": "Game Settings",
     "boardSize": "Board Size",
     "placementCandidates": "Placement Candidates",
-    "startingPegs": "Starting Pegs"
+    "startingPegs": "Starting Pegs",
+    "boardFixed": "4×4 — always",
+    "boardFixedHint": "One row, column or diagonal wins."
   },
   "colors": {
     "red": "Red",
@@ -50,7 +52,8 @@
     "twoXBadge": "2x",
     "jokers": "Jokers",
     "constraintRandom": "Random",
-    "constraintFree": "Free Placement"
+    "constraintFree": "Free Placement",
+    "specialJoker": "Joker"
   },
   "question": {
     "hint": "Hint",
@@ -82,7 +85,11 @@
     "placePeg": "Place your peg!",
     "tapToPlace": "Tap a glowing field to place your peg",
     "autoPlaced": "Peg placed!",
-    "pegsRemaining": "{count} pegs remaining"
+    "pegsRemaining": "{count} pegs remaining",
+    "onTurn": "On turn",
+    "pegsLabel": "Pegs",
+    "correctLabel": "Correct",
+    "jokersLabel": "Jokers"
   },
   "victory": {
     "wins": "{name} wins!",
@@ -153,5 +160,19 @@
     "jokerDoubleDown": "Double Down!",
     "jokerHint": "Here's a hint!",
     "earnedJoker": "Earned: {joker}!"
+  },
+  "joker": {
+    "use": "Use",
+    "cancel": "Back"
+  },
+  "jokerDesc": {
+    "reshuffle_selection": "Discards the four offered questions and draws four new ones. This joker is spent afterwards.",
+    "reshuffle_question": "Replaces the current question with another from the same category. This joker is spent afterwards.",
+    "reveal_hint": "Shows a hint for the current question. This joker is spent afterwards.",
+    "the_gambler": "Stakes one of your pegs. Answer correctly and you gain three pegs; answer wrong and you lose the staked one.",
+    "steal": "Takes a random peg from another player's board.",
+    "curse": "The chosen player's next question becomes hard, whichever slot they pick.",
+    "snipe": "Removes one specific peg from an opponent's board.",
+    "double_down": "Your next correct answer awards two pegs instead of one."
   }
 }

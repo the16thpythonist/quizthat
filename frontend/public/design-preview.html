@@ -1,0 +1,1591 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>QuizThat — Design Preview</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  /* ==================================================================
+     QuizThat — design concept across the whole game flow.
+
+     Static mock. No Vue, no store, no real state. This is the visual
+     specification the screens would be rebuilt against; the :root block
+     below is the draft of the token layer.
+     ================================================================== */
+
+  @font-face {
+    font-family: 'Nunito';
+    font-style: normal;
+    font-weight: 700 900;
+    font-display: swap;
+    src: url('/assets/fonts/nunito-latin.woff2') format('woff2');
+  }
+
+  :root {
+    /* Ground */
+    --qt-ground-deep: #3F1263;
+    --qt-ground: #5B1E8C;
+    --qt-ground-pink: #A8248C;
+    --qt-ground-gradient: linear-gradient(158deg, #5B1E8C 0%, #7A1F8B 46%, #A8248C 100%);
+
+    /* Accent */
+    --qt-accent: #E8705F;
+    --qt-accent-shade: #CE5B4B;
+    --qt-accent-ink: #FFFFFF;
+
+    /* Panel */
+    --qt-panel: #FFFFFF;
+    --qt-ink: #4A1670;
+    --qt-ink-soft: #8B6BA8;
+
+    /* Verdict */
+    --qt-correct: #3E9E72;
+    --qt-wrong: #35114F;
+
+    /* Highlight — win line, 2x boost, the "special" tier */
+    --qt-gold: #F0C24B;
+
+    /* Form */
+    --qt-radius-pill: 999px;
+    --qt-shadow-pill: 0 4px 0 rgba(0,0,0,0.18);
+    --qt-shadow-pill-sm: 0 3px 0 rgba(0,0,0,0.18);
+    --qt-shadow-float: 0 6px 18px rgba(28,5,48,0.28);
+    --qt-edge: 3px solid rgba(255,255,255,0.45);
+    --qt-font: 'Nunito','Trebuchet MS','Segoe UI',system-ui,sans-serif;
+
+    /* Player colours — verbatim from types/session.ts COLOR_HEX */
+    --p-red: #EF4444;
+    --p-blue: #3B82F6;
+    --p-green: #22C55E;
+    --p-yellow: #EAB308;
+    --p-purple: #A855F7;
+    --p-orange: #F97316;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: 40px 24px 80px;
+    background: #17081F;
+    color: #EAD9F5;
+    font-family: var(--qt-font);
+  }
+
+  /* ---------- page furniture ---------- */
+  .page-head { text-align: center; margin-bottom: 8px; }
+  .page-head h1 { font-size: 28px; font-weight: 900; margin: 0 0 6px; color: #fff; }
+  .page-head p { font-weight: 700; font-size: 14px; opacity: 0.55; margin: 0; }
+
+  .toc {
+    max-width: 900px; margin: 24px auto 48px;
+    display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+  }
+  .toc a {
+    font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.8px;
+    color: #EAD9F5; text-decoration: none;
+    padding: 7px 14px; border-radius: var(--qt-radius-pill);
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+  }
+  .toc a:hover { background: rgba(255,255,255,0.15); }
+
+  section { max-width: 1700px; margin: 0 auto 70px; }
+  .sec-head {
+    display: flex; align-items: baseline; gap: 14px;
+    padding-bottom: 10px; margin-bottom: 26px;
+    border-bottom: 2px solid rgba(255,255,255,0.1);
+  }
+  .sec-num { font-size: 12px; font-weight: 900; letter-spacing: 1.4px; color: var(--qt-accent); }
+  .sec-head h2 { font-size: 21px; font-weight: 900; margin: 0; color: #fff; }
+  .sec-head .file { font-size: 12px; font-weight: 700; opacity: 0.4; margin-left: auto; }
+
+  .rack { display: flex; flex-wrap: wrap; gap: 40px; align-items: flex-start; }
+  .slot { width: 380px; }
+  .slot-label { text-align: center; font-weight: 900; font-size: 14px; margin-bottom: 3px; color: #fff; }
+  .slot-hint { text-align: center; font-weight: 700; font-size: 11px; opacity: 0.45; margin-bottom: 13px; min-height: 15px; }
+
+  .phone {
+    position: relative;
+    width: 380px; height: 790px;
+    border-radius: 34px;
+    overflow: hidden;
+    box-shadow: 0 18px 50px rgba(0,0,0,0.55);
+    display: flex; flex-direction: column;
+    background: var(--qt-ground-gradient);
+  }
+
+  /* ---------- doodle field ---------- */
+  .qt-doodles { position: relative; isolation: isolate; }
+  .qt-doodles::before {
+    content: '';
+    position: absolute; inset: 0;
+    background-image: url('/assets/pattern/doodles.svg');
+    background-size: 200px 200px;
+    background-repeat: repeat;
+    opacity: 0.09;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .qt-doodles--deep::before { opacity: 0.07; }
+  .qt-doodles--ink::before {
+    background-image: url('/assets/pattern/doodles-ink.svg');
+    opacity: 0.13;
+  }
+  .qt-doodles > * { position: relative; z-index: 1; }
+
+  /* ---------- top bar + board tab ---------- */
+  .topbar {
+    flex: 0 0 auto; position: relative; z-index: 3;
+    background: var(--qt-ground-deep);
+    padding: 14px 18px;
+    display: flex; align-items: center; justify-content: space-between;
+    overflow: visible;
+  }
+  /* A hushed 4x4 read-out of the current player's own board, standing where
+     the help button used to be. It replaces the peg pill: the same
+     information, but as position rather than as a number. */
+  .mini-board {
+    display: grid;
+    grid-template-columns: repeat(4, 8px);
+    gap: 2px;
+    opacity: 0.45;
+  }
+  .mini-board i {
+    width: 8px; height: 8px;
+    border-radius: 2px;
+    background: rgba(255,255,255,0.16);
+    display: block;
+  }
+
+  .icon-btn {
+    width: 44px; height: 44px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.9);
+    background: transparent; color: #fff;
+    font-family: var(--qt-font); font-weight: 900; font-size: 19px; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+  }
+  .badge {
+    position: absolute; left: 50%; top: 0; bottom: -26px;
+    transform: translateX(-50%);
+    width: 76px;
+    border-radius: 0 0 38px 38px;
+    background: var(--qt-ground-deep);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 6px;
+    border: var(--qt-edge); border-top: none;
+    cursor: pointer; font-family: var(--qt-font);
+  }
+  .badge-value { font-weight: 900; font-size: 26px; color: #fff; line-height: 1; }
+  .badge-chevron {
+    width: 13px; height: 13px;
+    border-right: 3px solid rgba(255,255,255,0.85);
+    border-bottom: 3px solid rgba(255,255,255,0.85);
+    transform: rotate(45deg) translate(-2px,-2px);
+  }
+
+  /* ---------- player strip ---------- */
+  .strip {
+    flex: 0 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 18px 12px; color: #fff;
+  }
+  .strip-left { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+  .strip-identity { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  .strip-gutter { flex: 0 0 auto; width: 86px; }
+  .strip-right { flex: 1 1 0; min-width: 0; display: flex; align-items: center; justify-content: flex-end; }
+  .strip-right .pmeta { text-align: right; white-space: normal; }
+  .chip { flex: 0 0 auto; width: 14px; height: 14px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.85); }
+  .pname { font-weight: 900; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pmeta { font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.6; line-height: 1.35; }
+  .pegs {
+    font-weight: 900; font-size: 14px;
+    background: rgba(255,255,255,0.16);
+    border-radius: var(--qt-radius-pill);
+    padding: 4px 13px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .pegs-dot { width: 9px; height: 9px; border-radius: 50%; }
+
+  /* ---------- white panel ---------- */
+  .panel {
+    flex: 0 0 auto;
+    background: var(--qt-panel);
+    padding: 24px 24px 28px;
+    text-align: center;
+    box-shadow: var(--qt-shadow-float);
+  }
+  .teaser { font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 1.4px; color: var(--qt-ink-soft); margin-bottom: 9px; }
+  .qtext { font-weight: 900; font-size: 23px; line-height: 1.25; color: var(--qt-ink); }
+  .hintbox {
+    margin-top: 15px; padding: 11px 13px; border-radius: 14px;
+    background: rgba(240,194,75,0.16);
+    border: 2px solid rgba(240,194,75,0.45);
+    color: #7d5a10; font-weight: 700; font-size: 13px; text-align: left;
+  }
+
+  /* ---------- answer pills ---------- */
+  .options { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; padding: 20px 18px 8px; }
+  .pill {
+    display: flex; align-items: center; gap: 12px; width: 100%;
+    padding: 7px 16px 7px 7px;
+    border: none; border-radius: var(--qt-radius-pill);
+    background: var(--qt-accent);
+    box-shadow: var(--qt-shadow-pill);
+    color: var(--qt-accent-ink);
+    font-family: var(--qt-font); font-weight: 900; font-size: 17px;
+    text-align: left; cursor: pointer;
+  }
+  .pill-letter {
+    flex: 0 0 auto; width: 40px; height: 40px; border-radius: 50%;
+    background: #fff; color: var(--qt-accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .pill--correct { background: var(--qt-correct); }
+  .pill--correct .pill-letter { color: var(--qt-correct); }
+  .pill--wrong { background: var(--qt-wrong); }
+  .pill--wrong .pill-letter { color: var(--qt-wrong); }
+  .pill--muted { background: rgba(255,255,255,0.14); box-shadow: none; opacity: 0.75; }
+  .pill--muted .pill-letter { background: rgba(255,255,255,0.25); color: #fff; }
+
+  /* generic wide action button */
+  .cta {
+    width: 100%; padding: 15px;
+    border: none; border-radius: var(--qt-radius-pill);
+    background: #fff; color: var(--qt-ground);
+    font-family: var(--qt-font); font-weight: 900; font-size: 16px;
+    letter-spacing: 0.4px; text-transform: uppercase;
+    box-shadow: var(--qt-shadow-pill); cursor: pointer;
+  }
+  .cta--accent { background: var(--qt-accent); color: #fff; }
+  .cta--ghost { background: rgba(255,255,255,0.14); color: #fff; box-shadow: none; border: 2px solid rgba(255,255,255,0.3); }
+  .cta.is-disabled { opacity: 0.35; }
+  .cta-bar { flex: 0 0 auto; padding: 14px 18px 20px; display: flex; flex-direction: column; gap: 10px; }
+
+  /* ---------- joker tray ---------- */
+  .tray {
+    flex: 0 0 auto; margin: 0 18px 18px; padding: 9px;
+    border-radius: 20px; background: rgba(0,0,0,0.2);
+    display: flex; justify-content: center; gap: 9px;
+  }
+  .joker {
+    position: relative; width: 48px; height: 48px; border-radius: 15px;
+    background: rgba(255,255,255,0.12);
+    border: 2px solid rgba(255,255,255,0.18);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 21px; cursor: pointer;
+  }
+  .joker.is-spent { opacity: 0.3; }
+  .ji { fill: #fff; display: block; }
+  .ji--hint { display: inline-block; vertical-align: -1px; fill: #7d5a10; margin-right: 3px; }
+  .joker-count {
+    position: absolute; top: -6px; right: -6px;
+    min-width: 18px; height: 18px; border-radius: 50%;
+    background: var(--qt-accent); color: #fff;
+    font-size: 10px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ---------- bingo board ---------- */
+  .board {
+    margin: 0 auto; display: grid; gap: 7px;
+    padding: 11px; border-radius: 18px;
+    background: rgba(0,0,0,0.22);
+    width: max-content;
+  }
+  .board .cell {
+    border-radius: 11px;
+    background: rgba(255,255,255,0.07);
+    border: 2px solid rgba(255,255,255,0.09);
+    display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .board .peg {
+    border-radius: 50%;
+    box-shadow: inset 0 -3px 6px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.25), 0 2px 5px rgba(0,0,0,0.4);
+  }
+  /* Both need the .board prefix to outweigh `.board .cell` above. */
+  .board .cell--line { border-color: var(--qt-gold); background: rgba(240,194,75,0.16); }
+  /* a placement candidate — the only cells that may be tapped */
+  .board .cell--cand {
+    border-color: var(--qt-accent);
+    background: rgba(232,112,95,0.22);
+    animation: cand 1.6s ease-in-out infinite;
+  }
+  @keyframes cand { 0%,100% { opacity: 0.75; } 50% { opacity: 1; } }
+  .cell-label { position: absolute; bottom: 2px; right: 4px; font-size: 9px; font-weight: 900; opacity: 0.45; }
+
+  /* ---------- board sheet (drop-down) ---------- */
+  .sheet-backdrop { position: absolute; inset: 0; background: rgba(10,2,18,0.55); z-index: 2; }
+  .sheet {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 4;
+    background: var(--qt-ground-deep);
+    border: var(--qt-edge); border-top: none;
+    border-radius: 0 0 30px 30px;
+    box-shadow: 0 22px 44px rgba(0,0,0,0.62), 0 6px 0 rgba(0,0,0,0.18);
+    padding: 74px 18px 20px; color: #fff;
+  }
+  .sheet-title {
+    text-align: center; font-weight: 900; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 1.6px;
+    opacity: 0.55; margin-bottom: 14px;
+  }
+  .slide-nav { display: flex; align-items: center; gap: 12px; }
+  .arrow {
+    flex: 0 0 auto; width: 36px; height: 36px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.3); background: transparent;
+    color: #fff; font-size: 17px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .slide { flex: 1 1 auto; min-width: 0; }
+  .slide-head { display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 12px; }
+  .slide-name { font-weight: 900; font-size: 17px; }
+  .slide-badge {
+    font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;
+    padding: 3px 9px; border-radius: var(--qt-radius-pill);
+    background: rgba(255,255,255,0.2);
+  }
+  .slide-stats { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 13px; }
+  .stat {
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+    padding: 6px 13px; border-radius: 14px; background: rgba(255,255,255,0.09);
+  }
+  .stat-value { font-weight: 900; font-size: 16px; }
+  .stat-label { font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.9px; opacity: 0.55; }
+  .slide-jokers { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 9px; }
+  .mini-joker {
+    position: relative; width: 31px; height: 31px; border-radius: 10px;
+    background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.16);
+    display: flex; align-items: center; justify-content: center; font-size: 14px;
+  }
+  .mini-joker.is-spent { opacity: 0.25; }
+  .mini-count {
+    position: absolute; top: -5px; right: -5px;
+    min-width: 15px; height: 15px; border-radius: 50%;
+    background: var(--qt-accent); color: #fff;
+    font-size: 9px; font-weight: 900;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .slide-foot { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 13px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.28); }
+  .dot--on { background: #fff; width: 22px; border-radius: var(--qt-radius-pill); }
+
+  /* ---------- gate screens (full-bleed player colour) ---------- */
+  .gate {
+    flex: 1 1 auto;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 30px; text-align: center; color: #fff;
+  }
+  .gate-initial {
+    width: 104px; height: 104px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 50px; font-weight: 900;
+    background: rgba(255,255,255,0.16);
+    border: 4px solid rgba(255,255,255,0.55);
+    margin-bottom: 20px;
+  }
+  .gate-title { font-size: 36px; font-weight: 900; line-height: 1.1; margin: 0 0 10px; }
+  .gate-sub { font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.4px; opacity: 0.65; margin: 0; }
+  .gate-board { margin: 24px 0 18px; }
+  .gate-tap { margin-top: 6px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.6px; opacity: 0.6; }
+
+  /* ---------- selection cards ---------- */
+  .slots { flex: 1 1 auto; display: flex; flex-direction: column; gap: 11px; padding: 16px 16px 8px; }
+  .slot-card {
+    background: #fff; border-radius: 22px; padding: 13px 15px;
+    box-shadow: var(--qt-shadow-pill); text-align: left;
+    border: none; cursor: pointer; position: relative;
+  }
+  .slot-card--special { box-shadow: 0 4px 0 rgba(0,0,0,0.18), 0 0 0 3px var(--qt-gold); }
+  .slot-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; }
+  .slot-cat { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.1px; color: var(--qt-ink-soft); }
+  /* Difficulty: filled skulls up to the level, pale ones for the rest.
+     Bigger and near-black, because on the white card the gold stars were
+     barely legible. */
+  .diff { display: flex; align-items: center; gap: 3px; }
+  .sk { fill: #D6C7E2; display: block; }
+  .sk.on { fill: #2A1236; }
+  .slot-title { font-size: 18px; font-weight: 900; color: var(--qt-ink); line-height: 1.2; margin-bottom: 8px; }
+  .slot-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .tier {
+    font-size: 9px; font-weight: 900; text-transform: uppercase; letter-spacing: 1px;
+    padding: 4px 10px; border-radius: var(--qt-radius-pill);
+    background: var(--qt-accent); color: #fff;
+  }
+  .tier--special { background: var(--qt-gold); color: #4A2C00; }
+  .placement { font-size: 11px; font-weight: 900; color: var(--qt-ink-soft); }
+  /* Chips overhang the card's top edge. Gold = doubled reward,
+     black = a special joker is awarded for answering this one. */
+  .chips {
+    position: absolute; top: -9px; right: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .boost, .special {
+    font-size: 11px; font-weight: 900;
+    padding: 3px 11px; border-radius: var(--qt-radius-pill);
+    box-shadow: 0 2px 0 rgba(0,0,0,0.2);
+    letter-spacing: 0.6px;
+  }
+  .boost { background: var(--qt-gold); color: #4A2C00; }
+  .special {
+    background: #5E5170; color: #fff;
+    text-transform: uppercase; font-size: 10px;
+  }
+
+  /* ---------- setup ---------- */
+  .setup-body { flex: 1 1 auto; overflow: hidden; padding: 16px 18px; display: flex; flex-direction: column; gap: 11px; }
+  .player-row {
+    display: flex; align-items: center; gap: 11px;
+    background: rgba(255,255,255,0.13);
+    border: 2px solid rgba(255,255,255,0.2);
+    border-radius: 20px; padding: 10px 13px; color: #fff;
+  }
+  .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.6);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 17px; flex: 0 0 auto;
+  }
+  .player-row .who { flex: 1 1 auto; min-width: 0; }
+  .player-row .who b { display: block; font-size: 16px; font-weight: 900; }
+  .player-row .who span { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.6; }
+  .row-x { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.35); background: transparent; color: #fff; font-weight: 900; cursor: pointer; }
+  .setting { background: rgba(0,0,0,0.2); border-radius: 20px; padding: 12px 14px; color: #fff; }
+  .setting-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.1px; opacity: 0.6; margin-bottom: 8px; }
+  .seg { display: flex; gap: 7px; }
+  .seg button {
+    flex: 1 1 0; padding: 9px 0; border-radius: var(--qt-radius-pill);
+    border: 2px solid rgba(255,255,255,0.22); background: transparent;
+    color: #fff; font-family: var(--qt-font); font-weight: 900; font-size: 13px; cursor: pointer;
+  }
+  .seg button.is-on { background: var(--qt-accent); border-color: var(--qt-accent); box-shadow: var(--qt-shadow-pill-sm); }
+  .swatches { display: flex; gap: 9px; }
+  .swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.25); }
+  .swatch.is-on { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.25); }
+  .swatch.is-taken { opacity: 0.25; }
+
+  /* ---------- title screen ---------- */
+  .title-wrap {
+    flex: 1 1 auto; position: relative; overflow: hidden;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 30px;
+  }
+
+  /* Two oversized copies of the same doodle tile drift at different speeds
+     and scales. Parallax out of the identity we already have - nothing new to
+     draw, and it cannot clash with the pattern elsewhere. */
+  .drift {
+    position: absolute; inset: -20%;
+    background-image: url('/assets/pattern/doodles.svg');
+    background-repeat: repeat;
+    pointer-events: none;
+    z-index: 0;
+  }
+  /* Both layers stay close to the app's normal 200px tile - the parallax
+     should come from the differing speeds, not from blowing the glyphs up. */
+  .drift--far { background-size: 200px 200px; opacity: 0.10; animation: driftFar 120s linear infinite; }
+  .drift--near { background-size: 260px 260px; opacity: 0.06; animation: driftNear 75s linear infinite; }
+  @keyframes driftFar  { from { background-position: 0 0; }   to { background-position: 200px -200px; } }
+  @keyframes driftNear { from { background-position: 0 0; }   to { background-position: -260px 260px; } }
+
+  .title-wrap > *:not(.drift) { position: relative; z-index: 1; }
+
+  .game-title {
+    font-size: 52px; font-weight: 900; color: #fff; margin: 0; letter-spacing: -1px;
+    text-shadow: 0 5px 0 rgba(0,0,0,0.22);
+    animation: bob 4.5s ease-in-out infinite;
+  }
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(-1.2deg); }
+    50%      { transform: translateY(-9px) rotate(-1.2deg); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .drift, .game-title { animation: none; }
+  }
+  .game-sub { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 2.4px; opacity: 0.6; margin: 6px 0 40px; color: #fff; }
+  .menu { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ---------- verdict screens ---------- */
+  .verdict {
+    flex: 1 1 auto; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; padding: 30px; text-align: center; color: #fff;
+  }
+  .verdict-mark {
+    width: 110px; height: 110px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 56px; font-weight: 900; margin-bottom: 20px;
+    border: 5px solid rgba(255,255,255,0.5);
+  }
+  .verdict-title { font-size: 40px; font-weight: 900; margin: 0 0 8px; }
+  .next-up { display: flex; flex-direction: column; align-items: center; margin-top: 26px; }
+  .next-avatar {
+    width: 76px; height: 76px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 36px; font-weight: 900; color: #fff;
+    border: 4px solid rgba(255,255,255,0.5);
+    box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+    margin-bottom: 12px;
+  }
+  .next-name { font-size: 28px; font-weight: 900; line-height: 1; }
+  .next-sub { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.4px; opacity: 0.6; margin-top: 6px; }
+
+  .reveal {
+    margin-top: 22px; padding: 14px 18px; border-radius: 18px;
+    background: rgba(0,0,0,0.22); border: 2px solid rgba(255,255,255,0.18);
+    font-weight: 700; font-size: 14px; line-height: 1.5;
+  }
+  .reveal b { font-weight: 900; }
+
+  /* ---------- sorting / calc / map ---------- */
+  .sort-list { display: flex; flex-direction: column; gap: 10px; padding: 20px 18px 8px; flex: 1 1 auto; }
+  .sort-item {
+    display: flex; align-items: center; gap: 11px;
+    background: #fff; border-radius: 18px; padding: 12px 14px;
+    box-shadow: var(--qt-shadow-pill); color: var(--qt-ink);
+    font-weight: 900; font-size: 16px;
+  }
+  .sort-rank {
+    width: 27px; height: 27px; border-radius: 50%;
+    background: var(--qt-accent); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; flex: 0 0 auto;
+  }
+  .sort-grip { margin-left: auto; opacity: 0.3; font-size: 17px; }
+  .sort-item--drag { transform: rotate(-1.4deg) scale(1.03); box-shadow: 0 10px 22px rgba(0,0,0,0.35); }
+
+  .calc-wrap { flex: 1 1 auto; padding: 18px 18px 8px; display: flex; flex-direction: column; gap: 12px; }
+  .calc-display {
+    background: #fff; border-radius: 20px; padding: 15px 18px;
+    display: flex; align-items: baseline; justify-content: flex-end; gap: 8px;
+    box-shadow: var(--qt-shadow-pill);
+  }
+  .calc-value { font-size: 31px; font-weight: 900; color: var(--qt-ink); }
+  .calc-unit { font-size: 14px; font-weight: 900; color: var(--qt-ink-soft); }
+  .keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .key {
+    padding: 13px 0; border-radius: 17px; border: 2px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.12); color: #fff;
+    font-family: var(--qt-font); font-weight: 900; font-size: 19px; cursor: pointer;
+  }
+  .key--del { background: rgba(0,0,0,0.25); }
+
+  /* The map is the interface here, so it runs edge to edge from under the
+     question panel to the bottom of the screen and the action floats on it. */
+  .map-wrap { flex: 1 1 auto; position: relative; display: flex; }
+  .map-frame {
+    flex: 1 1 auto; overflow: hidden;
+    border: none; border-top: 2px solid rgba(255,255,255,0.25);
+    background:
+      radial-gradient(circle at 30% 40%, #2E7D6E 0 60px, transparent 61px),
+      radial-gradient(circle at 62% 28%, #2E7D6E 0 86px, transparent 87px),
+      radial-gradient(circle at 74% 70%, #2E7D6E 0 46px, transparent 47px),
+      linear-gradient(180deg, #1B4B63 0%, #16394B 100%);
+    position: relative;
+  }
+  .map-cta {
+    position: absolute; left: 18px; right: 18px; bottom: 20px; z-index: 2;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.45), var(--qt-shadow-pill);
+  }
+  .map-pin {
+    position: absolute; left: 58%; top: 34%;
+    width: 26px; height: 26px; border-radius: 50% 50% 50% 0;
+    background: var(--qt-accent); border: 3px solid #fff;
+    transform: rotate(-45deg) translate(-50%, -50%);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.45);
+  }
+
+  /* ---------- victory ---------- */
+  .victory-crown { font-size: 38px; margin-bottom: 4px; }
+  .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .confetti i { position: absolute; display: block; width: 7px; height: 11px; border-radius: 1px; opacity: 0.85; }
+
+  /* joker confirm sheet — rises from the bottom, mirrors the board sheet */
+  .joker-backdrop { position: absolute; inset: 0; background: rgba(10,2,18,0.6); z-index: 4; }
+  .joker-sheet {
+    position: absolute; left: 0; right: 0; bottom: 0; z-index: 5;
+    background: var(--qt-ground-deep);
+    border: var(--qt-edge); border-bottom: none;
+    border-radius: 30px 30px 0 0;
+    box-shadow: 0 -22px 44px rgba(0,0,0,0.6);
+    padding: 24px 22px 26px;
+    text-align: center; color: #fff;
+  }
+  .joker-hero {
+    width: 64px; height: 64px; border-radius: 20px;
+    background: var(--qt-accent);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+    box-shadow: var(--qt-shadow-pill);
+  }
+  .joker-name { font-size: 21px; font-weight: 900; margin-bottom: 7px; }
+  .joker-desc { font-size: 13px; font-weight: 700; line-height: 1.5; opacity: 0.7; margin: 0 0 18px; }
+  .joker-actions { display: flex; flex-direction: column; gap: 10px; }
+
+  .note {
+    max-width: 900px; margin: 60px auto 0;
+    font-weight: 700; font-size: 13px; line-height: 1.75;
+    opacity: 0.6; text-align: center;
+  }
+  .note code { background: rgba(255,255,255,0.1); padding: 1px 5px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>QuizThat — Design-Konzept</h1>
+  <p>Alle Screens im Spielverlauf · Koralle #E8705F · statischer Mock, kein State</p>
+</div>
+
+<nav class="toc">
+  <a href="#s1">1 Start &amp; Setup</a>
+  <a href="#s2">2 Zugwechsel</a>
+  <a href="#s3">3 Auswahl</a>
+  <a href="#s4">4 Frage</a>
+  <a href="#s5">5 Auflösung</a>
+  <a href="#s6">6 Platzierung</a>
+  <a href="#s7">7 Sieg</a>
+  <a href="#s8">8 Komponenten</a>
+</nav>
+
+<!-- =============== 1 · START & SETUP =============== -->
+<section id="s1">
+  <div class="sec-head">
+    <span class="sec-num">01</span>
+    <h2>Start &amp; Spieler-Einrichtung</h2>
+    <span class="file">SetupScreen.vue</span>
+  </div>
+  <div class="rack">
+
+    <div class="slot">
+      <div class="slot-label">Titelbildschirm</div>
+      <div class="slot-hint">driftende Doodles (Parallax) · Logo wippt</div>
+      <div class="phone">
+        <div class="title-wrap">
+          <span class="drift drift--far"></span>
+          <span class="drift drift--near"></span>
+          <h1 class="game-title">QuizThat!</h1>
+          <p class="game-sub">Das Quiz-Brettspiel</p>
+          <div class="menu">
+            <button class="cta cta--accent">Neues Spiel</button>
+            <button class="cta cta--ghost">Spiel fortsetzen</button>
+            <button class="cta cta--ghost">Einstellungen</button>
+            <button class="cta cta--ghost">Spielanleitung</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Einrichtung · leer</div>
+      <div class="slot-hint">mind. 2 Spieler nötig</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <button class="icon-btn">‹</button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="setup-body qt-doodles">
+          <div class="setting">
+            <div class="setting-label">Spieler</div>
+            <p style="margin:0;font-weight:700;font-size:13px;opacity:0.55">Noch keine Spieler. Mindestens 2 Spieler erforderlich.</p>
+          </div>
+          <button class="cta cta--ghost">+ Spieler hinzufügen</button>
+        </div>
+        <div class="cta-bar">
+          <button class="cta is-disabled">Spiel starten</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Einrichtung · 3 Spieler</div>
+      <div class="slot-hint">Farbe, Expertise, Entfernen</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <button class="icon-btn">‹</button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="setup-body qt-doodles">
+          <div class="player-row">
+            <div class="avatar" style="background:var(--p-blue)">J</div>
+            <div class="who"><b>Jonas</b><span>Wissenschaft · Physik</span></div>
+            <button class="row-x">✕</button>
+          </div>
+          <div class="player-row">
+            <div class="avatar" style="background:var(--p-orange)">A</div>
+            <div class="who"><b>Anna</b><span>Musik · Pop Kultur</span></div>
+            <button class="row-x">✕</button>
+          </div>
+          <div class="player-row">
+            <div class="avatar" style="background:var(--p-green)">B</div>
+            <div class="who"><b>Ben</b><span>Geographie · Sport</span></div>
+            <button class="row-x">✕</button>
+          </div>
+
+          <div class="setting">
+            <div class="setting-label">Farbe für Spieler 4</div>
+            <div class="swatches">
+              <span class="swatch" style="background:var(--p-red)"></span>
+              <span class="swatch is-taken" style="background:var(--p-blue)"></span>
+              <span class="swatch is-taken" style="background:var(--p-green)"></span>
+              <span class="swatch is-on" style="background:var(--p-yellow)"></span>
+              <span class="swatch" style="background:var(--p-purple)"></span>
+              <span class="swatch is-taken" style="background:var(--p-orange)"></span>
+            </div>
+          </div>
+
+          <button class="cta cta--ghost">+ Spieler hinzufügen</button>
+        </div>
+        <div class="cta-bar">
+          <button class="cta cta--accent">Spiel starten</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Spieleinstellungen</div>
+      <div class="slot-hint">Spiellänge über Start-Stifte · Feld immer 4×4</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <button class="icon-btn">‹</button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="setup-body qt-doodles">
+          <div class="setting">
+            <div class="setting-label">Spielfeld</div>
+            <p style="margin:0;font-weight:900;font-size:15px">4×4 — immer</p>
+            <p style="margin:4px 0 0;font-weight:700;font-size:11px;opacity:0.55">Eine Reihe, Spalte oder Diagonale gewinnt.</p>
+          </div>
+          <div class="setting">
+            <div class="setting-label">Platzierungskandidaten</div>
+            <div class="seg">
+              <button>1</button><button>2</button><button class="is-on">3</button><button>4</button>
+            </div>
+          </div>
+          <div class="setting">
+            <div class="setting-label">Start-Stifte</div>
+            <div class="seg">
+              <button class="is-on">0</button><button>2</button><button>4</button><button>6</button>
+            </div>
+          </div>
+        </div>
+        <div class="cta-bar">
+          <button class="cta cta--accent">Spiel starten</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =============== 2 · ZUGWECHSEL =============== -->
+<section id="s2">
+  <div class="sec-head">
+    <span class="sec-num">02</span>
+    <h2>Zugwechsel — Gerät weiterreichen</h2>
+    <span class="file">TurnGateScreen.vue · PassGateScreen.vue</span>
+  </div>
+  <div class="rack">
+
+    <div class="slot">
+      <div class="slot-label">Zug-Gate</div>
+      <div class="slot-hint">Ground = Spielerfarbe statt Lila</div>
+      <div class="phone qt-doodles" style="background:radial-gradient(ellipse at 50% 35%, #6BA6FA 0%, #3B82F6 45%, #1D4FA8 100%)">
+        <div class="gate">
+          <div class="gate-initial">J</div>
+          <h1 class="gate-title">Jonas ist dran</h1>
+          <p class="gate-sub">Runde 4 · 5 Stifte</p>
+          <div class="gate-board" data-board data-size="4" data-color="#3B82F6" data-cells="x.x.xxx........."></div>
+          <p class="gate-tap">Tippen zum Fortfahren</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Pass-Gate</div>
+      <div class="slot-hint">nach falscher Antwort · Spieler eine Runde zurück</div>
+      <div class="phone qt-doodles" style="background:radial-gradient(ellipse at 50% 35%, #FBB36B 0%, #F97316 45%, #B4520C 100%)">
+        <div class="gate">
+          <div class="gate-initial">A</div>
+          <h1 class="gate-title">Anna,<br>deine Chance!</h1>
+          <p class="gate-sub">Ein zufälliger Stift</p>
+          <div class="gate-board" data-board data-size="4" data-color="#F97316" data-cells=".x...x.x.x..x..."></div>
+          <p class="gate-tap">Tippen zum Fortfahren</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =============== 3 · AUSWAHL =============== -->
+<section id="s3">
+  <div class="sec-head">
+    <span class="sec-num">03</span>
+    <h2>Fragenauswahl — vier Slots</h2>
+    <span class="file">SelectionScreen.vue</span>
+  </div>
+  <div class="rack">
+
+    <div class="slot">
+      <div class="slot-label">Auswahl</div>
+      <div class="slot-hint">Expertise · Standard ×2 · freie Platzierung</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#3B82F6" data-cells="x.x.xxx........."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="strip">
+          <div class="strip-left">
+            <div class="strip-identity"><div class="chip" style="background:var(--p-blue)"></div><div class="pname">Jonas</div></div>
+          </div>
+          <div class="strip-gutter"></div>
+          <div class="strip-right"><div class="pmeta">Wähle deine Frage</div></div>
+        </div>
+
+        <div class="slots qt-doodles">
+          <button class="slot-card">
+            <div class="slot-top">
+              <span class="slot-cat">Wissenschaft</span>
+              <span class="diff" title="Schwierigkeit 2/4"><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></span>
+            </div>
+            <div class="slot-title">Kosmische Fahrpläne</div>
+            <div class="slot-bottom">
+              <span class="tier">Expertise</span>
+              <span class="placement">3 Felder · überall</span>
+            </div>
+          </button>
+
+          <button class="slot-card">
+            <div class="slot-top">
+              <span class="slot-cat">Geschichte</span>
+              <span class="diff" title="Schwierigkeit 3/4"><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></span>
+            </div>
+            <div class="slot-title">Könige ohne Krone</div>
+            <div class="slot-bottom">
+              <span class="tier">Standard</span>
+              <span class="placement">3 Felder · Reihe 3</span>
+            </div>
+          </button>
+
+          <button class="slot-card">
+            <div class="slot-top">
+              <span class="slot-cat">Musik</span>
+              <span class="diff" title="Schwierigkeit 2/4"><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></span>
+            </div>
+            <div class="slot-title">Vier Takte Ruhm</div>
+            <div class="slot-bottom">
+              <span class="tier">Standard</span>
+              <span class="placement">3 Felder · Spalte B</span>
+            </div>
+          </button>
+
+          <button class="slot-card slot-card--special">
+            <span class="chips"><span class="special">Joker</span></span>
+            <div class="slot-top">
+              <span class="slot-cat">Sprache</span>
+              <span class="diff" title="Schwierigkeit 4/4"><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></span>
+            </div>
+            <div class="slot-title">Wörter, die niemand mehr sagt</div>
+            <div class="slot-bottom">
+              <span class="tier tier--special">Freie Platzierung</span>
+              <span class="placement">jedes leere Feld</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="tray">
+          <div class="joker"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M403.8 34.4c12-5 25.7-2.2 34.9 6.9l64 64c6 6 9.4 14.1 9.4 22.6s-3.4 16.6-9.4 22.6l-64 64c-9.2 9.2-22.9 11.9-34.9 6.9s-19.8-16.6-19.8-29.6l0-32-32 0c-10.1 0-19.6 4.7-25.6 12.8L284 229.3 244 176l31.2-41.6C293.3 110.2 321.8 96 352 96l32 0 0-32c0-12.9 7.8-24.6 19.8-29.6zM164 282.7L204 336l-31.2 41.6C154.7 401.8 126.2 416 96 416l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c10.1 0 19.6-4.7 25.6-12.8L164 282.7zm274.6 188c-9.2 9.2-22.9 11.9-34.9 6.9s-19.8-16.6-19.8-29.6l0-32-32 0c-30.2 0-58.7-14.2-76.8-38.4L121.6 172.8c-6-8.1-15.5-12.8-25.6-12.8l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c30.2 0 58.7 14.2 76.8 38.4L326.4 339.2c6 8.1 15.5 12.8 25.6 12.8l32 0 0-32c0-12.9 7.8-24.6 19.8-29.6s25.7-2.2 34.9 6.9l64 64c6 6 9.4 14.1 9.4 22.6s-3.4 16.6-9.4 22.6l-64 64z"/></svg></div>
+          <div class="joker"><svg class="ji" viewBox="0 0 640 512" width="22" height="22" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8L173.1 413.7c28.1 28.1 73.7 28.1 101.8 0L413.7 274.9c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zM96 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 376a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM352 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 120a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-192c0-35.3-28.7-64-64-64l-114.3 0c11.6 36 3.1 77-25.4 105.5L320 413.8l0 34.2zM480 328a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg></div>
+          <div class="joker"><svg class="ji" viewBox="0 0 576 512" width="22" height="22" aria-hidden="true"><path d="M559.7 392.2c17.8-13.1 21.6-38.1 8.5-55.9s-38.1-21.6-55.9-8.5L392.6 416 272 416c-8.8 0-16-7.2-16-16s7.2-16 16-16l16 0 64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0-16 0-78.3 0c-29.1 0-57.3 9.9-80 28L68.8 384 32 384c-17.7 0-32 14.3-32 32l0 64c0 17.7 14.3 32 32 32l160 0 160.5 0c29 0 57.3-9.3 80.7-26.5l126.6-93.3zm-367-8.2c.3 0 .6 0 .9 0c0 0 0 0 0 0c-.3 0-.6 0-.9 0z"/></svg></div>
+          <div class="joker"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M256 0c17.7 0 32 14.3 32 32l0 10.4c93.7 13.9 167.7 88 181.6 181.6l10.4 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-10.4 0c-13.9 93.7-88 167.7-181.6 181.6l0 10.4c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-10.4C130.3 455.7 56.3 381.7 42.4 288L32 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l10.4 0C56.3 130.3 130.3 56.3 224 42.4L224 32c0-17.7 14.3-32 32-32zM107.4 288c12.5 58.3 58.4 104.1 116.6 116.6l0-20.6c0-17.7 14.3-32 32-32s32 14.3 32 32l0 20.6c58.3-12.5 104.1-58.4 116.6-116.6L384 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l20.6 0C392.1 165.7 346.3 119.9 288 107.4l0 20.6c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-20.6C165.7 119.9 119.9 165.7 107.4 224l20.6 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-20.6 0zM256 224a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Auswahl · mit 2×-Boost</div>
+      <div class="slot-hint">ab Runde 3 für den Spieler mit den wenigsten Treffern</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#22C55E" data-cells=".x......x......."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="strip">
+          <div class="strip-left">
+            <div class="strip-identity"><div class="chip" style="background:var(--p-green)"></div><div class="pname">Ben</div></div>
+          </div>
+          <div class="strip-gutter"></div>
+          <div class="strip-right"><div class="pmeta">Aufholbonus aktiv</div></div>
+        </div>
+
+        <div class="slots qt-doodles">
+          <button class="slot-card">
+            <div class="slot-top">
+              <span class="slot-cat">Geographie</span>
+              <span class="diff" title="Schwierigkeit 2/4"><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></span>
+            </div>
+            <div class="slot-title">Flüsse ohne Mündung</div>
+            <div class="slot-bottom">
+              <span class="tier">Expertise</span>
+              <span class="placement">3 Felder · überall</span>
+            </div>
+          </button>
+
+          <button class="slot-card">
+            <span class="chips"><span class="boost">2×</span></span>
+            <div class="slot-top">
+              <span class="slot-cat">Kunst</span>
+              <span class="diff" title="Schwierigkeit 3/4"><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></span>
+            </div>
+            <div class="slot-title">Farben mit schlechtem Ruf</div>
+            <div class="slot-bottom">
+              <span class="tier">Standard</span>
+              <span class="placement">2 Stifte · Reihe 2</span>
+            </div>
+          </button>
+
+          <button class="slot-card">
+            <div class="slot-top">
+              <span class="slot-cat">Technik</span>
+              <span class="diff" title="Schwierigkeit 2/4"><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></span>
+            </div>
+            <div class="slot-title">Erfindungen aus Versehen</div>
+            <div class="slot-bottom">
+              <span class="tier">Standard</span>
+              <span class="placement">3 Felder · Spalte D</span>
+            </div>
+          </button>
+
+          <button class="slot-card slot-card--special">
+            <span class="chips"><span class="boost">2×</span><span class="special">Joker</span></span>
+            <div class="slot-top">
+              <span class="slot-cat">Politik</span>
+              <span class="diff" title="Schwierigkeit 4/4"><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg><svg class="sk on" viewBox="0 0 512 512" width="13" height="13" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></span>
+            </div>
+            <div class="slot-title">Verträge, die keiner las</div>
+            <div class="slot-bottom">
+              <span class="tier tier--special">Freie Platzierung</span>
+              <span class="placement">2 Stifte · frei</span>
+            </div>
+          </button>
+        </div>
+
+        <div class="tray">
+          <div class="joker"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M403.8 34.4c12-5 25.7-2.2 34.9 6.9l64 64c6 6 9.4 14.1 9.4 22.6s-3.4 16.6-9.4 22.6l-64 64c-9.2 9.2-22.9 11.9-34.9 6.9s-19.8-16.6-19.8-29.6l0-32-32 0c-10.1 0-19.6 4.7-25.6 12.8L284 229.3 244 176l31.2-41.6C293.3 110.2 321.8 96 352 96l32 0 0-32c0-12.9 7.8-24.6 19.8-29.6zM164 282.7L204 336l-31.2 41.6C154.7 401.8 126.2 416 96 416l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c10.1 0 19.6-4.7 25.6-12.8L164 282.7zm274.6 188c-9.2 9.2-22.9 11.9-34.9 6.9s-19.8-16.6-19.8-29.6l0-32-32 0c-30.2 0-58.7-14.2-76.8-38.4L121.6 172.8c-6-8.1-15.5-12.8-25.6-12.8l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c30.2 0 58.7 14.2 76.8 38.4L326.4 339.2c6 8.1 15.5 12.8 25.6 12.8l32 0 0-32c0-12.9 7.8-24.6 19.8-29.6s25.7-2.2 34.9 6.9l64 64c6 6 9.4 14.1 9.4 22.6s-3.4 16.6-9.4 22.6l-64 64z"/></svg></div>
+          <div class="joker is-spent"><svg class="ji" viewBox="0 0 640 512" width="22" height="22" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8L173.1 413.7c28.1 28.1 73.7 28.1 101.8 0L413.7 274.9c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zM96 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 376a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM352 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 120a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-192c0-35.3-28.7-64-64-64l-114.3 0c11.6 36 3.1 77-25.4 105.5L320 413.8l0 34.2zM480 328a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg></div>
+          <div class="joker"><svg class="ji" viewBox="0 0 576 512" width="22" height="22" aria-hidden="true"><path d="M559.7 392.2c17.8-13.1 21.6-38.1 8.5-55.9s-38.1-21.6-55.9-8.5L392.6 416 272 416c-8.8 0-16-7.2-16-16s7.2-16 16-16l16 0 64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0-16 0-78.3 0c-29.1 0-57.3 9.9-80 28L68.8 384 32 384c-17.7 0-32 14.3-32 32l0 64c0 17.7 14.3 32 32 32l160 0 160.5 0c29 0 57.3-9.3 80.7-26.5l126.6-93.3zm-367-8.2c.3 0 .6 0 .9 0c0 0 0 0 0 0c-.3 0-.6 0-.9 0z"/></svg></div>
+          <div class="joker is-spent"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =============== 4 · FRAGE =============== -->
+<section id="s4">
+  <div class="sec-head">
+    <span class="sec-num">04</span>
+    <h2>Frage — vier Fragetypen</h2>
+    <span class="file">QuestionScreen.vue</span>
+  </div>
+  <div class="rack">
+
+    <div class="slot">
+      <div class="slot-label">Multiple Choice</div>
+      <div class="slot-hint">der Standardfall</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#3B82F6" data-cells="x.x.xxx........."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="strip">
+          <div class="strip-left">
+            <div class="strip-identity"><div class="chip" style="background:var(--p-blue)"></div><div class="pname">Jonas</div></div>
+          </div>
+          <div class="strip-gutter"></div>
+          <div class="strip-right"><div class="pmeta">Wissenschaft · Physik</div></div>
+        </div>
+        <div class="panel qt-doodles qt-doodles--ink">
+          <div class="teaser">Kosmische Fahrpläne</div>
+          <div class="qtext">Wie lange braucht Jupiter für eine Umrundung der Sonne?</div>
+        </div>
+        <div class="options">
+          <button class="pill"><span class="pill-letter">A</span><span>Etwa 2 Jahre</span></button>
+          <button class="pill"><span class="pill-letter">B</span><span>Etwa 12 Jahre</span></button>
+          <button class="pill"><span class="pill-letter">C</span><span>Etwa 29 Jahre</span></button>
+          <button class="pill"><span class="pill-letter">D</span><span>Etwa 84 Jahre</span></button>
+        </div>
+        <div class="tray">
+          <div class="joker"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M142.9 142.9c-17.5 17.5-30.1 38-37.8 59.8c-5.9 16.7-24.2 25.4-40.8 19.5s-25.4-24.2-19.5-40.8C55.6 150.7 73.2 122 97.6 97.6c87.2-87.2 228.3-87.5 315.8-1L455 55c6.9-6.9 17.2-8.9 26.2-5.2s14.8 12.5 14.8 22.2l0 128c0 13.3-10.7 24-24 24l-8.4 0c0 0 0 0 0 0L344 224c-9.7 0-18.5-5.8-22.2-14.8s-1.7-19.3 5.2-26.2l41.1-41.1c-62.6-61.5-163.1-61.2-225.3 1zM16 312c0-13.3 10.7-24 24-24l7.6 0 .7 0L168 288c9.7 0 18.5 5.8 22.2 14.8s1.7 19.3-5.2 26.2l-41.1 41.1c62.6 61.5 163.1 61.2 225.3-1c17.5-17.5 30.1-38 37.8-59.8c5.9-16.7 24.2-25.4 40.8-19.5s25.4 24.2 19.5 40.8c-10.8 30.6-28.4 59.3-52.9 83.8c-87.2 87.2-228.3 87.5-315.8 1L57 457c-6.9 6.9-17.2 8.9-26.2 5.2S16 449.7 16 440l0-119.6 0-.7 0-7.6z"/></svg></div>
+          <div class="joker"><svg class="ji" viewBox="0 0 384 512" width="22" height="22" aria-hidden="true"><path d="M272 384c9.6-31.9 29.5-59.1 49.2-86.2c0 0 0 0 0 0c5.2-7.1 10.4-14.2 15.4-21.4c19.8-28.5 31.4-63 31.4-100.3C368 78.8 289.2 0 192 0S16 78.8 16 176c0 37.3 11.6 71.9 31.4 100.3c5 7.2 10.2 14.3 15.4 21.4c0 0 0 0 0 0c19.8 27.1 39.7 54.4 49.2 86.2l160 0zM192 512c44.2 0 80-35.8 80-80l0-16-160 0 0 16c0 44.2 35.8 80 80 80zM112 176c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.9 50.1-112 112-112c8.8 0 16 7.2 16 16s-7.2 16-16 16c-44.2 0-80 35.8-80 80z"/></svg></div>
+          <div class="joker"><svg class="ji" viewBox="0 0 448 512" width="22" height="22" aria-hidden="true"><path d="M246.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 109.3 361.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160zm160 352l-160-160c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 301.3 361.4 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3z"/></svg><span class="joker-count">2</span></div>
+          <div class="joker is-spent"><svg class="ji" viewBox="0 0 640 512" width="22" height="22" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8L173.1 413.7c28.1 28.1 73.7 28.1 101.8 0L413.7 274.9c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zM96 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 376a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM352 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 120a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-192c0-35.3-28.7-64-64-64l-114.3 0c11.6 36 3.1 77-25.4 105.5L320 413.8l0 34.2zM480 328a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Multiple Choice · Hinweis</div>
+      <div class="slot-hint">Joker „Hinweis zeigen“ eingelöst</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#3B82F6" data-cells="x.x.xxx........."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="strip">
+          <div class="strip-left">
+            <div class="strip-identity"><div class="chip" style="background:var(--p-blue)"></div><div class="pname">Jonas</div></div>
+          </div>
+          <div class="strip-gutter"></div>
+          <div class="strip-right"><div class="pmeta">Wissenschaft · Physik</div></div>
+        </div>
+        <div class="panel qt-doodles qt-doodles--ink">
+          <div class="teaser">Kosmische Fahrpläne</div>
+          <div class="qtext">Wie lange braucht Jupiter für eine Umrundung der Sonne?</div>
+          <div class="hintbox"><svg class="ji ji--hint" viewBox="0 0 384 512" width="13" height="13" aria-hidden="true"><path d="M272 384c9.6-31.9 29.5-59.1 49.2-86.2c0 0 0 0 0 0c5.2-7.1 10.4-14.2 15.4-21.4c19.8-28.5 31.4-63 31.4-100.3C368 78.8 289.2 0 192 0S16 78.8 16 176c0 37.3 11.6 71.9 31.4 100.3c5 7.2 10.2 14.3 15.4 21.4c0 0 0 0 0 0c19.8 27.1 39.7 54.4 49.2 86.2l160 0zM192 512c44.2 0 80-35.8 80-80l0-16-160 0 0 16c0 44.2 35.8 80 80 80zM112 176c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.9 50.1-112 112-112c8.8 0 16 7.2 16 16s-7.2 16-16 16c-44.2 0-80 35.8-80 80z"/></svg> Hinweis: Mehr als ein Jahrzehnt, aber weniger als zwei.</div>
+        </div>
+        <div class="options">
+          <button class="pill"><span class="pill-letter">A</span><span>Etwa 2 Jahre</span></button>
+          <button class="pill"><span class="pill-letter">B</span><span>Etwa 12 Jahre</span></button>
+          <button class="pill"><span class="pill-letter">C</span><span>Etwa 29 Jahre</span></button>
+          <button class="pill"><span class="pill-letter">D</span><span>Etwa 84 Jahre</span></button>
+        </div>
+        <div class="tray">
+          <div class="joker"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M142.9 142.9c-17.5 17.5-30.1 38-37.8 59.8c-5.9 16.7-24.2 25.4-40.8 19.5s-25.4-24.2-19.5-40.8C55.6 150.7 73.2 122 97.6 97.6c87.2-87.2 228.3-87.5 315.8-1L455 55c6.9-6.9 17.2-8.9 26.2-5.2s14.8 12.5 14.8 22.2l0 128c0 13.3-10.7 24-24 24l-8.4 0c0 0 0 0 0 0L344 224c-9.7 0-18.5-5.8-22.2-14.8s-1.7-19.3 5.2-26.2l41.1-41.1c-62.6-61.5-163.1-61.2-225.3 1zM16 312c0-13.3 10.7-24 24-24l7.6 0 .7 0L168 288c9.7 0 18.5 5.8 22.2 14.8s1.7 19.3-5.2 26.2l-41.1 41.1c62.6 61.5 163.1 61.2 225.3-1c17.5-17.5 30.1-38 37.8-59.8c5.9-16.7 24.2-25.4 40.8-19.5s25.4 24.2 19.5 40.8c-10.8 30.6-28.4 59.3-52.9 83.8c-87.2 87.2-228.3 87.5-315.8 1L57 457c-6.9 6.9-17.2 8.9-26.2 5.2S16 449.7 16 440l0-119.6 0-.7 0-7.6z"/></svg></div>
+          <div class="joker is-spent"><svg class="ji" viewBox="0 0 384 512" width="22" height="22" aria-hidden="true"><path d="M272 384c9.6-31.9 29.5-59.1 49.2-86.2c0 0 0 0 0 0c5.2-7.1 10.4-14.2 15.4-21.4c19.8-28.5 31.4-63 31.4-100.3C368 78.8 289.2 0 192 0S16 78.8 16 176c0 37.3 11.6 71.9 31.4 100.3c5 7.2 10.2 14.3 15.4 21.4c0 0 0 0 0 0c19.8 27.1 39.7 54.4 49.2 86.2l160 0zM192 512c44.2 0 80-35.8 80-80l0-16-160 0 0 16c0 44.2 35.8 80 80 80zM112 176c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.9 50.1-112 112-112c8.8 0 16 7.2 16 16s-7.2 16-16 16c-44.2 0-80 35.8-80 80z"/></svg></div>
+          <div class="joker"><svg class="ji" viewBox="0 0 448 512" width="22" height="22" aria-hidden="true"><path d="M246.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 109.3 361.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160zm160 352l-160-160c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 301.3 361.4 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3z"/></svg><span class="joker-count">2</span></div>
+          <div class="joker is-spent"><svg class="ji" viewBox="0 0 640 512" width="22" height="22" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8L173.1 413.7c28.1 28.1 73.7 28.1 101.8 0L413.7 274.9c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zM96 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 376a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM352 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 120a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-192c0-35.3-28.7-64-64-64l-114.3 0c11.6 36 3.1 77-25.4 105.5L320 413.8l0 34.2zM480 328a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Sortieren</div>
+      <div class="slot-hint">Drag &amp; Drop · gezogenes Element gekippt</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#F97316" data-cells=".x...x.x.x..x..."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="strip">
+          <div class="strip-left">
+            <div class="strip-identity"><div class="chip" style="background:var(--p-orange)"></div><div class="pname">Anna</div></div>
+          </div>
+          <div class="strip-gutter"></div>
+          <div class="strip-right"><div class="pmeta">Nach Länge sortieren</div></div>
+        </div>
+        <div class="panel qt-doodles qt-doodles--ink">
+          <div class="teaser">Wasserwege</div>
+          <div class="qtext">Sortiere diese Flüsse nach Länge — längster zuerst.</div>
+        </div>
+        <div class="sort-list">
+          <div class="sort-item"><span class="sort-rank">1</span>Nil<span class="sort-grip">⠿</span></div>
+          <div class="sort-item sort-item--drag"><span class="sort-rank">2</span>Amazonas<span class="sort-grip">⠿</span></div>
+          <div class="sort-item"><span class="sort-rank">3</span>Jangtse<span class="sort-grip">⠿</span></div>
+          <div class="sort-item"><span class="sort-rank">4</span>Donau<span class="sort-grip">⠿</span></div>
+        </div>
+        <div class="cta-bar"><button class="cta cta--accent">Abschicken</button></div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Rechnen</div>
+      <div class="slot-hint">eigenes Keypad, keine Systemtastatur</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#22C55E" data-cells=".x......x......."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="strip">
+          <div class="strip-left">
+            <div class="strip-identity"><div class="chip" style="background:var(--p-green)"></div><div class="pname">Ben</div></div>
+          </div>
+          <div class="strip-gutter"></div>
+          <div class="strip-right"><div class="pmeta">Toleranz ±5 %</div></div>
+        </div>
+        <div class="panel qt-doodles qt-doodles--ink">
+          <div class="teaser">Himmelsmechanik</div>
+          <div class="qtext">Umlaufzeit eines Satelliten in 400 km Höhe?</div>
+        </div>
+        <div class="calc-wrap">
+          <div class="calc-display"><span class="calc-value">92,6</span><span class="calc-unit">Minuten</span></div>
+          <div class="keypad">
+            <button class="key">7</button><button class="key">8</button><button class="key">9</button>
+            <button class="key">4</button><button class="key">5</button><button class="key">6</button>
+            <button class="key">1</button><button class="key">2</button><button class="key">3</button>
+            <button class="key">,</button><button class="key">0</button><button class="key key--del">⌫</button>
+          </div>
+          <button class="cta cta--accent">Abschicken</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Karte</div>
+      <div class="slot-hint">Leaflet im gleichen Rahmen</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#A855F7" data-cells="xx..x.x..x.x.x.."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="strip">
+          <div class="strip-left">
+            <div class="strip-identity"><div class="chip" style="background:var(--p-purple)"></div><div class="pname">Mira</div></div>
+          </div>
+          <div class="strip-gutter"></div>
+          <div class="strip-right"><div class="pmeta">Tippe auf die Karte</div></div>
+        </div>
+        <div class="panel qt-doodles qt-doodles--ink">
+          <div class="teaser">Ursprünge</div>
+          <div class="qtext">Wo wurde das Papier erfunden?</div>
+        </div>
+        <div class="map-wrap">
+          <div class="map-frame"><span class="map-pin"></span></div>
+          <button class="cta cta--accent map-cta">Antwort setzen</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =============== 5 · AUFLÖSUNG =============== -->
+<section id="s5">
+  <div class="sec-head">
+    <span class="sec-num">05</span>
+    <h2>Auflösung</h2>
+    <span class="file">AnswerResultScreen.vue · PassResolveScreen.vue</span>
+  </div>
+  <div class="rack">
+
+    <div class="slot">
+      <div class="slot-label">Richtig</div>
+      <div class="slot-hint">gedämpftes Grün als Ground</div>
+      <div class="phone qt-doodles" style="background:linear-gradient(158deg,#2F7F5C 0%,#3E9E72 55%,#57B98A 100%)">
+        <div class="verdict">
+          <div class="verdict-mark">✓</div>
+          <h1 class="verdict-title">Richtig!</h1>
+          <p class="gate-sub">Jonas · +1 Stift</p>
+          <p class="gate-tap" style="margin-top:34px">Tippen für Platzierung</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Falsch</div>
+      <div class="slot-hint">Frage wandert weiter — Lösung noch verdeckt</div>
+      <div class="phone qt-doodles" style="background:linear-gradient(158deg,#2A0D42 0%,#35114F 55%,#4A1670 100%)">
+        <div class="verdict">
+          <div class="verdict-mark">✗</div>
+          <h1 class="verdict-title">Falsch!</h1>
+
+          <!-- The player who inherits the question is named in their own
+               colour, without taking over the ground - it is not their turn
+               yet, they are only being handed the chance. -->
+          <div class="next-up">
+            <div class="next-avatar" style="background:var(--p-orange);border-color:#FFC08A">A</div>
+            <div class="next-name" style="color:#FFC08A">Anna</div>
+            <div class="next-sub">bekommt die Chance</div>
+          </div>
+
+          <p class="gate-tap" style="margin-top:30px">Gerät weiterreichen</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Pass abgelehnt</div>
+      <div class="slot-hint">erst jetzt wird die Lösung gezeigt</div>
+      <div class="phone qt-doodles" style="background:linear-gradient(158deg,#2A0D42 0%,#35114F 55%,#4A1670 100%)">
+        <div class="verdict">
+          <div class="verdict-mark" style="font-size:42px">—</div>
+          <h1 class="verdict-title">Abgelehnt</h1>
+          <div class="reveal">Die richtige Antwort war:<br><b>Etwa 12 Jahre</b></div>
+          <p class="gate-tap" style="margin-top:30px">Weiter</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =============== 6 · PLATZIERUNG =============== -->
+<section id="s6">
+  <div class="sec-head">
+    <span class="sec-num">06</span>
+    <h2>Stift setzen</h2>
+    <span class="file">PegPlacementScreen.vue</span>
+  </div>
+  <div class="rack">
+
+    <div class="slot">
+      <div class="slot-label">Kandidaten</div>
+      <div class="slot-hint">3 Felder aus Reihe 3 · nur diese sind tippbar</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#3B82F6" data-cells="x.x.xxx........."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="strip">
+          <div class="strip-left">
+            <div class="strip-identity"><div class="chip" style="background:var(--p-blue)"></div><div class="pname">Jonas</div></div>
+          </div>
+          <div class="strip-gutter"></div>
+          <div class="strip-right"><div class="pmeta">Setze deinen Stift</div></div>
+        </div>
+        <div class="verdict qt-doodles" style="justify-content:flex-start;padding-top:30px">
+          <h1 style="font-size:24px;font-weight:900;margin:0 0 6px">Setze deinen Stift!</h1>
+          <p class="gate-sub" style="margin-bottom:24px">Reihe 3 · 3 Kandidaten</p>
+          <div data-board data-size="4" data-color="#3B82F6" data-labels="1" data-cells="x.x.xxx.ccc....."></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Freie Platzierung</div>
+      <div class="slot-hint">nach schwerer Frage · jedes leere Feld · 2 Stifte</div>
+      <div class="phone">
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#3B82F6" data-cells="x.x.xxx........."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="strip">
+          <div class="strip-left">
+            <div class="strip-identity"><div class="chip" style="background:var(--p-blue)"></div><div class="pname">Jonas</div></div>
+          </div>
+          <div class="strip-gutter"></div>
+          <div class="strip-right"><div class="pmeta">Freie Platzierung</div></div>
+        </div>
+        <div class="verdict qt-doodles" style="justify-content:flex-start;padding-top:30px">
+          <h1 style="font-size:24px;font-weight:900;margin:0 0 6px">Wähle frei!</h1>
+          <p class="gate-sub" style="margin-bottom:24px">2 Stifte übrig</p>
+          <div data-board data-size="4" data-color="#3B82F6" data-labels="1" data-cells="x.x.xxx.cccccccc"></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =============== 7 · SIEG =============== -->
+<section id="s7">
+  <div class="sec-head">
+    <span class="sec-num">07</span>
+    <h2>Sieg</h2>
+    <span class="file">VictoryScreen.vue</span>
+  </div>
+  <div class="rack">
+
+    <div class="slot">
+      <div class="slot-label">Gewinner</div>
+      <div class="slot-hint">Ground = Gewinnerfarbe · Linie in Gold</div>
+      <div class="phone qt-doodles" style="background:radial-gradient(ellipse at 50% 30%, #6BA6FA 0%, #3B82F6 45%, #1D4FA8 100%)">
+        <div class="confetti" id="confetti"></div>
+        <div class="gate">
+          <div class="victory-crown">👑</div>
+          <div class="gate-initial">J</div>
+          <h1 class="gate-title">Jonas gewinnt!</h1>
+          <p class="gate-sub">Herzlichen Glückwunsch</p>
+          <div class="gate-board" data-board data-size="4" data-color="#3B82F6" data-cells="x.x.LLLL.x..x..."></div>
+          <div style="width:100%;display:flex;flex-direction:column;gap:10px">
+            <button class="cta">Nochmal spielen</button>
+            <button class="cta cta--ghost">Zurück zum Menü</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<!-- =============== 8 · KOMPONENTEN =============== -->
+<section id="s8">
+  <div class="sec-head">
+    <span class="sec-num">08</span>
+    <h2>Gemeinsame Komponenten</h2>
+    <span class="file">BoardViewerOverlay.vue · BoardGrid.vue · JokerTray.vue</span>
+  </div>
+  <div class="rack">
+
+    <div class="slot">
+      <div class="slot-label">Spielfeld-Ansicht</div>
+      <div class="slot-hint">Badge gedrückt · aktiver Spieler zuerst</div>
+      <div class="phone">
+        <div class="sheet-backdrop"></div>
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#3B82F6" data-cells="x.x.LLLl........"></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="sheet qt-doodles qt-doodles--deep">
+          <div class="sheet-title">Spielfelder</div>
+          <div class="slide-nav">
+            <button class="arrow">‹</button>
+            <div class="slide">
+              <div class="slide-head">
+                <span class="chip" style="background:var(--p-blue)"></span>
+                <span class="slide-name">Jonas</span>
+                <span class="slide-badge">Am Zug</span>
+              </div>
+              <div data-board data-size="4" data-color="#3B82F6" data-cells="x.x.LLLl........"></div>
+              <div class="slide-stats">
+                <div class="stat"><span class="stat-value">5</span><span class="stat-label">Stifte</span></div>
+                <div class="stat"><span class="stat-value">7/9</span><span class="stat-label">Richtig</span></div>
+                <div class="stat"><span class="stat-value">3</span><span class="stat-label">Joker</span></div>
+              </div>
+              <div class="slide-jokers">
+                <div class="mini-joker"><svg class="ji" viewBox="0 0 512 512" width="15" height="15" aria-hidden="true"><path d="M403.8 34.4c12-5 25.7-2.2 34.9 6.9l64 64c6 6 9.4 14.1 9.4 22.6s-3.4 16.6-9.4 22.6l-64 64c-9.2 9.2-22.9 11.9-34.9 6.9s-19.8-16.6-19.8-29.6l0-32-32 0c-10.1 0-19.6 4.7-25.6 12.8L284 229.3 244 176l31.2-41.6C293.3 110.2 321.8 96 352 96l32 0 0-32c0-12.9 7.8-24.6 19.8-29.6zM164 282.7L204 336l-31.2 41.6C154.7 401.8 126.2 416 96 416l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c10.1 0 19.6-4.7 25.6-12.8L164 282.7zm274.6 188c-9.2 9.2-22.9 11.9-34.9 6.9s-19.8-16.6-19.8-29.6l0-32-32 0c-30.2 0-58.7-14.2-76.8-38.4L121.6 172.8c-6-8.1-15.5-12.8-25.6-12.8l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c30.2 0 58.7 14.2 76.8 38.4L326.4 339.2c6 8.1 15.5 12.8 25.6 12.8l32 0 0-32c0-12.9 7.8-24.6 19.8-29.6s25.7-2.2 34.9 6.9l64 64c6 6 9.4 14.1 9.4 22.6s-3.4 16.6-9.4 22.6l-64 64z"/></svg></div>
+                <div class="mini-joker is-spent"><svg class="ji" viewBox="0 0 512 512" width="15" height="15" aria-hidden="true"><path d="M142.9 142.9c-17.5 17.5-30.1 38-37.8 59.8c-5.9 16.7-24.2 25.4-40.8 19.5s-25.4-24.2-19.5-40.8C55.6 150.7 73.2 122 97.6 97.6c87.2-87.2 228.3-87.5 315.8-1L455 55c6.9-6.9 17.2-8.9 26.2-5.2s14.8 12.5 14.8 22.2l0 128c0 13.3-10.7 24-24 24l-8.4 0c0 0 0 0 0 0L344 224c-9.7 0-18.5-5.8-22.2-14.8s-1.7-19.3 5.2-26.2l41.1-41.1c-62.6-61.5-163.1-61.2-225.3 1zM16 312c0-13.3 10.7-24 24-24l7.6 0 .7 0L168 288c9.7 0 18.5 5.8 22.2 14.8s1.7 19.3-5.2 26.2l-41.1 41.1c62.6 61.5 163.1 61.2 225.3-1c17.5-17.5 30.1-38 37.8-59.8c5.9-16.7 24.2-25.4 40.8-19.5s25.4 24.2 19.5 40.8c-10.8 30.6-28.4 59.3-52.9 83.8c-87.2 87.2-228.3 87.5-315.8 1L57 457c-6.9 6.9-17.2 8.9-26.2 5.2S16 449.7 16 440l0-119.6 0-.7 0-7.6z"/></svg></div>
+                <div class="mini-joker"><svg class="ji" viewBox="0 0 384 512" width="15" height="15" aria-hidden="true"><path d="M272 384c9.6-31.9 29.5-59.1 49.2-86.2c0 0 0 0 0 0c5.2-7.1 10.4-14.2 15.4-21.4c19.8-28.5 31.4-63 31.4-100.3C368 78.8 289.2 0 192 0S16 78.8 16 176c0 37.3 11.6 71.9 31.4 100.3c5 7.2 10.2 14.3 15.4 21.4c0 0 0 0 0 0c19.8 27.1 39.7 54.4 49.2 86.2l160 0zM192 512c44.2 0 80-35.8 80-80l0-16-160 0 0 16c0 44.2 35.8 80 80 80zM112 176c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.9 50.1-112 112-112c8.8 0 16 7.2 16 16s-7.2 16-16 16c-44.2 0-80 35.8-80 80z"/></svg></div>
+                <div class="mini-joker is-spent"><svg class="ji" viewBox="0 0 640 512" width="15" height="15" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8L173.1 413.7c28.1 28.1 73.7 28.1 101.8 0L413.7 274.9c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zM96 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 376a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM352 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 120a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-192c0-35.3-28.7-64-64-64l-114.3 0c11.6 36 3.1 77-25.4 105.5L320 413.8l0 34.2zM480 328a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg></div>
+                <div class="mini-joker"><svg class="ji" viewBox="0 0 448 512" width="15" height="15" aria-hidden="true"><path d="M246.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 109.3 361.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160zm160 352l-160-160c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 301.3 361.4 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3z"/></svg><span class="mini-count">2</span></div>
+              </div>
+              <div class="slide-foot">
+                <span class="dot dot--on"></span><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+              </div>
+            </div>
+            <button class="arrow">›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Spielfeld-Ansicht · nächster</div>
+      <div class="slot-hint">gewischt oder über die Pfeile</div>
+      <div class="phone">
+        <div class="sheet-backdrop"></div>
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#F97316" data-cells=".x...x.x.x..x..."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="sheet qt-doodles qt-doodles--deep">
+          <div class="sheet-title">Spielfelder</div>
+          <div class="slide-nav">
+            <button class="arrow">‹</button>
+            <div class="slide">
+              <div class="slide-head">
+                <span class="chip" style="background:var(--p-orange)"></span>
+                <span class="slide-name">Anna</span>
+              </div>
+              <div data-board data-size="4" data-color="#F97316" data-cells=".x...x.x.x..x..."></div>
+              <div class="slide-stats">
+                <div class="stat"><span class="stat-value">5</span><span class="stat-label">Stifte</span></div>
+                <div class="stat"><span class="stat-value">5/9</span><span class="stat-label">Richtig</span></div>
+                <div class="stat"><span class="stat-value">2</span><span class="stat-label">Joker</span></div>
+              </div>
+              <div class="slide-jokers">
+                <div class="mini-joker is-spent"><svg class="ji" viewBox="0 0 512 512" width="15" height="15" aria-hidden="true"><path d="M403.8 34.4c12-5 25.7-2.2 34.9 6.9l64 64c6 6 9.4 14.1 9.4 22.6s-3.4 16.6-9.4 22.6l-64 64c-9.2 9.2-22.9 11.9-34.9 6.9s-19.8-16.6-19.8-29.6l0-32-32 0c-10.1 0-19.6 4.7-25.6 12.8L284 229.3 244 176l31.2-41.6C293.3 110.2 321.8 96 352 96l32 0 0-32c0-12.9 7.8-24.6 19.8-29.6zM164 282.7L204 336l-31.2 41.6C154.7 401.8 126.2 416 96 416l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c10.1 0 19.6-4.7 25.6-12.8L164 282.7zm274.6 188c-9.2 9.2-22.9 11.9-34.9 6.9s-19.8-16.6-19.8-29.6l0-32-32 0c-30.2 0-58.7-14.2-76.8-38.4L121.6 172.8c-6-8.1-15.5-12.8-25.6-12.8l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c30.2 0 58.7 14.2 76.8 38.4L326.4 339.2c6 8.1 15.5 12.8 25.6 12.8l32 0 0-32c0-12.9 7.8-24.6 19.8-29.6s25.7-2.2 34.9 6.9l64 64c6 6 9.4 14.1 9.4 22.6s-3.4 16.6-9.4 22.6l-64 64z"/></svg></div>
+                <div class="mini-joker"><svg class="ji" viewBox="0 0 512 512" width="15" height="15" aria-hidden="true"><path d="M142.9 142.9c-17.5 17.5-30.1 38-37.8 59.8c-5.9 16.7-24.2 25.4-40.8 19.5s-25.4-24.2-19.5-40.8C55.6 150.7 73.2 122 97.6 97.6c87.2-87.2 228.3-87.5 315.8-1L455 55c6.9-6.9 17.2-8.9 26.2-5.2s14.8 12.5 14.8 22.2l0 128c0 13.3-10.7 24-24 24l-8.4 0c0 0 0 0 0 0L344 224c-9.7 0-18.5-5.8-22.2-14.8s-1.7-19.3 5.2-26.2l41.1-41.1c-62.6-61.5-163.1-61.2-225.3 1zM16 312c0-13.3 10.7-24 24-24l7.6 0 .7 0L168 288c9.7 0 18.5 5.8 22.2 14.8s1.7 19.3-5.2 26.2l-41.1 41.1c62.6 61.5 163.1 61.2 225.3-1c17.5-17.5 30.1-38 37.8-59.8c5.9-16.7 24.2-25.4 40.8-19.5s25.4 24.2 19.5 40.8c-10.8 30.6-28.4 59.3-52.9 83.8c-87.2 87.2-228.3 87.5-315.8 1L57 457c-6.9 6.9-17.2 8.9-26.2 5.2S16 449.7 16 440l0-119.6 0-.7 0-7.6z"/></svg></div>
+                <div class="mini-joker is-spent"><svg class="ji" viewBox="0 0 384 512" width="15" height="15" aria-hidden="true"><path d="M272 384c9.6-31.9 29.5-59.1 49.2-86.2c0 0 0 0 0 0c5.2-7.1 10.4-14.2 15.4-21.4c19.8-28.5 31.4-63 31.4-100.3C368 78.8 289.2 0 192 0S16 78.8 16 176c0 37.3 11.6 71.9 31.4 100.3c5 7.2 10.2 14.3 15.4 21.4c0 0 0 0 0 0c19.8 27.1 39.7 54.4 49.2 86.2l160 0zM192 512c44.2 0 80-35.8 80-80l0-16-160 0 0 16c0 44.2 35.8 80 80 80zM112 176c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.9 50.1-112 112-112c8.8 0 16 7.2 16 16s-7.2 16-16 16c-44.2 0-80 35.8-80 80z"/></svg></div>
+                <div class="mini-joker is-spent"><svg class="ji" viewBox="0 0 640 512" width="15" height="15" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8L173.1 413.7c28.1 28.1 73.7 28.1 101.8 0L413.7 274.9c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zM96 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 376a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM352 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 120a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-192c0-35.3-28.7-64-64-64l-114.3 0c11.6 36 3.1 77-25.4 105.5L320 413.8l0 34.2zM480 328a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg></div>
+                <div class="mini-joker"><svg class="ji" viewBox="0 0 512 512" width="15" height="15" aria-hidden="true"><path d="M256 0c17.7 0 32 14.3 32 32l0 10.4c93.7 13.9 167.7 88 181.6 181.6l10.4 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-10.4 0c-13.9 93.7-88 167.7-181.6 181.6l0 10.4c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-10.4C130.3 455.7 56.3 381.7 42.4 288L32 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l10.4 0C56.3 130.3 130.3 56.3 224 42.4L224 32c0-17.7 14.3-32 32-32zM107.4 288c12.5 58.3 58.4 104.1 116.6 116.6l0-20.6c0-17.7 14.3-32 32-32s32 14.3 32 32l0 20.6c58.3-12.5 104.1-58.4 116.6-116.6L384 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l20.6 0C392.1 165.7 346.3 119.9 288 107.4l0 20.6c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-20.6C165.7 119.9 119.9 165.7 107.4 224l20.6 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-20.6 0zM256 224a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></svg></div>
+              </div>
+              <div class="slide-foot">
+                <span class="dot"></span><span class="dot dot--on"></span><span class="dot"></span><span class="dot"></span>
+              </div>
+            </div>
+            <button class="arrow">›</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">BoardGrid · Zustände</div>
+      <div class="slot-hint">immer 4×4 · leer · Kandidaten · Gewinnlinie</div>
+      <div class="phone qt-doodles">
+        <div style="flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:space-around;padding:22px 16px">
+          <div style="text-align:center">
+            <div class="stat-label" style="margin-bottom:8px">Start mit 4 Zufalls-Stiften</div>
+            <div data-board data-size="4" data-color="#22C55E" data-cells=".x....x.x....x.."></div>
+          </div>
+          <div style="text-align:center">
+            <div class="stat-label" style="margin-bottom:8px">Kandidaten</div>
+            <div data-board data-size="4" data-color="#EF4444" data-cells="x....cc..c.x...."></div>
+          </div>
+          <div style="text-align:center">
+            <div class="stat-label" style="margin-bottom:8px">Gewinnlinie (Diagonale)</div>
+            <div data-board data-size="4" data-color="#EAB308" data-cells="L.x..L..x.L...xL"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">Joker bestätigen</div>
+      <div class="slot-hint">Joker sind einmalig — Tippen fragt erst nach</div>
+      <div class="phone">
+        <div class="joker-backdrop"></div>
+        <div class="topbar qt-doodles qt-doodles--deep">
+          <div class="mini-board" data-mini data-color="#3B82F6" data-cells="x.x.xxx........."></div>
+          <button class="badge"><span class="badge-value">4</span><span class="badge-chevron"></span></button>
+          <button class="icon-btn">⚙</button>
+        </div>
+        <div class="strip">
+          <div class="strip-left">
+            <div class="strip-identity"><div class="chip" style="background:var(--p-blue)"></div><div class="pname">Jonas</div></div>
+          </div>
+          <div class="strip-gutter"></div>
+          <div class="strip-right"><div class="pmeta">Wissenschaft · Physik</div></div>
+        </div>
+        <div class="panel qt-doodles qt-doodles--ink">
+          <div class="teaser">Kosmische Fahrpläne</div>
+          <div class="qtext">Wie lange braucht Jupiter für eine Umrundung der Sonne?</div>
+        </div>
+        <div class="options">
+          <button class="pill"><span class="pill-letter">A</span><span>Etwa 2 Jahre</span></button>
+          <button class="pill"><span class="pill-letter">B</span><span>Etwa 12 Jahre</span></button>
+          <button class="pill"><span class="pill-letter">C</span><span>Etwa 29 Jahre</span></button>
+          <button class="pill"><span class="pill-letter">D</span><span>Etwa 84 Jahre</span></button>
+        </div>
+
+        <div class="joker-sheet">
+          <div class="joker-hero"><svg class="ji" viewBox="0 0 384 512" width="30" height="30" aria-hidden="true"><path d="M272 384c9.6-31.9 29.5-59.1 49.2-86.2c0 0 0 0 0 0c5.2-7.1 10.4-14.2 15.4-21.4c19.8-28.5 31.4-63 31.4-100.3C368 78.8 289.2 0 192 0S16 78.8 16 176c0 37.3 11.6 71.9 31.4 100.3c5 7.2 10.2 14.3 15.4 21.4c0 0 0 0 0 0c19.8 27.1 39.7 54.4 49.2 86.2l160 0zM192 512c44.2 0 80-35.8 80-80l0-16-160 0 0 16c0 44.2 35.8 80 80 80zM112 176c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.9 50.1-112 112-112c8.8 0 16 7.2 16 16s-7.2 16-16 16c-44.2 0-80 35.8-80 80z"/></svg></div>
+          <div class="joker-name">Hinweis zeigen</div>
+          <p class="joker-desc">Zeigt einen Hinweis zur aktuellen Frage. Dieser Joker ist danach verbraucht.</p>
+          <div class="joker-actions">
+            <button class="cta cta--accent">Einsetzen</button>
+            <button class="cta cta--ghost">Zurück</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slot">
+      <div class="slot-label">JokerTray · Zustände</div>
+      <div class="slot-hint">verfügbar · mehrfach · verbraucht · Spezial</div>
+      <div class="phone qt-doodles">
+        <div style="flex:1 1 auto;display:flex;flex-direction:column;justify-content:center;gap:26px;padding:24px 18px">
+          <div>
+            <div class="stat-label" style="margin-bottom:9px;text-align:center">Auswahl-Phase</div>
+            <div class="tray" style="margin:0">
+              <div class="joker"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M403.8 34.4c12-5 25.7-2.2 34.9 6.9l64 64c6 6 9.4 14.1 9.4 22.6s-3.4 16.6-9.4 22.6l-64 64c-9.2 9.2-22.9 11.9-34.9 6.9s-19.8-16.6-19.8-29.6l0-32-32 0c-10.1 0-19.6 4.7-25.6 12.8L284 229.3 244 176l31.2-41.6C293.3 110.2 321.8 96 352 96l32 0 0-32c0-12.9 7.8-24.6 19.8-29.6zM164 282.7L204 336l-31.2 41.6C154.7 401.8 126.2 416 96 416l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c10.1 0 19.6-4.7 25.6-12.8L164 282.7zm274.6 188c-9.2 9.2-22.9 11.9-34.9 6.9s-19.8-16.6-19.8-29.6l0-32-32 0c-30.2 0-58.7-14.2-76.8-38.4L121.6 172.8c-6-8.1-15.5-12.8-25.6-12.8l-64 0c-17.7 0-32-14.3-32-32s14.3-32 32-32l64 0c30.2 0 58.7 14.2 76.8 38.4L326.4 339.2c6 8.1 15.5 12.8 25.6 12.8l32 0 0-32c0-12.9 7.8-24.6 19.8-29.6s25.7-2.2 34.9 6.9l64 64c6 6 9.4 14.1 9.4 22.6s-3.4 16.6-9.4 22.6l-64 64z"/></svg></div><div class="joker"><svg class="ji" viewBox="0 0 640 512" width="22" height="22" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8L173.1 413.7c28.1 28.1 73.7 28.1 101.8 0L413.7 274.9c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zM96 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 376a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM352 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 120a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-192c0-35.3-28.7-64-64-64l-114.3 0c11.6 36 3.1 77-25.4 105.5L320 413.8l0 34.2zM480 328a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg></div><div class="joker"><svg class="ji" viewBox="0 0 576 512" width="22" height="22" aria-hidden="true"><path d="M559.7 392.2c17.8-13.1 21.6-38.1 8.5-55.9s-38.1-21.6-55.9-8.5L392.6 416 272 416c-8.8 0-16-7.2-16-16s7.2-16 16-16l16 0 64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0-16 0-78.3 0c-29.1 0-57.3 9.9-80 28L68.8 384 32 384c-17.7 0-32 14.3-32 32l0 64c0 17.7 14.3 32 32 32l160 0 160.5 0c29 0 57.3-9.3 80.7-26.5l126.6-93.3zm-367-8.2c.3 0 .6 0 .9 0c0 0 0 0 0 0c-.3 0-.6 0-.9 0z"/></svg></div><div class="joker"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M256 0c17.7 0 32 14.3 32 32l0 10.4c93.7 13.9 167.7 88 181.6 181.6l10.4 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-10.4 0c-13.9 93.7-88 167.7-181.6 181.6l0 10.4c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-10.4C130.3 455.7 56.3 381.7 42.4 288L32 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l10.4 0C56.3 130.3 130.3 56.3 224 42.4L224 32c0-17.7 14.3-32 32-32zM107.4 288c12.5 58.3 58.4 104.1 116.6 116.6l0-20.6c0-17.7 14.3-32 32-32s32 14.3 32 32l0 20.6c58.3-12.5 104.1-58.4 116.6-116.6L384 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l20.6 0C392.1 165.7 346.3 119.9 288 107.4l0 20.6c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-20.6C165.7 119.9 119.9 165.7 107.4 224l20.6 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-20.6 0zM256 224a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></svg></div>
+            </div>
+          </div>
+          <div>
+            <div class="stat-label" style="margin-bottom:9px;text-align:center">Frage-Phase</div>
+            <div class="tray" style="margin:0">
+              <div class="joker"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M142.9 142.9c-17.5 17.5-30.1 38-37.8 59.8c-5.9 16.7-24.2 25.4-40.8 19.5s-25.4-24.2-19.5-40.8C55.6 150.7 73.2 122 97.6 97.6c87.2-87.2 228.3-87.5 315.8-1L455 55c6.9-6.9 17.2-8.9 26.2-5.2s14.8 12.5 14.8 22.2l0 128c0 13.3-10.7 24-24 24l-8.4 0c0 0 0 0 0 0L344 224c-9.7 0-18.5-5.8-22.2-14.8s-1.7-19.3 5.2-26.2l41.1-41.1c-62.6-61.5-163.1-61.2-225.3 1zM16 312c0-13.3 10.7-24 24-24l7.6 0 .7 0L168 288c9.7 0 18.5 5.8 22.2 14.8s1.7 19.3-5.2 26.2l-41.1 41.1c62.6 61.5 163.1 61.2 225.3-1c17.5-17.5 30.1-38 37.8-59.8c5.9-16.7 24.2-25.4 40.8-19.5s25.4 24.2 19.5 40.8c-10.8 30.6-28.4 59.3-52.9 83.8c-87.2 87.2-228.3 87.5-315.8 1L57 457c-6.9 6.9-17.2 8.9-26.2 5.2S16 449.7 16 440l0-119.6 0-.7 0-7.6z"/></svg></div><div class="joker"><svg class="ji" viewBox="0 0 384 512" width="22" height="22" aria-hidden="true"><path d="M272 384c9.6-31.9 29.5-59.1 49.2-86.2c0 0 0 0 0 0c5.2-7.1 10.4-14.2 15.4-21.4c19.8-28.5 31.4-63 31.4-100.3C368 78.8 289.2 0 192 0S16 78.8 16 176c0 37.3 11.6 71.9 31.4 100.3c5 7.2 10.2 14.3 15.4 21.4c0 0 0 0 0 0c19.8 27.1 39.7 54.4 49.2 86.2l160 0zM192 512c44.2 0 80-35.8 80-80l0-16-160 0 0 16c0 44.2 35.8 80 80 80zM112 176c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.9 50.1-112 112-112c8.8 0 16 7.2 16 16s-7.2 16-16 16c-44.2 0-80 35.8-80 80z"/></svg></div><div class="joker"><svg class="ji" viewBox="0 0 448 512" width="22" height="22" aria-hidden="true"><path d="M246.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 109.3 361.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160zm160 352l-160-160c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 301.3 361.4 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3z"/></svg><span class="joker-count">2</span></div><div class="joker is-spent"><svg class="ji" viewBox="0 0 640 512" width="22" height="22" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8L173.1 413.7c28.1 28.1 73.7 28.1 101.8 0L413.7 274.9c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zM96 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 376a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM352 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 120a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-192c0-35.3-28.7-64-64-64l-114.3 0c11.6 36 3.1 77-25.4 105.5L320 413.8l0 34.2zM480 328a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg></div>
+            </div>
+          </div>
+          <div>
+            <div class="stat-label" style="margin-bottom:9px;text-align:center">Alles verbraucht</div>
+            <div class="tray" style="margin:0">
+              <div class="joker is-spent"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M142.9 142.9c-17.5 17.5-30.1 38-37.8 59.8c-5.9 16.7-24.2 25.4-40.8 19.5s-25.4-24.2-19.5-40.8C55.6 150.7 73.2 122 97.6 97.6c87.2-87.2 228.3-87.5 315.8-1L455 55c6.9-6.9 17.2-8.9 26.2-5.2s14.8 12.5 14.8 22.2l0 128c0 13.3-10.7 24-24 24l-8.4 0c0 0 0 0 0 0L344 224c-9.7 0-18.5-5.8-22.2-14.8s-1.7-19.3 5.2-26.2l41.1-41.1c-62.6-61.5-163.1-61.2-225.3 1zM16 312c0-13.3 10.7-24 24-24l7.6 0 .7 0L168 288c9.7 0 18.5 5.8 22.2 14.8s1.7 19.3-5.2 26.2l-41.1 41.1c62.6 61.5 163.1 61.2 225.3-1c17.5-17.5 30.1-38 37.8-59.8c5.9-16.7 24.2-25.4 40.8-19.5s25.4 24.2 19.5 40.8c-10.8 30.6-28.4 59.3-52.9 83.8c-87.2 87.2-228.3 87.5-315.8 1L57 457c-6.9 6.9-17.2 8.9-26.2 5.2S16 449.7 16 440l0-119.6 0-.7 0-7.6z"/></svg></div><div class="joker is-spent"><svg class="ji" viewBox="0 0 384 512" width="22" height="22" aria-hidden="true"><path d="M272 384c9.6-31.9 29.5-59.1 49.2-86.2c0 0 0 0 0 0c5.2-7.1 10.4-14.2 15.4-21.4c19.8-28.5 31.4-63 31.4-100.3C368 78.8 289.2 0 192 0S16 78.8 16 176c0 37.3 11.6 71.9 31.4 100.3c5 7.2 10.2 14.3 15.4 21.4c0 0 0 0 0 0c19.8 27.1 39.7 54.4 49.2 86.2l160 0zM192 512c44.2 0 80-35.8 80-80l0-16-160 0 0 16c0 44.2 35.8 80 80 80zM112 176c0 8.8-7.2 16-16 16s-16-7.2-16-16c0-61.9 50.1-112 112-112c8.8 0 16 7.2 16 16s-7.2 16-16 16c-44.2 0-80 35.8-80 80z"/></svg></div><div class="joker is-spent"><svg class="ji" viewBox="0 0 448 512" width="22" height="22" aria-hidden="true"><path d="M246.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 109.3 361.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160zm160 352l-160-160c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 301.3 361.4 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3z"/></svg></div><div class="joker is-spent"><svg class="ji" viewBox="0 0 640 512" width="22" height="22" aria-hidden="true"><path d="M274.9 34.3c-28.1-28.1-73.7-28.1-101.8 0L34.3 173.1c-28.1 28.1-28.1 73.7 0 101.8L173.1 413.7c28.1 28.1 73.7 28.1 101.8 0L413.7 274.9c28.1-28.1 28.1-73.7 0-101.8L274.9 34.3zM200 224a24 24 0 1 1 48 0 24 24 0 1 1 -48 0zM96 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 376a24 24 0 1 1 0-48 24 24 0 1 1 0 48zM352 200a24 24 0 1 1 0 48 24 24 0 1 1 0-48zM224 120a24 24 0 1 1 0-48 24 24 0 1 1 0 48zm96 328c0 35.3 28.7 64 64 64l192 0c35.3 0 64-28.7 64-64l0-192c0-35.3-28.7-64-64-64l-114.3 0c11.6 36 3.1 77-25.4 105.5L320 413.8l0 34.2zM480 328a24 24 0 1 1 0 48 24 24 0 1 1 0-48z"/></svg></div>
+            </div>
+          </div>
+          <div>
+            <div class="stat-label" style="margin-bottom:9px;text-align:center">Spezial-Joker (aus Slot 4)</div>
+            <div class="tray" style="margin:0">
+              <div class="joker"><svg class="ji" viewBox="0 0 576 512" width="22" height="22" aria-hidden="true"><path d="M559.7 392.2c17.8-13.1 21.6-38.1 8.5-55.9s-38.1-21.6-55.9-8.5L392.6 416 272 416c-8.8 0-16-7.2-16-16s7.2-16 16-16l16 0 64 0c17.7 0 32-14.3 32-32s-14.3-32-32-32l-64 0-16 0-78.3 0c-29.1 0-57.3 9.9-80 28L68.8 384 32 384c-17.7 0-32 14.3-32 32l0 64c0 17.7 14.3 32 32 32l160 0 160.5 0c29 0 57.3-9.3 80.7-26.5l126.6-93.3zm-367-8.2c.3 0 .6 0 .9 0c0 0 0 0 0 0c-.3 0-.6 0-.9 0z"/></svg></div><div class="joker"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M416 398.9c58.5-41.1 96-104.1 96-174.9C512 100.3 397.4 0 256 0S0 100.3 0 224c0 70.7 37.5 133.8 96 174.9c0 .4 0 .7 0 1.1l0 64c0 26.5 21.5 48 48 48l48 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 64 0 0-48c0-8.8 7.2-16 16-16s16 7.2 16 16l0 48 48 0c26.5 0 48-21.5 48-48l0-64c0-.4 0-.7 0-1.1zM96 256a64 64 0 1 1 128 0A64 64 0 1 1 96 256zm256-64a64 64 0 1 1 0 128 64 64 0 1 1 0-128z"/></svg></div><div class="joker"><svg class="ji" viewBox="0 0 512 512" width="22" height="22" aria-hidden="true"><path d="M256 0c17.7 0 32 14.3 32 32l0 10.4c93.7 13.9 167.7 88 181.6 181.6l10.4 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-10.4 0c-13.9 93.7-88 167.7-181.6 181.6l0 10.4c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-10.4C130.3 455.7 56.3 381.7 42.4 288L32 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l10.4 0C56.3 130.3 130.3 56.3 224 42.4L224 32c0-17.7 14.3-32 32-32zM107.4 288c12.5 58.3 58.4 104.1 116.6 116.6l0-20.6c0-17.7 14.3-32 32-32s32 14.3 32 32l0 20.6c58.3-12.5 104.1-58.4 116.6-116.6L384 288c-17.7 0-32-14.3-32-32s14.3-32 32-32l20.6 0C392.1 165.7 346.3 119.9 288 107.4l0 20.6c0 17.7-14.3 32-32 32s-32-14.3-32-32l0-20.6C165.7 119.9 119.9 165.7 107.4 224l20.6 0c17.7 0 32 14.3 32 32s-14.3 32-32 32l-20.6 0zM256 224a32 32 0 1 1 0 64 32 32 0 1 1 0-64z"/></svg></div><div class="joker"><svg class="ji" viewBox="0 0 448 512" width="22" height="22" aria-hidden="true"><path d="M246.6 41.4c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 109.3 361.4 246.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3l-160-160zm160 352l-160-160c-12.5-12.5-32.8-12.5-45.3 0l-160 160c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L224 301.3 361.4 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3z"/></svg></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<p class="note">
+  Statischer Mock — kein Store, kein State, keine Vue-Komponenten.
+  Spielerfarben 1:1 aus <code>types/session.ts</code>, Texte aus <code>i18n/de.json</code>.
+  Der <code>:root</code>-Block ist der Entwurf der Token-Ebene; die Screens würden anschließend
+  dagegen neu gebaut. Nicht enthalten: <code>GamblerConfirmScreen</code> und
+  <code>GamblerResolveScreen</code> — aktuell 12-zeilige Platzhalter ohne Inhalt.
+  <br><br>
+  Joker-Icons: <b>Font Awesome Free 6.7.2</b> (CC BY 4.0), als SVG-Subset lokal unter
+  <code>/assets/icons/jokers/</code> eingebunden — kein CDN, damit die Offline-Anforderung
+  aus <code>TECH.md</code> erhalten bleibt.
+</p>
+
+<script>
+  /* Boards are described by a compact cell string so the markup stays readable:
+       .  empty      x  peg
+       c  candidate  L  peg on the winning line
+       l  empty cell that is part of the highlighted line            */
+  document.querySelectorAll('[data-board]').forEach(function (el) {
+    var size = parseInt(el.dataset.size, 10);
+    var color = el.dataset.color;
+    var cellSize = parseInt(el.dataset.cellSize || '46', 10);
+    var pegSize = Math.round(cellSize * 0.65);
+    var cells = (el.dataset.cells || '').replace(/\s+/g, '');
+
+    el.classList.add('board');
+    el.style.gridTemplateColumns = 'repeat(' + size + ', ' + cellSize + 'px)';
+
+    for (var i = 0; i < size * size; i++) {
+      var ch = cells[i] || '.';
+      var cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.style.width = cellSize + 'px';
+      cell.style.height = cellSize + 'px';
+
+      if (ch === 'c') cell.classList.add('cell--cand');
+      if (ch === 'L' || ch === 'l') cell.classList.add('cell--line');
+
+      if (ch === 'x' || ch === 'L') {
+        var peg = document.createElement('span');
+        peg.className = 'peg';
+        peg.style.width = pegSize + 'px';
+        peg.style.height = pegSize + 'px';
+        peg.style.background =
+          'radial-gradient(circle at 35% 30%, ' + color + 'ee, ' + color + ' 55%, ' + color + 'bb 100%)';
+        cell.appendChild(peg);
+      }
+
+      if (el.dataset.labels) {
+        var label = document.createElement('span');
+        label.className = 'cell-label';
+        label.textContent = String.fromCharCode(65 + (i % size)) + (Math.floor(i / size) + 1);
+        cell.appendChild(label);
+      }
+
+      el.appendChild(cell);
+    }
+  });
+
+  /* The faint mini board in the top bar - same cell string vocabulary. */
+  document.querySelectorAll('[data-mini]').forEach(function (el) {
+    var color = el.dataset.color;
+    var cells = (el.dataset.cells || '').replace(/\s+/g, '');
+    for (var i = 0; i < 16; i++) {
+      var ch = cells[i] || '.';
+      var dot = document.createElement('i');
+      if (ch === 'x' || ch === 'L') dot.style.background = color;
+      el.appendChild(dot);
+    }
+  });
+
+  /* Victory confetti — static, purely to show the treatment */
+  var conf = document.getElementById('confetti');
+  if (conf) {
+    var COLORS = ['#EF4444', '#3B82F6', '#22C55E', '#EAB308', '#A855F7', '#F97316', '#E8705F', '#F0C24B'];
+    for (var i = 0; i < 70; i++) {
+      var bit = document.createElement('i');
+      bit.style.left = (Math.random() * 100) + '%';
+      bit.style.top = (Math.random() * 100) + '%';
+      bit.style.backgroundColor = COLORS[i % COLORS.length];
+      bit.style.transform = 'rotate(' + (Math.random() * 360) + 'deg)';
+      if (i % 4 === 0) bit.style.borderRadius = '50%';
+      conf.appendChild(bit);
+    }
+  }
+</script>
+
+</body>
+</html>

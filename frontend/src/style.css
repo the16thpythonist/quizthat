@@ -129,3 +129,840 @@ html, body {
 .animate-reveal-glow {
   animation: reveal-glow 0.15s ease-in-out;
 }
+
+/* ==================================================================
+   QuizThat design system
+   ------------------------------------------------------------------
+   Ported from the approved concept (public/design-preview.html).
+   Everything visual comes from the tokens below, so a palette change
+   is a one-block edit. Component classes live in @layer components so
+   Tailwind utilities can still override them at call sites.
+   ================================================================== */
+
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 700 900;
+  font-display: swap;
+  src: url('/assets/fonts/nunito-latin.woff2') format('woff2');
+}
+
+:root {
+  /* Ground */
+  --qt-ground-deep: #3F1263;
+  --qt-ground: #5B1E8C;
+  --qt-ground-pink: #A8248C;
+  --qt-ground-gradient: linear-gradient(158deg, #5B1E8C 0%, #7A1F8B 46%, #A8248C 100%);
+
+  /* Accent */
+  --qt-accent: #E8705F;
+  --qt-accent-shade: #CE5B4B;
+  --qt-accent-ink: #FFFFFF;
+
+  /* Panel */
+  --qt-panel: #FFFFFF;
+  --qt-ink: #4A1670;
+  --qt-ink-soft: #8B6BA8;
+
+  /* Verdict — muted green; a wrong pick recedes to plum rather than
+     competing with the coral of the answers themselves */
+  --qt-correct: #3E9E72;
+  --qt-wrong: #35114F;
+
+  /* Highlight — win line, 2x boost, the "special" tier */
+  --qt-gold: #F0C24B;
+
+  /* Form */
+  --qt-radius-pill: 999px;
+  --qt-shadow-pill: 0 4px 0 rgba(0, 0, 0, 0.18);
+  --qt-shadow-pill-sm: 0 3px 0 rgba(0, 0, 0, 0.18);
+  --qt-shadow-float: 0 6px 18px rgba(28, 5, 48, 0.28);
+  --qt-edge: 3px solid rgba(255, 255, 255, 0.45);
+  --qt-font: 'Nunito', 'Trebuchet MS', 'Segoe UI', system-ui, sans-serif;
+}
+
+html, body {
+  background-color: var(--qt-ground-deep);
+  font-family: var(--qt-font);
+}
+
+@layer components {
+
+  /* ---------- the ground every screen sits on ---------- */
+  .qt-screen {
+    display: flex;
+    flex-direction: column;
+    min-height: 100dvh;
+    background: var(--qt-ground-gradient);
+    color: #fff;
+    font-family: var(--qt-font);
+  }
+
+  /* ---------- doodle field ----------
+     Three strengths, because one opacity cannot read correctly on both
+     white and deep purple: base for the mid-purple ground, --deep for the
+     dark bar and sheets, --ink for the white question panel. */
+  .qt-doodles { position: relative; isolation: isolate; }
+  .qt-doodles::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: url('/assets/pattern/doodles.svg');
+    background-size: 200px 200px;
+    background-repeat: repeat;
+    opacity: 0.09;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .qt-doodles--deep::before { opacity: 0.07; }
+  .qt-doodles--ink::before {
+    background-image: url('/assets/pattern/doodles-ink.svg');
+    opacity: 0.13;
+  }
+  .qt-doodles > * { position: relative; z-index: 1; }
+
+  /* ---------- top bar ---------- */
+  .qt-topbar {
+    flex: 0 0 auto;
+    position: relative;
+    z-index: 30;
+    background: var(--qt-ground-deep);
+    padding: 14px 18px;
+    padding-top: calc(14px + env(safe-area-inset-top, 0px));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    overflow: visible;
+  }
+
+  .qt-icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.9);
+    background: transparent;
+    color: #fff;
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 19px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease, background 0.12s ease;
+  }
+  .qt-icon-btn:active { transform: scale(0.92); background: rgba(255, 255, 255, 0.16); }
+
+  /* The board tab: flush with the top of the bar, running its full height and
+     rounding into a semicircle where it hangs past the bottom edge. */
+  .qt-badge {
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: -26px;
+    transform: translateX(-50%);
+    width: 76px;
+    border-radius: 0 0 38px 38px;
+    background: var(--qt-ground-deep);
+    border: var(--qt-edge);
+    border-top: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-family: var(--qt-font);
+  }
+  .qt-badge-value { font-weight: 900; font-size: 26px; color: #fff; line-height: 1; }
+  .qt-badge-chevron {
+    width: 13px;
+    height: 13px;
+    border-right: 3px solid rgba(255, 255, 255, 0.85);
+    border-bottom: 3px solid rgba(255, 255, 255, 0.85);
+    transform: rotate(45deg) translate(-2px, -2px);
+    transition: transform 0.2s ease;
+  }
+  .qt-badge[aria-expanded='true'] .qt-badge-chevron {
+    transform: rotate(225deg) translate(-2px, -2px);
+  }
+
+  /* ---------- player strip ---------- */
+  .qt-strip {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 18px 12px;
+    color: #fff;
+  }
+  .qt-strip-left {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  .qt-strip-identity { display: flex; align-items: center; gap: 9px; min-width: 0; }
+  /* keeps the row clear of the badge hanging down into it */
+  .qt-strip-gutter { flex: 0 0 auto; width: 86px; }
+  .qt-strip-right {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+  .qt-chip {
+    flex: 0 0 auto;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+  }
+  .qt-pname {
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: 0.2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .qt-pmeta {
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    opacity: 0.6;
+    line-height: 1.35;
+    text-align: right;
+  }
+
+  /* ---------- question panel ---------- */
+  .qt-panel {
+    flex: 0 0 auto;
+    background: var(--qt-panel);
+    padding: 24px 24px 28px;
+    text-align: center;
+    box-shadow: var(--qt-shadow-float);
+  }
+  .qt-teaser {
+    font-weight: 700;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.4px;
+    color: var(--qt-ink-soft);
+    margin-bottom: 9px;
+  }
+  .qt-qtext { font-weight: 900; font-size: 23px; line-height: 1.25; color: var(--qt-ink); }
+  .qt-hintbox {
+    margin-top: 15px;
+    padding: 11px 13px;
+    border-radius: 14px;
+    background: rgba(240, 194, 75, 0.16);
+    border: 2px solid rgba(240, 194, 75, 0.45);
+    color: #7d5a10;
+    font-weight: 700;
+    font-size: 13px;
+    text-align: left;
+  }
+
+  /* ---------- answer pills ---------- */
+  .qt-options { flex: 1 1 auto; display: flex; flex-direction: column; gap: 12px; padding: 20px 18px 8px; }
+  .qt-pill {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 7px 16px 7px 7px;
+    border: none;
+    border-radius: var(--qt-radius-pill);
+    background: var(--qt-accent);
+    box-shadow: var(--qt-shadow-pill);
+    color: var(--qt-accent-ink);
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 17px;
+    text-align: left;
+    transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.18s ease, opacity 0.18s ease;
+  }
+  .qt-pill:active:not(:disabled) { transform: translateY(3px); box-shadow: var(--qt-shadow-pill-sm); }
+  .qt-pill-letter {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #fff;
+    color: var(--qt-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    transition: color 0.18s ease;
+  }
+  .qt-pill--correct { background: var(--qt-correct); }
+  .qt-pill--correct .qt-pill-letter { color: var(--qt-correct); }
+  .qt-pill--wrong { background: var(--qt-wrong); }
+  .qt-pill--wrong .qt-pill-letter { color: var(--qt-wrong); }
+  .qt-pill--muted { background: rgba(255, 255, 255, 0.14); box-shadow: none; opacity: 0.75; }
+  .qt-pill--muted .qt-pill-letter { background: rgba(255, 255, 255, 0.25); color: #fff; }
+
+  /* ---------- wide action button ---------- */
+  .qt-cta {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: var(--qt-radius-pill);
+    background: #fff;
+    color: var(--qt-ground);
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 16px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
+    box-shadow: var(--qt-shadow-pill);
+    transition: transform 0.12s ease, box-shadow 0.12s ease, opacity 0.18s ease;
+  }
+  .qt-cta:active:not(:disabled) { transform: translateY(3px); box-shadow: var(--qt-shadow-pill-sm); }
+  .qt-cta:disabled { opacity: 0.35; }
+  .qt-cta--accent { background: var(--qt-accent); color: #fff; }
+  .qt-cta--ghost {
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    box-shadow: none;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+  }
+  .qt-cta-bar { flex: 0 0 auto; padding: 14px 18px calc(20px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 10px; }
+
+  /* ---------- joker tray ---------- */
+  .qt-tray {
+    flex: 0 0 auto;
+    margin: 0 18px 18px;
+    padding: 9px;
+    border-radius: 20px;
+    background: rgba(0, 0, 0, 0.2);
+    display: flex;
+    justify-content: center;
+    gap: 9px;
+  }
+  .qt-joker {
+    position: relative;
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+    background: rgba(255, 255, 255, 0.12);
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.12s ease;
+  }
+  .qt-joker:active:not(:disabled) { transform: scale(0.92); }
+  .qt-joker:disabled { opacity: 0.3; }
+  .qt-joker-count {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--qt-accent);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qt-ji { fill: #fff; display: block; }
+
+  /* ---------- bingo board ---------- */
+  .qt-board {
+    margin: 0 auto;
+    display: grid;
+    gap: 7px;
+    padding: 11px;
+    border-radius: 18px;
+    background: rgba(0, 0, 0, 0.22);
+    width: max-content;
+  }
+  .qt-cell {
+    border-radius: 11px;
+    background: rgba(255, 255, 255, 0.07);
+    border: 2px solid rgba(255, 255, 255, 0.09);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+  }
+  .qt-peg {
+    border-radius: 50%;
+    box-shadow: inset 0 -3px 6px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.25), 0 2px 5px rgba(0, 0, 0, 0.4);
+  }
+  /* both need the .qt-board prefix to outweigh .qt-cell above */
+  .qt-board .qt-cell--line { border-color: var(--qt-gold); background: rgba(240, 194, 75, 0.16); }
+  .qt-board .qt-cell--cand {
+    border-color: var(--qt-accent);
+    background: rgba(232, 112, 95, 0.22);
+    animation: qt-cand 1.6s ease-in-out infinite;
+  }
+  @keyframes qt-cand { 0%, 100% { opacity: 0.75; } 50% { opacity: 1; } }
+  .qt-cell-label { position: absolute; bottom: 2px; right: 4px; font-size: 9px; font-weight: 900; opacity: 0.45; }
+
+  /* ---------- mini board in the bar ----------
+     A hushed read-out of the current player's own board, standing where a
+     help button would otherwise sit. Replaces the peg count: same
+     information, but as position rather than as a number. */
+  .qt-mini-board { display: grid; grid-template-columns: repeat(4, 8px); gap: 2px; opacity: 0.45; }
+  .qt-mini-board i { width: 8px; height: 8px; border-radius: 2px; background: rgba(255, 255, 255, 0.16); display: block; }
+
+  /* ---------- sheets ---------- */
+  .qt-backdrop { position: fixed; inset: 0; background: rgba(10, 2, 18, 0.55); z-index: 40; }
+  .qt-sheet {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    background: var(--qt-ground-deep);
+    border: var(--qt-edge);
+    border-top: none;
+    border-radius: 0 0 30px 30px;
+    box-shadow: 0 22px 44px rgba(0, 0, 0, 0.62), 0 6px 0 rgba(0, 0, 0, 0.18);
+    padding: calc(74px + env(safe-area-inset-top, 0px)) 18px 20px;
+    color: #fff;
+  }
+  .qt-sheet-title {
+    text-align: center;
+    font-weight: 900;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1.6px;
+    opacity: 0.55;
+    margin-bottom: 14px;
+  }
+  /* rises from the bottom instead — the joker confirmation */
+  .qt-sheet--up {
+    top: auto;
+    bottom: 0;
+    border: var(--qt-edge);
+    border-bottom: none;
+    border-radius: 30px 30px 0 0;
+    box-shadow: 0 -22px 44px rgba(0, 0, 0, 0.6);
+    padding: 24px 22px calc(26px + env(safe-area-inset-bottom, 0px));
+    text-align: center;
+  }
+
+  .qt-slide-nav { display: flex; align-items: center; gap: 12px; }
+  .qt-arrow {
+    flex: 0 0 auto;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: transparent;
+    color: #fff;
+    font-size: 17px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qt-arrow:disabled { opacity: 0.25; }
+  .qt-slide { flex: 1 1 auto; min-width: 0; }
+  .qt-slide-head { display: flex; align-items: center; justify-content: center; gap: 9px; margin-bottom: 12px; }
+  .qt-slide-name { font-weight: 900; font-size: 17px; }
+  .qt-slide-badge {
+    font-size: 10px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 3px 9px;
+    border-radius: var(--qt-radius-pill);
+    background: rgba(255, 255, 255, 0.2);
+  }
+  .qt-slide-stats { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 13px; }
+  .qt-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    padding: 6px 13px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.09);
+  }
+  .qt-stat-value { font-weight: 900; font-size: 16px; }
+  .qt-stat-label { font-weight: 700; font-size: 9px; text-transform: uppercase; letter-spacing: 0.9px; opacity: 0.55; }
+  .qt-slide-jokers { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 9px; }
+  .qt-mini-joker {
+    position: relative;
+    width: 31px;
+    height: 31px;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qt-mini-joker.is-spent { opacity: 0.25; }
+  .qt-mini-count {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 15px;
+    height: 15px;
+    border-radius: 50%;
+    background: var(--qt-accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 900;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .qt-slide-foot { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 13px; }
+  .qt-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255, 255, 255, 0.28); }
+  .qt-dot--on { background: #fff; width: 22px; border-radius: var(--qt-radius-pill); }
+
+  /* joker confirmation */
+  .qt-joker-hero {
+    width: 64px;
+    height: 64px;
+    border-radius: 20px;
+    background: var(--qt-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 14px;
+    box-shadow: var(--qt-shadow-pill);
+  }
+  .qt-joker-name { font-size: 21px; font-weight: 900; margin-bottom: 7px; }
+  .qt-joker-desc { font-size: 13px; font-weight: 700; line-height: 1.5; opacity: 0.7; margin: 0 0 18px; }
+
+  /* ---------- gate screens (full-bleed player colour) ---------- */
+  .qt-gate {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    text-align: center;
+    color: #fff;
+  }
+  .qt-gate-initial {
+    width: 104px;
+    height: 104px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 50px;
+    font-weight: 900;
+    background: rgba(255, 255, 255, 0.16);
+    border: 4px solid rgba(255, 255, 255, 0.55);
+    margin-bottom: 20px;
+  }
+  .qt-gate-title { font-size: 36px; font-weight: 900; line-height: 1.1; margin: 0 0 10px; }
+  .qt-gate-sub { font-size: 14px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.4px; opacity: 0.65; margin: 0; }
+  .qt-gate-tap { margin-top: 6px; font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.6px; opacity: 0.6; }
+
+  /* ---------- verdict screens ---------- */
+  .qt-verdict {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    text-align: center;
+    color: #fff;
+  }
+  .qt-verdict-mark {
+    width: 110px;
+    height: 110px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 56px;
+    font-weight: 900;
+    margin-bottom: 20px;
+    border: 5px solid rgba(255, 255, 255, 0.5);
+  }
+  .qt-verdict-title { font-size: 40px; font-weight: 900; margin: 0 0 8px; }
+  .qt-reveal {
+    margin-top: 22px;
+    padding: 14px 18px;
+    border-radius: 18px;
+    background: rgba(0, 0, 0, 0.22);
+    border: 2px solid rgba(255, 255, 255, 0.18);
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  /* the player who inherits a failed question, named in their own colour
+     without the ground becoming theirs — it is not their turn yet */
+  .qt-next-up { display: flex; flex-direction: column; align-items: center; margin-top: 26px; }
+  .qt-next-avatar {
+    width: 76px;
+    height: 76px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 36px;
+    font-weight: 900;
+    color: #fff;
+    border: 4px solid rgba(255, 255, 255, 0.5);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+    margin-bottom: 12px;
+  }
+  .qt-next-name { font-size: 28px; font-weight: 900; line-height: 1; }
+  .qt-next-sub { font-size: 13px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.4px; opacity: 0.6; margin-top: 6px; }
+
+  /* ---------- selection cards ---------- */
+  .qt-slots { flex: 1 1 auto; display: flex; flex-direction: column; gap: 11px; padding: 16px 16px 8px; }
+  .qt-slot-card {
+    background: #fff;
+    border-radius: 22px;
+    padding: 13px 15px;
+    box-shadow: var(--qt-shadow-pill);
+    text-align: left;
+    border: none;
+    position: relative;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+  }
+  .qt-slot-card:active { transform: translateY(3px); box-shadow: var(--qt-shadow-pill-sm); }
+  .qt-slot-card--special { box-shadow: 0 4px 0 rgba(0, 0, 0, 0.18), 0 0 0 3px var(--qt-gold); }
+  .qt-slot-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 5px; gap: 10px; }
+  .qt-slot-cat { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.1px; color: var(--qt-ink-soft); }
+  .qt-slot-title { font-size: 18px; font-weight: 900; color: var(--qt-ink); line-height: 1.2; margin-bottom: 8px; }
+  .qt-slot-bottom { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .qt-tier {
+    font-size: 9px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    border-radius: var(--qt-radius-pill);
+    background: var(--qt-accent);
+    color: #fff;
+  }
+  .qt-tier--special { background: var(--qt-gold); color: #4A2C00; }
+  .qt-placement { font-size: 11px; font-weight: 900; color: var(--qt-ink-soft); }
+
+  /* difficulty: filled skulls up to the level, pale ones for the rest */
+  .qt-diff { display: flex; align-items: center; gap: 3px; }
+  .qt-sk { fill: #D6C7E2; display: block; }
+  .qt-sk.on { fill: #2A1236; }
+
+  /* chips overhang the card's top edge: gold = doubled reward,
+     grey = a special joker is awarded for answering this one */
+  .qt-chips { position: absolute; top: -9px; right: 12px; display: flex; align-items: center; gap: 6px; }
+  .qt-boost, .qt-special {
+    font-size: 11px;
+    font-weight: 900;
+    padding: 3px 11px;
+    border-radius: var(--qt-radius-pill);
+    box-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
+    letter-spacing: 0.6px;
+  }
+  .qt-boost { background: var(--qt-gold); color: #4A2C00; }
+  .qt-special { background: #5E5170; color: #fff; text-transform: uppercase; font-size: 10px; }
+
+  /* ---------- setup ---------- */
+  .qt-setup-body { flex: 1 1 auto; overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 11px; }
+  .qt-player-row {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    background: rgba(255, 255, 255, 0.13);
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 10px 13px;
+    color: #fff;
+  }
+  .qt-avatar {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 17px;
+    flex: 0 0 auto;
+  }
+  .qt-row-x {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    background: transparent;
+    color: #fff;
+    font-weight: 900;
+    flex: 0 0 auto;
+  }
+  .qt-setting { background: rgba(0, 0, 0, 0.2); border-radius: 20px; padding: 12px 14px; color: #fff; }
+  .qt-setting-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.1px; opacity: 0.6; margin-bottom: 8px; }
+  .qt-seg { display: flex; gap: 7px; }
+  .qt-seg > button {
+    flex: 1 1 0;
+    padding: 9px 0;
+    border-radius: var(--qt-radius-pill);
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    background: transparent;
+    color: #fff;
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 13px;
+  }
+  .qt-seg > button.is-on { background: var(--qt-accent); border-color: var(--qt-accent); box-shadow: var(--qt-shadow-pill-sm); }
+  .qt-swatches { display: flex; gap: 9px; flex-wrap: wrap; }
+  .qt-swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.25); }
+  .qt-swatch.is-on { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25); }
+  .qt-swatch:disabled { opacity: 0.25; }
+  .qt-input {
+    width: 100%;
+    padding: 11px 14px;
+    border-radius: var(--qt-radius-pill);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.2);
+    color: #fff;
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 15px;
+  }
+  .qt-input::placeholder { color: rgba(255, 255, 255, 0.4); }
+
+  /* ---------- title screen ---------- */
+  .qt-title-wrap {
+    flex: 1 1 auto;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+  }
+  /* two copies of the doodle tile drifting at different speeds — parallax out
+     of the identity we already have, rather than new artwork */
+  .qt-drift {
+    position: absolute;
+    inset: -20%;
+    background-image: url('/assets/pattern/doodles.svg');
+    background-repeat: repeat;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .qt-drift--far { background-size: 200px 200px; opacity: 0.10; animation: qt-drift-far 120s linear infinite; }
+  .qt-drift--near { background-size: 260px 260px; opacity: 0.06; animation: qt-drift-near 75s linear infinite; }
+  @keyframes qt-drift-far { from { background-position: 0 0; } to { background-position: 200px -200px; } }
+  @keyframes qt-drift-near { from { background-position: 0 0; } to { background-position: -260px 260px; } }
+  .qt-title-wrap > *:not(.qt-drift) { position: relative; z-index: 1; }
+
+  .qt-game-title {
+    font-size: 52px;
+    font-weight: 900;
+    color: #fff;
+    margin: 0;
+    letter-spacing: -1px;
+    text-shadow: 0 5px 0 rgba(0, 0, 0, 0.22);
+    animation: qt-bob 4.5s ease-in-out infinite;
+  }
+  @keyframes qt-bob {
+    0%, 100% { transform: translateY(0) rotate(-1.2deg); }
+    50% { transform: translateY(-9px) rotate(-1.2deg); }
+  }
+  .qt-game-sub {
+    font-size: 12px;
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: 2.4px;
+    opacity: 0.6;
+    margin: 6px 0 40px;
+    color: #fff;
+  }
+  .qt-menu { width: 100%; display: flex; flex-direction: column; gap: 12px; }
+
+  /* ---------- map question ---------- */
+  .qt-map-wrap { flex: 1 1 auto; position: relative; display: flex; }
+  .qt-map-frame { flex: 1 1 auto; overflow: hidden; border-top: 2px solid rgba(255, 255, 255, 0.25); }
+  .qt-map-cta {
+    position: absolute;
+    left: 18px;
+    right: 18px;
+    bottom: calc(20px + env(safe-area-inset-bottom, 0px));
+    z-index: 400;
+    width: auto;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), var(--qt-shadow-pill);
+  }
+
+  /* ---------- sorting question ---------- */
+  .qt-sort-list { display: flex; flex-direction: column; gap: 10px; padding: 20px 18px 8px; flex: 1 1 auto; }
+  .qt-sort-item {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    background: #fff;
+    border-radius: 18px;
+    padding: 12px 14px;
+    box-shadow: var(--qt-shadow-pill);
+    color: var(--qt-ink);
+    font-weight: 900;
+    font-size: 16px;
+  }
+  .qt-sort-rank {
+    width: 27px;
+    height: 27px;
+    border-radius: 50%;
+    background: var(--qt-accent);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex: 0 0 auto;
+  }
+  .qt-sort-grip { margin-left: auto; opacity: 0.3; font-size: 17px; }
+  .qt-sort-item--drag { transform: rotate(-1.4deg) scale(1.03); box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35); }
+
+  /* ---------- calculation question ---------- */
+  .qt-calc-wrap { flex: 1 1 auto; padding: 18px 18px 8px; display: flex; flex-direction: column; gap: 12px; }
+  .qt-calc-display {
+    background: #fff;
+    border-radius: 20px;
+    padding: 15px 18px;
+    display: flex;
+    align-items: baseline;
+    justify-content: flex-end;
+    gap: 8px;
+    box-shadow: var(--qt-shadow-pill);
+  }
+  .qt-calc-value { font-size: 31px; font-weight: 900; color: var(--qt-ink); }
+  .qt-calc-unit { font-size: 14px; font-weight: 900; color: var(--qt-ink-soft); }
+  .qt-keypad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .qt-key {
+    padding: 13px 0;
+    border-radius: 17px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.12);
+    color: #fff;
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 19px;
+  }
+  .qt-key--del { background: rgba(0, 0, 0, 0.25); }
+
+  /* ---------- victory ---------- */
+  .qt-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+  .qt-confetti i { position: absolute; display: block; width: 7px; height: 11px; border-radius: 1px; opacity: 0.85; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qt-drift, .qt-game-title, .qt-board .qt-cell--cand { animation: none; }
+}

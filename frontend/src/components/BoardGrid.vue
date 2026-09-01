@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref, watch, computed } from 'vue'
 import type { Board, PlayerColor } from '../types/session'
 import { COLOR_HEX } from '../types/session'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   board: Board
   playerColor: PlayerColor
   winningLine?: [number, number][] | null
@@ -11,16 +11,21 @@ const props = defineProps<{
   interactive?: boolean
   revealingFields?: [number, number][]
   lastPlacedField?: [number, number] | null
-}>()
+  /** Cell edge length in px — smaller inside the board sheet than on the placement screen. */
+  cellSize?: number
+  /** Show A1..D4 labels; on for placement, off for read-only views. */
+  labels?: boolean
+}>(), {
+  cellSize: 46,
+  labels: false,
+})
 
 const emit = defineEmits<{
   fieldClick: [row: number, col: number]
 }>()
 
-// Track board shake
 const shaking = ref(false)
-
-// Track the slam field separately so it persists across re-renders
+// tracked separately so the slam survives re-renders
 const slamField = ref<[number, number] | null>(null)
 
 watch(() => props.lastPlacedField, (newVal) => {
@@ -31,6 +36,9 @@ watch(() => props.lastPlacedField, (newVal) => {
     setTimeout(() => { slamField.value = null }, 500)
   }
 })
+
+const pegSize = computed(() => Math.round(props.cellSize * 0.65))
+const color = computed(() => COLOR_HEX[props.playerColor])
 
 function isWinningField(row: number, col: number): boolean {
   return props.winningLine?.some(([r, c]) => r === row && c === col) ?? false
@@ -60,109 +68,57 @@ function handleClick(row: number, col: number) {
   }
 }
 
-function colLabel(col: number): string {
-  return String.fromCharCode(65 + col)
-}
-
-function cellStyle(row: number, col: number): Record<string, string> {
-  const winning = isWinningField(row, col)
-  const candidate = isCandidateField(row, col)
-  const revealing = isRevealingField(row, col)
-  const color = COLOR_HEX[props.playerColor]
-
-  return {
-    backgroundColor: revealing
-      ? color + '40'
-      : candidate
-        ? color + '25'
-        : 'rgba(255, 255, 255, 0.02)',
-    border: winning
-      ? '1.5px solid rgba(250, 204, 21, 0.6)'
-      : revealing
-        ? `1px solid ${color}60`
-        : '0.5px solid rgba(255, 255, 255, 0.06)',
-    boxShadow: winning
-      ? '0 0 12px rgba(250, 204, 21, 0.3)'
-      : revealing
-        ? `0 0 16px ${color}40, inset 0 0 12px ${color}30`
-        : candidate
-          ? `inset 0 0 12px ${color}20`
-          : 'inset 0 1px 2px rgba(0, 0, 0, 0.2)',
-    transition: 'background-color 0.1s, border-color 0.1s, box-shadow 0.1s',
-  }
+function fieldLabel(row: number, col: number): string {
+  return String.fromCharCode(65 + col) + (row + 1)
 }
 
 function pegStyle(row: number, col: number): Record<string, string> {
-  const color = COLOR_HEX[props.playerColor]
-  const winning = isWinningField(row, col)
-
+  const c = color.value
   return {
-    background: `radial-gradient(circle at 35% 30%, ${color}ee, ${color} 50%, ${color}bb 100%)`,
-    boxShadow: winning
-      ? `0 0 16px ${color}80, 0 2px 6px rgba(0, 0, 0, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.3), inset 0 2px 4px rgba(255, 255, 255, 0.2)`
-      : `0 2px 8px rgba(0, 0, 0, 0.5), inset 0 -3px 6px rgba(0, 0, 0, 0.25), inset 0 2px 4px rgba(255, 255, 255, 0.15)`,
+    width: pegSize.value + 'px',
+    height: pegSize.value + 'px',
+    background: `radial-gradient(circle at 35% 30%, ${c}ee, ${c} 55%, ${c}bb 100%)`,
+    ...(isWinningField(row, col)
+      ? { boxShadow: `0 0 16px ${c}80, inset 0 -3px 6px rgba(0,0,0,0.3), inset 0 2px 4px rgba(255,255,255,0.25)` }
+      : {}),
   }
 }
 </script>
 
 <template>
   <div
-    class="inline-block p-3 rounded-xl"
+    class="qt-board"
     :class="shaking ? 'animate-board-shake' : ''"
-    :style="{
-      background: 'linear-gradient(135deg, rgba(15, 15, 25, 0.8) 0%, rgba(10, 10, 18, 0.9) 100%)',
-      border: '1px solid rgba(255, 255, 255, 0.06)',
-      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.03)'
-    }"
+    :style="{ gridTemplateColumns: `repeat(${board.size}, ${cellSize}px)` }"
   >
-    <!-- Column labels -->
-    <div class="flex ml-8">
+    <template v-for="r in board.size" :key="'row-' + r">
       <div
         v-for="c in board.size"
-        :key="'col-' + c"
-        class="w-12 h-6 flex items-center justify-center text-[10px] text-gray-500 font-mono tracking-wider"
-      >
-        {{ colLabel(c - 1) }}
-      </div>
-    </div>
-    <!-- Grid rows -->
-    <div
-      v-for="r in board.size"
-      :key="'row-' + r"
-      class="flex items-center"
-    >
-      <!-- Row label -->
-      <div class="w-8 h-12 flex items-center justify-center text-[10px] text-gray-500 font-mono tracking-wider">
-        {{ r }}
-      </div>
-      <!-- Fields -->
-      <div
-        v-for="c in board.size"
-        :key="'field-' + r + '-' + c"
-        class="w-12 h-12 flex items-center justify-center relative"
-        :class="[
-          isCandidateField(r - 1, c - 1) ? 'cursor-pointer animate-cell-pulse' : '',
-        ]"
-        :style="cellStyle(r - 1, c - 1)"
+        :key="'f-' + r + '-' + c"
+        class="qt-cell"
+        :class="{
+          'qt-cell--line': isWinningField(r - 1, c - 1),
+          'qt-cell--cand': isCandidateField(r - 1, c - 1) || isRevealingField(r - 1, c - 1),
+          'cursor-pointer': interactive && isCandidateField(r - 1, c - 1),
+        }"
+        :style="{ width: cellSize + 'px', height: cellSize + 'px' }"
         @click="handleClick(r - 1, c - 1)"
       >
-        <!-- Cell flash overlay on slam -->
         <div
           v-if="isSlamField(r - 1, c - 1)"
-          class="absolute inset-0 rounded-sm animate-cell-flash"
-          :style="{ backgroundColor: COLOR_HEX[playerColor] + '60' }"
+          class="absolute inset-0 rounded-[11px] animate-cell-flash"
+          :style="{ backgroundColor: color + '60' }"
         ></div>
-        <!-- Peg -->
-        <div
+
+        <span
           v-if="board.fields[r - 1]?.[c - 1]"
-          class="w-8 h-8 rounded-full"
-          :class="[
-            isWinningField(r - 1, c - 1) ? 'scale-110' : '',
-            isSlamField(r - 1, c - 1) ? 'animate-peg-slam' : '',
-          ]"
+          class="qt-peg"
+          :class="isSlamField(r - 1, c - 1) ? 'animate-peg-slam' : ''"
           :style="pegStyle(r - 1, c - 1)"
-        ></div>
+        ></span>
+
+        <span v-if="labels" class="qt-cell-label">{{ fieldLabel(r - 1, c - 1) }}</span>
       </div>
-    </div>
+    </template>
   </div>
 </template>

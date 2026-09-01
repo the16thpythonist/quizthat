@@ -1,8 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { JokerInventory, JokerType, GameState, PlayerColor } from '../types/session'
-import { COLOR_HEX } from '../types/session'
+import JokerIcon from './JokerIcon.vue'
 
 const { t } = useI18n()
 
@@ -19,20 +19,8 @@ const emit = defineEmits<{
 
 interface JokerDisplay {
   type: JokerType
-  icon: string
   count: number
   usable: boolean
-}
-
-const JOKER_ICONS: Record<JokerType, string> = {
-  reshuffle_selection: '🔄',
-  reshuffle_question: '🔃',
-  reveal_hint: '💡',
-  the_gambler: '🎲',
-  steal: '🫳',
-  curse: '💀',
-  snipe: '🎯',
-  double_down: '⬆️',
 }
 
 const SELECTION_JOKERS: JokerType[] = ['reshuffle_selection', 'the_gambler', 'steal', 'curse', 'snipe']
@@ -49,73 +37,69 @@ function isUsableInState(type: JokerType, state: GameState): boolean {
   return false
 }
 
-const jokerList = computed<JokerDisplay[]>(() => {
-  return ALL_JOKERS
+const jokerList = computed<JokerDisplay[]>(() =>
+  ALL_JOKERS
     .filter((type) => props.jokers[type] > 0)
-    .map((type) => {
-      const count = props.jokers[type]
-      const usedAlready = props.usedThisTurn.has(type)
-      return {
-        type,
-        icon: JOKER_ICONS[type],
-        count,
-        usable: !usedAlready && isUsableInState(type, props.gameState),
-      }
-    })
-})
+    .map((type) => ({
+      type,
+      count: props.jokers[type],
+      usable: !props.usedThisTurn.has(type) && isUsableInState(type, props.gameState),
+    })),
+)
 
 const hasJokers = computed(() => jokerList.value.length > 0)
 
-function handleJokerClick(joker: JokerDisplay) {
-  if (joker.usable) {
-    emit('useJoker', joker.type)
-  }
+/**
+ * Jokers are one-time-use, so tapping one asks before spending it rather than
+ * firing immediately. The sheet also carries the explanation, which is why the
+ * tray itself needs no labels.
+ */
+const pending = ref<JokerType | null>(null)
+
+function requestJoker(joker: JokerDisplay) {
+  if (!joker.usable) return
+  pending.value = joker.type
+}
+
+function confirmJoker() {
+  if (pending.value) emit('useJoker', pending.value)
+  pending.value = null
+}
+
+function cancelJoker() {
+  pending.value = null
 }
 </script>
 
 <template>
-  <div
-    v-if="hasJokers"
-    class="flex items-center justify-center py-3 px-4 rounded-xl mx-auto"
-    :style="{
-      width: '75%',
-      ...(props.playerColor ? {
-        background: `${COLOR_HEX[props.playerColor]}15`,
-        border: `1px solid ${COLOR_HEX[props.playerColor]}20`,
-      } : {
-        background: 'rgba(14, 14, 22, 0.95)',
-        border: '1px solid rgba(255, 255, 255, 0.06)',
-      }),
-    }"
-  >
-    <div class="flex items-center justify-center gap-3">
-      <button
-        v-for="joker in jokerList"
-        :key="joker.type"
-        class="relative flex items-center justify-center w-14 h-14 rounded-xl transition-all duration-200 touch-manipulation"
-        :class="[
-          joker.usable ? 'opacity-100 cursor-pointer hover:scale-110' : 'opacity-40 cursor-default',
-        ]"
-        :style="{
-          border: joker.usable
-            ? '1px solid rgba(255, 255, 255, 0.12)'
-            : '1px solid rgba(255, 255, 255, 0.04)',
-        }"
-        :title="t('jokerNames.' + joker.type)"
-        @click="handleJokerClick(joker)"
-      >
-        <span class="text-2xl">{{ joker.icon }}</span>
-        <span
-          v-if="joker.count > 1"
-          class="absolute -top-1.5 -right-1.5 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center"
-          :style="{
-            background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-            boxShadow: '0 0 8px rgba(99, 102, 241, 0.4), 0 1px 3px rgba(0, 0, 0, 0.3)',
-          }"
-        >
-          {{ joker.count }}
-        </span>
-      </button>
-    </div>
+  <div v-if="hasJokers" class="qt-tray">
+    <button
+      v-for="joker in jokerList"
+      :key="joker.type"
+      class="qt-joker"
+      :disabled="!joker.usable"
+      :title="t('jokerNames.' + joker.type)"
+      :aria-label="t('jokerNames.' + joker.type)"
+      @click="requestJoker(joker)"
+    >
+      <JokerIcon :type="joker.type" :size="22" />
+      <span v-if="joker.count > 1" class="qt-joker-count">{{ joker.count }}</span>
+    </button>
   </div>
+
+  <!-- confirmation, rising from the bottom -->
+  <template v-if="pending">
+    <div class="qt-backdrop" @click="cancelJoker"></div>
+    <div class="qt-sheet qt-sheet--up">
+      <div class="qt-joker-hero">
+        <JokerIcon :type="pending" :size="30" />
+      </div>
+      <div class="qt-joker-name">{{ t('jokerNames.' + pending) }}</div>
+      <p class="qt-joker-desc">{{ t('jokerDesc.' + pending) }}</p>
+      <div class="flex flex-col gap-2.5">
+        <button class="qt-cta qt-cta--accent" @click="confirmJoker">{{ t('joker.use') }}</button>
+        <button class="qt-cta qt-cta--ghost" @click="cancelJoker">{{ t('joker.cancel') }}</button>
+      </div>
+    </div>
+  </template>
 </template>
