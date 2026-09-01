@@ -4,6 +4,8 @@ import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import JokerTray from '../components/JokerTray.vue'
 import MapQuestion from '../components/MapQuestion.vue'
+import GameBar from '../components/GameBar.vue'
+import PlayerStrip from '../components/PlayerStrip.vue'
 import type {
   JokerType,
   MultipleChoiceAnswerData,
@@ -11,7 +13,7 @@ import type {
   CalculationAnswerData,
   MapLocationAnswerData,
 } from '../types/session'
-import { COLOR_HEX } from '../types/session'
+import { JOKER_ICONS } from '../components/jokerIcons'
 
 const { t } = useI18n()
 const game = useGameStore()
@@ -22,6 +24,14 @@ const isPassPhase = computed(() => game.state === 'pass_answering')
 const usedJokers = computed(() => game.turn?.jokers_used_this_turn ?? new Set<JokerType>())
 const hintRevealed = computed(() => game.turn?.hint_revealed ?? false)
 const doubleDownActive = computed(() => game.turn?.double_down_active ?? false)
+
+/** The slot this question came from — it carries the category, which the
+ *  question payload itself does not. */
+const selectedSlot = computed(() => {
+  const idx = game.turn?.selected_slot_index
+  if (idx === null || idx === undefined) return null
+  return game.turn?.offered_slots[idx] ?? null
+})
 
 // Time limit visual effect
 const timeFraction = ref(1)
@@ -180,28 +190,6 @@ function submitCalcAnswer() {
   game.submitAnswer(correct)
 }
 
-function calcKeyStyle(key: string): Record<string, string> {
-  if (key === 'submit') {
-    return {
-      background: 'linear-gradient(180deg, #16a34a 0%, #15803d 100%)',
-      border: '1px solid rgba(34, 197, 94, 0.3)',
-      boxShadow: '0 0 12px rgba(34, 197, 94, 0.2), 0 2px 8px rgba(0, 0, 0, 0.3)',
-    }
-  }
-  if (key === 'backspace') {
-    return {
-      background: 'linear-gradient(180deg, rgba(127, 29, 29, 0.7) 0%, rgba(80, 20, 20, 0.8) 100%)',
-      border: '1px solid rgba(239, 68, 68, 0.2)',
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
-    }
-  }
-  return {
-    background: 'linear-gradient(180deg, rgba(55, 55, 75, 0.9) 0%, rgba(40, 40, 55, 0.95) 100%)',
-    border: '1px solid rgba(255, 255, 255, 0.08)',
-    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.06)',
-  }
-}
-
 // --- Joker handlers ---
 function handleUseJoker(type: JokerType) {
   if (type === 'reveal_hint') {
@@ -218,213 +206,149 @@ function handleDecline() {
   game.submitPassAnswer('declined')
 }
 
+/** What the strip's right-hand line says on this screen. */
+const contextLine = computed(() => {
+  const q = question.value
+  if (!q) return ''
+  if (q.question_type === 'sorting') {
+    return t('question.sortInstruction', { metric: (q.answer_data as SortingAnswerData).metric })
+  }
+  if (q.question_type === 'calculation') return t('question.calcInstruction')
+  if (q.question_type === 'map_location') return t('question.mapInstruction')
+  return selectedSlot.value?.major_category ?? ''
+})
+
 // Init sorting if needed
 if (question.value?.question_type === 'sorting') {
   initSorting()
 }
 
-const CALC_KEYS = [
-  ['7', '8', '9'],
-  ['4', '5', '6'],
-  ['1', '2', '3'],
-  ['-', '0', '.'],
-  [',', 'backspace', 'submit'],
-]
+const CALC_KEYS = ['7', '8', '9', '4', '5', '6', '1', '2', '3', ',', '0', 'backspace']
+
+/** The hint bulb matches the joker that produced it. */
+const HINT_ICON = JOKER_ICONS.reveal_hint
 </script>
 
 <template>
-  <div
-    class="flex flex-col min-h-screen bg-game-dark text-white transition-colors duration-1000"
-    :style="bgStyle"
-  >
-    <!-- Header -->
-    <div
-      class="flex items-center justify-between px-6 py-3 glass-surface"
-      :style="player ? {
-        background: `${COLOR_HEX[player.color]}15`,
-        borderBottom: `1px solid ${COLOR_HEX[player.color]}25`,
-      } : {}"
-    >
-      <div class="flex items-center gap-3">
-        <div
-          class="w-8 h-8 rounded-full ring-2 ring-white/10"
-          :style="{
-            backgroundColor: player ? COLOR_HEX[player.color] : '#666',
-            boxShadow: player ? `0 0 12px ${COLOR_HEX[player.color]}60` : 'none'
-          }"
-        ></div>
-        <span class="font-semibold">{{ player?.name }}</span>
-      </div>
-      <div v-if="doubleDownActive" class="text-amber-400 font-bold text-sm animate-pulse">
-        {{ t('question.doubleDownActive') }}
-      </div>
+  <div class="qt-screen" :style="bgStyle">
+    <GameBar />
+    <PlayerStrip :player="player" :context="contextLine" />
+
+    <!-- Loading state when question data hasn't arrived yet -->
+    <div v-if="!question" class="flex flex-1 items-center justify-center">
+      <p class="qt-gate-sub animate-pulse">Loading…</p>
     </div>
 
-    <!-- Question content -->
-    <div class="flex-1 flex flex-col overflow-y-auto p-6">
-      <!-- Loading state when question data hasn't arrived yet -->
-      <div v-if="!question" class="flex items-center justify-center h-full">
-        <p class="text-gray-500 text-lg animate-pulse">Loading question…</p>
+    <template v-else>
+      <!-- The question itself, in the one bright region on the screen -->
+      <div class="qt-panel qt-doodles qt-doodles--ink">
+        <div v-if="question.teaser_title" class="qt-teaser">{{ question.teaser_title }}</div>
+        <div class="qt-qtext">{{ question.question_text }}</div>
+
+        <div v-if="doubleDownActive" class="qt-teaser" style="color: var(--qt-accent); margin: 10px 0 0">
+          {{ t('question.doubleDownActive') }}
+        </div>
+
+        <div v-if="hintRevealed && question.hint" class="qt-hintbox">
+          <svg
+            :viewBox="HINT_ICON.viewBox"
+            width="13"
+            height="13"
+            aria-hidden="true"
+            style="display: inline-block; vertical-align: -1px; fill: #7d5a10; margin-right: 4px"
+          ><path :d="HINT_ICON.d" /></svg>
+          {{ t('question.hint') }}: {{ question.hint }}
+        </div>
       </div>
 
-      <div v-else class="max-w-2xl mx-auto w-full" :class="question.question_type === 'map_location' ? 'flex flex-col flex-1 max-w-none' : ''">
-        <!-- Question mark icon -->
-        <div class="flex justify-center mb-5">
-          <div
-            class="w-16 h-16 rounded-full flex items-center justify-center text-3xl font-black"
-            :style="{
-              background: player ? `${COLOR_HEX[player.color]}18` : 'rgba(255,255,255,0.06)',
-              border: `2px solid ${player ? COLOR_HEX[player.color] + '40' : 'rgba(255,255,255,0.1)'}`,
-              color: player ? COLOR_HEX[player.color] : '#999',
-              boxShadow: player ? `0 0 20px ${COLOR_HEX[player.color]}20` : 'none',
-            }"
-          >?</div>
-        </div>
-
-        <!-- Question text -->
-        <h2
-          class="text-2xl md:text-3xl font-bold mb-8 leading-relaxed text-center"
-          :style="{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)' }"
+      <!-- Multiple Choice -->
+      <div v-if="question.question_type === 'multiple_choice'" class="qt-options">
+        <button
+          v-for="(option, idx) in (question.answer_data as MultipleChoiceAnswerData).options"
+          :key="idx"
+          class="qt-pill"
+          @click="handleMultipleChoiceAnswer(idx)"
         >
-          {{ question.question_text }}
-        </h2>
+          <span class="qt-pill-letter">{{ String.fromCharCode(65 + idx) }}</span>
+          <span class="flex-1">{{ option }}</span>
+        </button>
+      </div>
 
-        <!-- Hint -->
+      <!-- Sorting -->
+      <div
+        v-else-if="question.question_type === 'sorting'"
+        ref="sortListEl"
+        class="qt-sort-list"
+        @touchmove.prevent="onTouchMove"
+        @touchend="onTouchEnd"
+      >
         <div
-          v-if="hintRevealed && question?.hint"
-          class="mb-6 p-4 rounded-xl backdrop-blur-sm"
-          :style="{
-            background: 'linear-gradient(135deg, rgba(120, 53, 15, 0.25) 0%, rgba(80, 35, 10, 0.3) 100%)',
-            border: '1px solid rgba(217, 119, 6, 0.3)',
-            boxShadow: '0 0 20px rgba(245, 158, 11, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.05)'
-          }"
+          v-for="(item, idx) in sortItems"
+          :key="item.originalIndex"
+          draggable="true"
+          class="qt-sort-item select-none"
+          :class="dragIndex === idx || touchDragIdx === idx ? 'qt-sort-item--drag' : ''"
+          @dragstart="onDragStart(idx, $event)"
+          @dragover="onDragOver(idx, $event)"
+          @dragend="onDragEnd"
+          @touchstart="onTouchStart(idx, $event)"
         >
-          <span class="text-sm text-amber-400 font-semibold">{{ t('question.hint') }}:</span>
-          <p class="text-amber-200 mt-1">{{ question.hint }}</p>
+          <span class="qt-sort-rank">{{ idx + 1 }}</span>
+          <span>{{ item.text }}</span>
+          <span class="qt-sort-grip">⠿</span>
         </div>
+      </div>
 
-        <!-- Multiple Choice answers -->
-        <div
-          v-if="question?.question_type === 'multiple_choice'"
-          class="space-y-3"
-        >
+      <!-- Calculation -->
+      <div v-else-if="question.question_type === 'calculation'" class="qt-calc-wrap">
+        <div class="qt-calc-display">
+          <span class="qt-calc-value">{{ calcInput || '0' }}</span>
+          <span class="qt-calc-unit">{{ (question.answer_data as CalculationAnswerData).unit }}</span>
+        </div>
+        <div class="qt-keypad">
           <button
-            v-for="(option, idx) in (question.answer_data as MultipleChoiceAnswerData).options"
-            :key="idx"
-            class="w-full text-left p-5 rounded-2xl text-xl transition-all duration-200 touch-manipulation glass-card inner-shine hover:scale-[1.01] active:scale-[0.99]"
-            @click="handleMultipleChoiceAnswer(idx)"
+            v-for="key in CALC_KEYS"
+            :key="key"
+            class="qt-key"
+            :class="key === 'backspace' ? 'qt-key--del' : ''"
+            @click="handleCalcKey(key)"
           >
-            <span class="text-gray-500 font-mono mr-3 text-sm bg-white/5 w-7 h-7 inline-flex items-center justify-center rounded-lg">{{ String.fromCharCode(65 + idx) }}</span>
-            {{ option }}
+            {{ key === 'backspace' ? '⌫' : key }}
           </button>
         </div>
+      </div>
 
-        <!-- Sorting -->
-        <div v-else-if="question?.question_type === 'sorting'" class="space-y-4">
-          <p class="text-gray-400 text-sm mb-4">
-            {{ t('question.sortInstruction', { metric: (question.answer_data as SortingAnswerData).metric }) }}
-          </p>
-          <div ref="sortListEl" class="space-y-2" @touchmove.prevent="onTouchMove" @touchend="onTouchEnd">
-            <div
-              v-for="(item, idx) in sortItems"
-              :key="item.originalIndex"
-              draggable="true"
-              class="w-full p-5 rounded-2xl text-xl font-medium glass-card cursor-grab select-none"
-              :class="[
-                dragIndex === idx || touchDragIdx === idx ? 'opacity-40 scale-[0.97]' : 'hover:scale-[1.01]',
-              ]"
-              :style="{ transition: 'transform 0.2s, opacity 0.2s' }"
-              @dragstart="onDragStart(idx, $event)"
-              @dragover="onDragOver(idx, $event)"
-              @dragend="onDragEnd"
-              @touchstart="onTouchStart(idx, $event)"
-            >
-              <div class="flex items-center">
-                <span class="text-gray-500 mr-3 text-base">⠿</span>
-                <span class="text-gray-400 mr-3">{{ idx + 1 }}.</span>
-                {{ item.text }}
-              </div>
-            </div>
-          </div>
-          <button
-            class="w-full py-4 text-white text-lg font-bold rounded-2xl transition-all duration-200 touch-manipulation mt-4 hover:scale-[1.01] active:scale-[0.99]"
-            :style="{
-              background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-              boxShadow: '0 0 20px rgba(34, 197, 94, 0.2), 0 4px 16px rgba(0, 0, 0, 0.3)',
-              border: '1px solid rgba(34, 197, 94, 0.3)'
-            }"
-            @click="submitSortAnswer"
-          >
-            {{ t('question.submit') }}
-          </button>
-        </div>
-
-        <!-- Calculation -->
-        <div v-else-if="question?.question_type === 'calculation'" class="space-y-4">
-          <p class="text-gray-400 text-sm">{{ t('question.calcInstruction') }}</p>
-          <!-- Display -->
-          <div
-            class="rounded-xl p-4 text-right glass-card"
-            :style="{ boxShadow: 'inset 0 2px 8px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.3)' }"
-          >
-            <span class="text-3xl font-mono">
-              {{ calcInput || '0' }}
-            </span>
-            <span class="text-gray-400 text-lg ml-2">
-              {{ (question.answer_data as CalculationAnswerData).unit }}
-            </span>
-          </div>
-          <!-- Keypad -->
-          <div class="space-y-2">
-            <div
-              v-for="(row, rowIdx) in CALC_KEYS"
-              :key="rowIdx"
-              class="flex gap-2"
-            >
-              <button
-                v-for="key in row"
-                :key="key"
-                class="flex-1 py-4 rounded-xl text-xl font-bold transition-all duration-150 touch-manipulation hover:scale-[1.03] active:scale-[0.97] text-white"
-                :class="key === 'backspace' ? 'text-red-300' : ''"
-                :style="calcKeyStyle(key)"
-                @click="handleCalcKey(key)"
-              >
-                {{ key === 'backspace' ? '⌫' : key === 'submit' ? '✓' : key }}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Map Location -->
-        <div v-else-if="question?.question_type === 'map_location'" class="flex flex-col flex-1">
-          <p class="text-gray-400 text-sm mb-3 text-center">{{ t('question.mapInstruction') }}</p>
+      <!-- Map Location — fills everything below the panel, action floats on it -->
+      <div v-else-if="question.question_type === 'map_location'" class="qt-map-wrap">
+        <div class="qt-map-frame">
           <MapQuestion
             :answer-data="(question.answer_data as MapLocationAnswerData)"
             @answer="(correct: boolean) => game.submitAnswer(correct)"
           />
         </div>
-
-        <!-- Pass: Decline button -->
-        <div v-if="isPassPhase" class="mt-6">
-          <button
-            class="w-full py-3 text-gray-300 text-lg rounded-2xl transition-all duration-200 touch-manipulation glass-card hover:scale-[1.01] active:scale-[0.99]"
-            @click="handleDecline"
-          >
-            Decline
-          </button>
-        </div>
       </div>
-    </div>
 
-    <!-- Joker Tray (not during pass) -->
-    <div v-if="!isPassPhase && player" class="px-4 pb-4">
+      <!-- Submit, for the types that need an explicit confirm -->
+      <div v-if="question.question_type === 'sorting'" class="qt-cta-bar">
+        <button class="qt-cta qt-cta--accent" @click="submitSortAnswer">{{ t('question.submit') }}</button>
+      </div>
+      <div v-else-if="question.question_type === 'calculation'" class="qt-cta-bar">
+        <button class="qt-cta qt-cta--accent" @click="submitCalcAnswer">{{ t('question.submit') }}</button>
+      </div>
+
+      <!-- Pass: the inheriting player may decline rather than guess -->
+      <div v-if="isPassPhase" class="qt-cta-bar">
+        <button class="qt-cta qt-cta--ghost" @click="handleDecline">{{ t('passResolve.declined') }}</button>
+      </div>
+
       <JokerTray
+        v-if="!isPassPhase && player"
         :jokers="player.jokers"
         :used-this-turn="usedJokers"
         :player-color="player.color"
         game-state="question_display"
         @use-joker="handleUseJoker"
       />
-    </div>
+    </template>
   </div>
 </template>

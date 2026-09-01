@@ -3,7 +3,8 @@ import { computed, ref, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import BoardGrid from '../components/BoardGrid.vue'
-import { COLOR_HEX } from '../types/session'
+import GameBar from '../components/GameBar.vue'
+import PlayerStrip from '../components/PlayerStrip.vue'
 
 const { t } = useI18n()
 const game = useGameStore()
@@ -160,6 +161,16 @@ function handleFieldClick(row: number, col: number) {
   }
 }
 
+/** The constraint from the selection screen, restated so the player can check
+ *  the highlighted fields against what they were promised. */
+const constraintLabel = computed(() => {
+  const rule = game.turn?.placement_rule
+  if (!rule) return ''
+  if (rule.type === 'free') return t('selection.constraintFree')
+  if (rule.constraint) return rule.constraint.display
+  return t('selection.constraintRandom')
+})
+
 function handleContinueTap() {
   if (!awaitingContinueTap.value) return
   game.confirmEndTurn()
@@ -167,69 +178,41 @@ function handleContinueTap() {
 </script>
 
 <template>
-  <div
-    class="flex flex-col items-center justify-center min-h-screen bg-game-dark text-white p-6"
-    @click="awaitingContinueTap ? handleContinueTap() : undefined"
-  >
-    <!-- Player indicator -->
-    <div class="flex items-center gap-3 mb-4">
-      <div
-        class="w-10 h-10 rounded-full ring-2 ring-white/10"
-        :style="{
-          background: placingPlayer
-            ? `radial-gradient(circle at 35% 35%, ${COLOR_HEX[placingPlayer.color]}dd, ${COLOR_HEX[placingPlayer.color]})`
-            : '#666',
-          boxShadow: placingPlayer ? `0 0 16px ${COLOR_HEX[placingPlayer.color]}50` : 'none'
-        }"
-      ></div>
-      <span class="text-xl font-bold">{{ placingPlayer?.name }}</span>
-    </div>
+  <div class="qt-screen" @click="awaitingContinueTap ? handleContinueTap() : undefined">
+    <GameBar />
+    <PlayerStrip :player="placingPlayer" :context="t('board.placePeg')" />
 
-    <!-- Instruction -->
-    <h2
-      class="text-2xl font-bold mb-2"
-      :style="{ textShadow: '0 2px 8px rgba(0, 0, 0, 0.5)' }"
-    >
-      {{ t('board.placePeg') }}
-    </h2>
-    <p class="text-gray-400 mb-6">
-      {{ donePlacing ? '' : isRevealing ? t('board.revealing', 'Revealing fields...') : t('board.tapToPlace') }}
-    </p>
+    <div class="qt-verdict qt-doodles" style="justify-content: flex-start; padding-top: 30px">
+      <h1 style="font-size: 24px; font-weight: 900; margin: 0 0 6px">
+        {{ isFree ? t('board.placeFreely') : t('board.placePeg') }}
+      </h1>
+      <p class="qt-gate-sub" style="margin-bottom: 24px">
+        <template v-if="isRevealing">{{ t('board.revealing') }}</template>
+        <template v-else-if="pegsRemaining > 1">
+          {{ t('board.pegsRemaining', { count: pegsRemaining }) }}
+        </template>
+        <template v-else-if="donePlacing">{{ t('answer.continue') }}</template>
+        <template v-else>{{ constraintLabel }}</template>
+      </p>
 
-    <!-- Pegs remaining -->
-    <div
-      v-if="pegsRemaining > 1"
-      class="mb-4 text-amber-400 font-semibold px-4 py-1.5 rounded-full"
-      :style="{
-        background: 'rgba(245, 158, 11, 0.1)',
-        border: '1px solid rgba(245, 158, 11, 0.2)',
-        boxShadow: '0 0 12px rgba(245, 158, 11, 0.1)'
-      }"
-    >
-      {{ t('board.pegsRemaining', { count: pegsRemaining }) }}
-    </div>
-
-    <!-- Board -->
-    <div v-if="board && placingPlayer" class="mb-8">
       <BoardGrid
+        v-if="board && placingPlayer"
         :board="board"
         :player-color="placingPlayer.color"
         :candidate-fields="canInteract ? revealedCandidates : []"
         :revealing-fields="revealingFields"
         :interactive="canInteract"
         :last-placed-field="lastPlacedField"
+        labels
         @field-click="handleFieldClick"
       />
+
+      <p v-if="donePlacing" class="qt-gate-tap animate-pulse" style="margin-top: 26px">
+        {{ t('board.tapToContinue') }}
+      </p>
+      <p v-else-if="!isRevealing" class="qt-gate-tap" style="margin-top: 26px">
+        {{ t('board.tapToPlace') }}
+      </p>
     </div>
-
-    <!-- Peg count -->
-    <p v-if="!donePlacing" class="text-gray-500 text-sm">
-      {{ t('board.pegs', { count: board?.peg_count ?? 0 }) }}
-    </p>
-
-    <!-- Tap to continue after last peg -->
-    <p v-if="donePlacing" class="text-white/50 text-lg mt-4 animate-pulse">
-      {{ t('answer.continue', 'Tap to continue') }}
-    </p>
   </div>
 </template>

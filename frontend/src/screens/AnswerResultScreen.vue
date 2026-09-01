@@ -10,6 +10,35 @@ const game = useGameStore()
 const isCorrect = computed(() => game.state === 'answer_correct')
 const player = computed(() => game.currentPlayer)
 
+/**
+ * On a wrong answer the question passes on, so the answer is deliberately NOT
+ * revealed here — only PassResolveScreen shows it, once nobody can still win
+ * the peg.
+ */
+const nextUp = computed(() => {
+  if (isCorrect.value) return null
+  const idx = game.turn?.previous_round_player_index
+  if (idx === null || idx === undefined) return null
+  if (game.round < 2) return null
+  return game.players[idx] ?? null
+})
+
+/** Pegs this answer is worth, so "+2 Stifte" is honest about the boost. */
+const pegsEarned = computed(() => {
+  let pegs = 1
+  const idx = game.turn?.selected_slot_index
+  const slot = idx !== null && idx !== undefined ? game.turn?.offered_slots[idx] : null
+  if (slot?.has_2x_boost) pegs++
+  if (game.turn?.double_down_active) pegs++
+  return pegs
+})
+
+const groundStyle = computed(() =>
+  isCorrect.value
+    ? { background: 'linear-gradient(158deg, #2F7F5C 0%, #3E9E72 55%, #57B98A 100%)' }
+    : { background: 'linear-gradient(158deg, #2A0D42 0%, #35114F 55%, #4A1670 100%)' },
+)
+
 function handleContinue() {
   if (isCorrect.value) {
     game.proceedToPlacement()
@@ -17,65 +46,32 @@ function handleContinue() {
     game.proceedFromWrongAnswer()
   }
 }
-
-const iconStyle = computed(() => {
-  if (isCorrect.value) {
-    return {
-      background: 'radial-gradient(circle at 35% 35%, #4ade80, #16a34a 60%, #15803d)',
-      boxShadow: '0 0 60px rgba(34, 197, 94, 0.5), 0 0 120px rgba(34, 197, 94, 0.2), inset 0 -4px 12px rgba(0, 0, 0, 0.3)',
-    }
-  }
-  return {
-    background: 'radial-gradient(circle at 35% 35%, #f87171, #dc2626 60%, #b91c1c)',
-    boxShadow: '0 0 60px rgba(239, 68, 68, 0.5), 0 0 120px rgba(239, 68, 68, 0.2), inset 0 -4px 12px rgba(0, 0, 0, 0.3)',
-  }
-})
-
-const headingStyle = computed(() => {
-  if (isCorrect.value) {
-    return { textShadow: '0 0 40px rgba(34, 197, 94, 0.4), 0 2px 4px rgba(0, 0, 0, 0.5)' }
-  }
-  return { textShadow: '0 0 40px rgba(239, 68, 68, 0.4), 0 2px 4px rgba(0, 0, 0, 0.5)' }
-})
 </script>
 
 <template>
-  <div
-    class="flex flex-col items-center justify-center h-screen select-none touch-manipulation px-6"
-    :class="isCorrect ? 'bg-result-correct' : 'bg-result-incorrect'"
-    @click="handleContinue"
-  >
-    <!-- Result icon -->
-    <div
-      class="w-24 h-24 rounded-full flex items-center justify-center mb-8"
-      :style="iconStyle"
-    >
-      <span class="text-5xl font-bold drop-shadow-lg">{{ isCorrect ? '✓' : '✗' }}</span>
+  <div class="qt-screen qt-doodles select-none" :style="groundStyle" @click="handleContinue">
+    <div class="qt-verdict">
+      <div class="qt-verdict-mark">{{ isCorrect ? '✓' : '✗' }}</div>
+      <h1 class="qt-verdict-title">{{ isCorrect ? t('answer.correct') : t('answer.incorrect') }}</h1>
+
+      <p v-if="isCorrect" class="qt-gate-sub">
+        {{ player?.name }} · {{ t('answer.pegsEarned', { count: pegsEarned }) }}
+      </p>
+
+      <!-- The player who inherits the question is named in their own colour,
+           but the ground stays plum: it is not their turn yet. -->
+      <div v-if="nextUp" class="qt-next-up">
+        <div
+          class="qt-next-avatar"
+          :style="{ backgroundColor: COLOR_HEX[nextUp.color] }"
+        >{{ nextUp.name.charAt(0)?.toUpperCase() }}</div>
+        <div class="qt-next-name" :style="{ color: COLOR_HEX[nextUp.color] }">{{ nextUp.name }}</div>
+        <div class="qt-next-sub">{{ t('answer.getsTheChance') }}</div>
+      </div>
+
+      <p class="qt-gate-tap" style="margin-top: 30px">
+        {{ nextUp ? t('answer.handOverDevice') : t('answer.continue') }}
+      </p>
     </div>
-
-    <!-- Result text -->
-    <h1
-      class="text-5xl md:text-6xl font-extrabold text-white text-center mb-4"
-      :style="headingStyle"
-    >
-      {{ isCorrect ? t('answer.correct') : t('answer.incorrect') }}
-    </h1>
-
-    <!-- Player indicator -->
-    <div class="flex items-center gap-3 mb-12">
-      <div
-        class="w-6 h-6 rounded-full ring-2 ring-white/10"
-        :style="{
-          backgroundColor: player ? COLOR_HEX[player.color] : '#666',
-          boxShadow: player ? `0 0 10px ${COLOR_HEX[player.color]}50` : 'none'
-        }"
-      ></div>
-      <span class="text-lg text-white/70">{{ player?.name }}</span>
-    </div>
-
-    <!-- Continue hint -->
-    <p class="text-white/50 text-lg">
-      {{ t('answer.continue') }}
-    </p>
   </div>
 </template>

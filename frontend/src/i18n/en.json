@@ -9,7 +9,8 @@
     "resumeGame": "Resume Game",
     "resumePrompt": "You have an unfinished game. Resume?",
     "resumeYes": "Resume",
-    "resumeNo": "Start Fresh"
+    "resumeNo": "Start Fresh",
+    "tagline": "The Quiz Board Game"
   },
   "setup": {
     "title": "Player Setup",
@@ -41,7 +42,8 @@
   },
   "turnGate": {
     "yourTurn": "{name}'s Turn",
-    "tapToContinue": "Tap to continue"
+    "tapToContinue": "Tap to continue",
+    "roundAndPegs": "Round {round} · {pegs} pegs"
   },
   "selection": {
     "title": "Choose Your Question",
@@ -68,11 +70,15 @@
     "correct": "Correct!",
     "incorrect": "Incorrect!",
     "continue": "Continue",
-    "correctAnswerWas": "The correct answer was: {answer}"
+    "correctAnswerWas": "The correct answer was: {answer}",
+    "pegsEarned": "+{count} pegs",
+    "getsTheChance": "gets the chance",
+    "handOverDevice": "Hand over the device"
   },
   "passGate": {
     "yourChance": "{name}, your chance!",
-    "tapToContinue": "Tap to continue"
+    "tapToContinue": "Tap to continue",
+    "reducedReward": "One random peg"
   },
   "passResolve": {
     "declined": "Declined",
@@ -89,7 +95,10 @@
     "onTurn": "On turn",
     "pegsLabel": "Pegs",
     "correctLabel": "Correct",
-    "jokersLabel": "Jokers"
+    "jokersLabel": "Jokers",
+    "placeFreely": "Place it anywhere!",
+    "revealing": "Drawing fields…",
+    "tapToContinue": "Tap to continue"
   },
   "victory": {
     "wins": "{name} wins!",

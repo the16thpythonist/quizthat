@@ -9,7 +9,8 @@
     "resumeGame": "Spiel fortsetzen",
     "resumePrompt": "Du hast ein unvollendetes Spiel. Fortsetzen?",
     "resumeYes": "Fortsetzen",
-    "resumeNo": "Neu starten"
+    "resumeNo": "Neu starten",
+    "tagline": "Das Quiz-Brettspiel"
   },
   "setup": {
     "title": "Spieler-Einrichtung",
@@ -41,7 +42,8 @@
   },
   "turnGate": {
     "yourTurn": "{name} ist dran",
-    "tapToContinue": "Tippen zum Fortfahren"
+    "tapToContinue": "Tippen zum Fortfahren",
+    "roundAndPegs": "Runde {round} · {pegs} Stifte"
   },
   "selection": {
     "title": "Wähle deine Frage",
@@ -68,11 +70,15 @@
     "correct": "Richtig!",
     "incorrect": "Falsch!",
     "continue": "Weiter",
-    "correctAnswerWas": "Die richtige Antwort war: {answer}"
+    "correctAnswerWas": "Die richtige Antwort war: {answer}",
+    "pegsEarned": "+{count} Stifte",
+    "getsTheChance": "bekommt die Chance",
+    "handOverDevice": "Gerät weiterreichen"
   },
   "passGate": {
     "yourChance": "{name}, deine Chance!",
-    "tapToContinue": "Tippen zum Fortfahren"
+    "tapToContinue": "Tippen zum Fortfahren",
+    "reducedReward": "Ein zufälliger Stift"
   },
   "passResolve": {
     "declined": "Abgelehnt",
@@ -89,7 +95,10 @@
     "onTurn": "Am Zug",
     "pegsLabel": "Stifte",
     "correctLabel": "Richtig",
-    "jokersLabel": "Joker"
+    "jokersLabel": "Joker",
+    "placeFreely": "Wähle frei!",
+    "revealing": "Felder werden ausgelost…",
+    "tapToContinue": "Tippen zum Fortfahren"
   },
   "victory": {
     "wins": "{name} gewinnt!",

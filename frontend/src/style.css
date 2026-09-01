@@ -961,8 +961,19 @@ html, body {
   /* ---------- victory ---------- */
   .qt-confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
   .qt-confetti i { position: absolute; display: block; width: 7px; height: 11px; border-radius: 1px; opacity: 0.85; }
+  /* The victory screen referenced .animate-confetti but nothing ever defined
+     it, so the confetti sat still. Defined here. */
+  .animate-confetti {
+    animation-name: qt-confetti-fall;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+  }
+  @keyframes qt-confetti-fall {
+    from { transform: translate3d(0, 0, 0) rotate(0deg); }
+    to { transform: translate3d(var(--drift, 0px), 110vh, 0) rotate(720deg); }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .qt-drift, .qt-game-title, .qt-board .qt-cell--cand { animation: none; }
+  .qt-drift, .qt-game-title, .qt-board .qt-cell--cand, .animate-confetti { animation: none; }
 }

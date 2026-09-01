@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import { COLOR_HEX } from '../types/session'
+import BoardGrid from '../components/BoardGrid.vue'
 
 const { t } = useI18n()
 const game = useGameStore()
@@ -18,59 +19,39 @@ onMounted(() => {
   }, 500)
 })
 
+const player = computed(() => game.currentPlayer)
+const playerName = computed(() => player.value?.name ?? '')
+const colorHex = computed(() => (player.value ? COLOR_HEX[player.value.color] : '#666'))
+
+/** The gate takes the player's own colour: this screen exists to say the
+ *  device is now theirs, so the ground should be unmistakably theirs. */
+const groundStyle = computed(() => ({
+  background: `radial-gradient(ellipse at 50% 35%, ${colorHex.value}dd 0%, ${colorHex.value} 45%, ${colorHex.value}77 100%)`,
+}))
+
 function handleTap() {
   if (locked.value) return
   game.proceedFromTurnGate()
 }
-
-const player = game.currentPlayer
-const playerColor = player?.color ?? 'blue'
-const playerName = player?.name ?? ''
-const colorHex = COLOR_HEX[playerColor]
 </script>
 
 <template>
-  <div
-    class="flex flex-col items-center justify-center h-screen select-none touch-manipulation relative overflow-hidden"
-    :style="{
-      background: `radial-gradient(ellipse at center, ${colorHex}cc 0%, ${colorHex} 40%, ${colorHex}90 100%)`,
-    }"
-    @click="handleTap"
-  >
-    <!-- Ambient glow -->
-    <div
-      class="absolute inset-0 pointer-events-none"
-      :style="{
-        background: `radial-gradient(circle at 50% 40%, rgba(255,255,255,0.08) 0%, transparent 60%)`,
-      }"
-    ></div>
+  <div class="qt-screen qt-doodles select-none" :style="groundStyle" @click="handleTap">
+    <div class="qt-gate">
+      <div class="qt-gate-initial">{{ playerName.charAt(0)?.toUpperCase() }}</div>
+      <h1 class="qt-gate-title">{{ t('turnGate.yourTurn', { name: playerName }) }}</h1>
+      <p class="qt-gate-sub">
+        {{ t('turnGate.roundAndPegs', { round: game.round, pegs: player?.board.peg_count ?? 0 }) }}
+      </p>
 
-    <!-- Player initial circle -->
-    <div
-      class="w-24 h-24 rounded-full flex items-center justify-center mb-8"
-      :style="{
-        background: `radial-gradient(circle at 35% 35%, rgba(255,255,255,0.25), rgba(255,255,255,0.05) 60%)`,
-        border: '2px solid rgba(255, 255, 255, 0.2)',
-        boxShadow: '0 0 40px rgba(255,255,255,0.1), inset 0 -4px 12px rgba(0,0,0,0.2)',
-      }"
-    >
-      <span class="text-5xl font-extrabold text-white/90">
-        {{ playerName.charAt(0)?.toUpperCase() }}
-      </span>
+      <!-- the incoming player sees where they stand before they start -->
+      <div v-if="player" class="my-6">
+        <BoardGrid :board="player.board" :player-color="player.color" :cell-size="42" />
+      </div>
+
+      <p class="qt-gate-tap transition-opacity duration-500" :class="showTapHint ? 'opacity-60' : 'opacity-0'">
+        {{ t('turnGate.tapToContinue') }}
+      </p>
     </div>
-
-    <h1
-      class="text-5xl md:text-7xl font-extrabold text-white text-center mb-8 relative"
-      :style="{ textShadow: '0 0 40px rgba(0,0,0,0.3), 0 4px 8px rgba(0,0,0,0.4)' }"
-    >
-      {{ t('turnGate.yourTurn', { name: playerName }) }}
-    </h1>
-
-    <p
-      class="text-xl text-white/70 transition-opacity duration-500 relative"
-      :class="showTapHint ? 'opacity-100' : 'opacity-0'"
-    >
-      {{ t('turnGate.tapToContinue') }}
-    </p>
   </div>
 </template>
