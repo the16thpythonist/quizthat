@@ -2,6 +2,8 @@ import { describe, it, expect } from 'vitest'
 import {
   checkWin,
   isBoostEligible,
+  assignBoostSlots,
+  assignJokerSlots,
   previousRoundPlayer,
   generateStartingPegs,
   calculatePegCount,
@@ -407,6 +409,70 @@ describe('scrambleAnswerOrder', () => {
   })
 })
 
+// ─── Boost and joker assignment ─────────────────────────────────
+
+describe('assignBoostSlots', () => {
+  it('only ever returns valid slot indices', () => {
+    const rng = new GameRng(1)
+    for (let i = 0; i < 50; i++) {
+      for (const idx of assignBoostSlots(rng, false)) {
+        expect([0, 1, 2, 3]).toContain(idx)
+      }
+    }
+  })
+
+  it('boosts a trailing player far more often than anyone else', () => {
+    const runs = 500
+    let base = 0
+    let behind = 0
+    const rng = new GameRng(42)
+    for (let i = 0; i < runs; i++) {
+      base += assignBoostSlots(rng, false).length
+      behind += assignBoostSlots(rng, true).length
+    }
+    // ~8% vs ~35% per card, 4 cards per run
+    expect(behind).toBeGreaterThan(base * 2)
+  })
+
+  it('leaves most cards unboosted for a player who is not behind', () => {
+    const runs = 500
+    let boosted = 0
+    const rng = new GameRng(7)
+    for (let i = 0; i < runs; i++) boosted += assignBoostSlots(rng, false).length
+    // well under half of the 4 cards per run
+    expect(boosted).toBeLessThan(runs * 4 * 0.2)
+  })
+})
+
+describe('assignJokerSlots', () => {
+  it('always awards a joker on the hard slot', () => {
+    const rng = new GameRng(3)
+    for (let i = 0; i < 50; i++) {
+      expect(assignJokerSlots(rng)).toContain(3)
+    }
+  })
+
+  it('never awards a joker on the expertise slot, so the lure always costs something', () => {
+    const rng = new GameRng(5)
+    for (let i = 0; i < 200; i++) {
+      expect(assignJokerSlots(rng)).not.toContain(0)
+    }
+  })
+
+  it('sometimes, but not usually, marks a standard slot', () => {
+    const rng = new GameRng(11)
+    let marked = 0
+    const runs = 400
+    for (let i = 0; i < runs; i++) {
+      const slots = assignJokerSlots(rng)
+      marked += slots.filter((s) => s === 1 || s === 2).length
+    }
+    // ~35% of the 2 standard cards per run
+    expect(marked).toBeGreaterThan(runs * 2 * 0.2)
+    expect(marked).toBeLessThan(runs * 2 * 0.5)
+  })
+})
+
 // ─── Placement Rule ─────────────────────────────────────────────
 
 describe('placementRuleForSlot', () => {
@@ -425,6 +491,7 @@ describe('placementRuleForSlot', () => {
       difficulty: 'hard',
       constraint: null,
       has_2x_boost: false,
+      awards_joker: false,
     }
     const rule = placementRuleForSlot(slot, settings)
     expect(rule.type).toBe('free')
@@ -439,6 +506,7 @@ describe('placementRuleForSlot', () => {
       difficulty: 'medium',
       constraint: { type: 'row', index: 1, display: 'Row 2' },
       has_2x_boost: false,
+      awards_joker: false,
     }
     const rule = placementRuleForSlot(slot, settings)
     expect(rule.type).toBe('constrained')
@@ -455,6 +523,7 @@ describe('placementRuleForSlot', () => {
       difficulty: 'easy',
       constraint: null,
       has_2x_boost: false,
+      awards_joker: false,
     }
     const rule = placementRuleForSlot(slot, settings)
     expect(rule.type).toBe('random_board')

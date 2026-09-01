@@ -77,12 +77,38 @@ export function isBoostEligible(round: number, players: Player[], playerIndex: n
   return playerCorrect === minCorrect
 }
 
+/** Per-card chance of a 2x boost for any player, in any round. */
+export const BOOST_CHANCE_BASE = 0.08
+/** Raised chance for the trailing player from round 3 — the catch-up path. */
+export const BOOST_CHANCE_BEHIND = 0.35
+/** Per-card chance that a standard slot (2 or 3) also awards a joker. */
+export const JOKER_CHANCE_STANDARD = 0.35
+
 /**
- * Randomly assign 2x boost to 2 of the 4 slot indices.
+ * Assign the 2x boost per card rather than to a fixed number of slots.
+ *
+ * Everyone has a small chance, so a 2x can surprise anyone, and the trailing
+ * player's chance is raised sharply from round 3 — that raised rate is what
+ * carries the catch-up mechanic.
  */
-export function assignBoostSlots(rng: GameRng): number[] {
-  const indices = [0, 1, 2, 3]
-  return rng.sample(indices, 2)
+export function assignBoostSlots(rng: GameRng, behind: boolean): number[] {
+  const chance = behind ? BOOST_CHANCE_BEHIND : BOOST_CHANCE_BASE
+  return [0, 1, 2, 3].filter(() => rng.chance(chance))
+}
+
+/**
+ * Assign which slots award a joker.
+ *
+ * Slot 4 always does. The two standard slots may, which is the point: a joker
+ * dangling on a risky card is what tempts a player away from their safe
+ * expertise pick. The expertise slot itself never carries one, so the lure
+ * always costs something.
+ */
+export function assignJokerSlots(rng: GameRng): number[] {
+  const slots = [3]
+  if (rng.chance(JOKER_CHANCE_STANDARD)) slots.push(1)
+  if (rng.chance(JOKER_CHANCE_STANDARD)) slots.push(2)
+  return slots.sort((a, b) => a - b)
 }
 
 // ─── Previous Round Player Resolution ───────────────────────────
@@ -361,6 +387,7 @@ export function generateSlots(
   usedIds: Set<string>,
   curseActive: boolean,
   boostSlots: number[],
+  jokerSlots: number[],
 ): OfferedSlot[] {
   const lang = settings.language
   const boardSize = BOARD_SIZE
@@ -380,6 +407,7 @@ export function generateSlots(
       difficulty: slot1Question.difficulty,
       constraint: null,
       has_2x_boost: boostSlots.includes(0),
+      awards_joker: jokerSlots.includes(0),
     })
   }
 
@@ -402,6 +430,7 @@ export function generateSlots(
         difficulty: question.difficulty,
         constraint,
         has_2x_boost: boostSlots.includes(slotIdx),
+        awards_joker: jokerSlots.includes(slotIdx),
       })
     }
   }
@@ -424,6 +453,7 @@ export function generateSlots(
       difficulty: slot4Question.difficulty,
       constraint: null,
       has_2x_boost: boostSlots.includes(3),
+      awards_joker: jokerSlots.includes(3),
     })
   }
 

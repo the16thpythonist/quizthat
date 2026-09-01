@@ -127,6 +127,8 @@ export interface OfferedSlot {
   difficulty: Difficulty
   constraint: Constraint | null
   has_2x_boost: boolean
+  /** Selecting this slot awards a joker outright, before the question is answered. */
+  awards_joker: boolean
 }
 
 export interface PlacementRule {

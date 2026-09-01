@@ -52,7 +52,7 @@ The player is presented with **4 question options**, each shown as an **ominous 
 | 1 | Player's expertise categories | Any | Low | Pick from N candidates anywhere on the board |
 | 2 | Random category | Random | Medium | Pick from N candidates within a revealed row or column |
 | 3 | Random category | Random | Medium | Pick from N candidates within a revealed row or column |
-| 4 | Random category | Hard or Very Hard | High + special joker | **Free placement** — any empty field |
+| 4 | Random category | Hard or Very Hard | High + guaranteed joker | **Free placement** — any empty field |
 
 For slots 2 and 3, the selection screen shows the constraint (e.g. "B,3") meaning the peg candidates are drawn from column B or row 3. N is the configured placement candidates setting (1–4).
 
@@ -86,11 +86,13 @@ If there are fewer empty fields available (in the constraint area or on the boar
 
 ## Catch-Up Mechanic: 2x Boost
 
-Starting from **round 3**, the player who has answered the **fewest questions correctly** so far receives a boost: **2 of their 4 question options** are randomly marked with a **"2x" multiplier**. If the player selects a 2x question and answers it correctly, they receive **2 pegs** instead of 1, placed according to that slot's normal placement rules (e.g. 2x on a Slot 2/3 question means 2 pegs within the revealed row/column; 2x on Slot 4 means 2 freely placed pegs + the special joker).
+The **"2x" multiplier** is assigned per card, not to a fixed number of slots. Every player has a **low base chance (~8% per card)** in every round, so a 2x can surprise anyone. Starting from **round 3**, the player who has answered the **fewest questions correctly** so far has that chance raised sharply to **~35% per card** — this raised rate is what carries the catch-up.
 
-This gives trailing players an active incentive to take risks and a tangible path to catch up, without punishing the leading player.
+If the player selects a 2x question and answers it correctly, they receive **2 pegs** instead of 1, placed according to that slot's normal placement rules (e.g. 2x on a Slot 2/3 question means 2 pegs within the revealed row/column).
 
-In case of a tie for fewest correct answers, all tied players receive the 2x boost.
+This gives trailing players an active incentive to take risks and a tangible path to catch up, without punishing the leading player. Keeping 2x rare for everyone else means seeing one is an event rather than routine.
+
+In case of a tie for fewest correct answers, all tied players receive the raised chance.
 
 ## Joker System
 
@@ -107,9 +109,26 @@ Every player begins with **4 jokers**, one of each type. Jokers are **one-time u
 
 - **Multiple jokers per turn**: Allowed, but not of the same type in a single turn.
 
+### Joker Awards — the bait
+
+A slot that awards a joker is marked with a **JOKER** chip, and the joker is granted **the moment that slot is selected** — before the question is even shown, and regardless of whether it is answered correctly. Only the peg is at stake.
+
+Which slots can carry it:
+
+| Slot | Joker chip |
+|------|-----------|
+| 1 — Expertise | **Never** |
+| 2 — Standard | ~35% chance |
+| 3 — Standard | ~35% chance |
+| 4 — Hard/Very Hard | **Always** |
+
+The expertise slot never carries one on purpose: the chip exists to **lure a player away from their safe pick**. Because the reward is guaranteed on selection, taking the bait is a real temptation — you bank a joker either way, and only risk the peg.
+
+The joker awarded is drawn at random from **all eight types**, basic or special.
+
 ### Special Jokers
 
-Earned by correctly answering Slot 4 (hard/very hard) questions:
+The four aggressive, board-affecting jokers, awarded through the mechanic above:
 
 - **Steal** — Take a random peg from another player's board.
 - **Curse** — Force another player's next question to be "Hard" difficulty regardless of their slot selection.

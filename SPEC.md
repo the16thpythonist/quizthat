@@ -363,7 +363,7 @@ The core decision screen. Layout:
   - The **slot type** indicated by visual styling: Slot 1 has a bronze border/accent, Slots 2/3 silver, Slot 4 gold
   - For Slots 2/3: the **board constraint** (e.g. "Column B / Row 3")
   - For Slot 4: a label like "Choose your placement"
-  - If the player has the **2x boost**: affected cards show a visible "2x" badge
+  - Cards that carry the **2x boost** show a "2x" chip; cards that award a joker show a "JOKER" chip. Both overhang the card's top edge.
 - **Narrator reads out** each teaser title in sequence (short lines, should take ~10 seconds total).
 - **Joker tray** at the bottom of the screen: small icons for each joker. Usable jokers (Reshuffle Selection, The Gambler) are fully visible; others are **dimmed** (not applicable in this phase). Spent jokers are **grayed out**.
 - The player **taps a card** to select that question.
@@ -594,7 +594,7 @@ SELECTION ◄──────────────────────�
 
 | Event | Condition | Next State | Side Effects |
 |-------|-----------|------------|--------------|
-| Turn begins | — | SELECTION | 1. If player is cursed: force Slots 1–3 to Hard difficulty (Slot 4 keeps normal 50/50 Hard/Very Hard), consume curse. 2. If round ≥ 3 and player has fewest correct answers: mark 2 random slots with 2x badge. 3. Generate 4 slot options (expertise question for Slot 1, random for 2/3, hard/very hard for 4). 4. Generate board constraints for Slots 2/3. |
+| Turn begins | — | SELECTION | 1. If player is cursed: force Slots 1–3 to Hard difficulty (Slot 4 keeps normal 50/50 Hard/Very Hard), consume curse. 2. Mark each slot with a 2x badge at ~8% chance (raised to ~35% per slot if round ≥ 3 and the player has the fewest correct answers). Mark Slot 4 as awarding a joker always, and Slots 2/3 at ~35% each; Slot 1 never. 3. Generate 4 slot options (expertise question for Slot 1, random for 2/3, hard/very hard for 4). 4. Generate board constraints for Slots 2/3. |
 
 #### SELECTION
 
@@ -724,7 +724,7 @@ The total pegs awarded on a correct answer is **additive**:
 | Modifier | Extra Pegs | Condition |
 |----------|-----------|-----------|
 | Base | 1 | Always |
-| 2x Boost | +1 | Player selected a 2x-marked slot (catch-up mechanic, round ≥ 3) |
+| 2x Boost | +1 | Player selected a 2x-marked slot (~8% per slot, ~35% for the trailing player from round 3) |
 | Double Down | +1 | Player activated Double Down joker during QUESTION_DISPLAY |
 
 **Maximum per normal answer: 3 pegs** (base + 2x + Double Down).

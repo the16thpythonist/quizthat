@@ -13,10 +13,12 @@ import type {
   OfferedSlot,
   QuestionData,
   JokerType,
+  BasicJokerType,
+  SpecialJokerType,
   SessionStatus,
 } from '../types/session'
 import { PLAYER_COLORS, BOARD_SIZE } from '../types/session'
-import { checkWin, generateSlots, assignBoostSlots, isBoostEligible, placementRuleForSlot, generateCandidates, passPlacementRule } from '../engine/algorithms'
+import { checkWin, generateSlots, assignBoostSlots, assignJokerSlots, isBoostEligible, placementRuleForSlot, generateCandidates, passPlacementRule } from '../engine/algorithms'
 import { GameRng } from '../engine/rng'
 import { useCorpusStore } from './corpus'
 
@@ -27,6 +29,19 @@ function createBoard(size: number): Board {
     peg_count: 0,
   }
 }
+
+const SPECIAL_JOKER_TYPES: SpecialJokerType[] = ['steal', 'curse', 'snipe', 'double_down']
+
+const ALL_JOKER_TYPES: JokerType[] = [
+  'reshuffle_selection',
+  'reshuffle_question',
+  'reveal_hint',
+  'the_gambler',
+  'steal',
+  'curse',
+  'snipe',
+  'double_down',
+]
 
 function createJokerInventory(): JokerInventory {
   return {
@@ -195,8 +210,10 @@ export const useGameStore = defineStore('game', () => {
     const player = players.value[currentPlayerIndex.value]
     if (!player) return
 
+    // Everyone has a small chance of a 2x; the trailing player's is raised.
     const boostEligible = isBoostEligible(round.value, players.value, currentPlayerIndex.value)
-    const boostSlots = boostEligible ? assignBoostSlots(rng.value) : []
+    const boostSlots = assignBoostSlots(rng.value, boostEligible)
+    const jokerSlots = assignJokerSlots(rng.value)
 
     const slots = generateSlots(
       rng.value,
@@ -206,6 +223,7 @@ export const useGameStore = defineStore('game', () => {
       usedQuestionIds.value,
       turn.value.curse_active,
       boostSlots,
+      jokerSlots,
     )
 
     // Load teaser titles from question JSON files
@@ -235,6 +253,13 @@ export const useGameStore = defineStore('game', () => {
     if (!slot) return
     turn.value.selected_question_id = slot.question_id
 
+    // The joker is the bait: it lands before the question is even shown, so
+    // picking a risky card is guaranteed to pay something even if the answer
+    // is wrong. Only the peg is at stake.
+    if (slot.awards_joker) {
+      _awardRandomJoker()
+    }
+
     // Fetch question data from corpus
     const corpus = useCorpusStore()
     const lang = settings.value.language
@@ -247,6 +272,21 @@ export const useGameStore = defineStore('game', () => {
 
     state.value = 'question_display'
     turn.value.phase = 'question_display'
+  }
+
+  /** Any of the eight joker types, basic or special. */
+  function _awardRandomJoker() {
+    if (!rng.value || !turn.value) return
+    const player = players.value[currentPlayerIndex.value]
+    if (!player) return
+    const type = rng.value.pick(ALL_JOKER_TYPES)
+    player.jokers[type]++
+    // recorded in whichever field matches its kind, for the turn summary
+    if (SPECIAL_JOKER_TYPES.includes(type as SpecialJokerType)) {
+      turn.value.special_joker_earned = type as SpecialJokerType
+    } else {
+      turn.value.basic_joker_earned = type as BasicJokerType
+    }
   }
 
   // Set loaded question data

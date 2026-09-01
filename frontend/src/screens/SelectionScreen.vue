@@ -32,9 +32,9 @@ function placementText(slot: OfferedSlot): string {
   return ''
 }
 
-/** Slot 4 always awards a special joker on top of free placement. */
-function awardsSpecialJoker(slot: OfferedSlot): boolean {
-  return slot.slot_type === 'hard'
+/** Slot 4 always awards one; standard slots sometimes do — that is the bait. */
+function awardsJoker(slot: OfferedSlot): boolean {
+  return slot.awards_joker
 }
 
 function handleSelectSlot(index: number) {
@@ -61,9 +61,9 @@ function handleUseJoker(type: JokerType) {
         :class="{ 'qt-slot-card--special': slot.slot_type === 'hard' }"
         @click="handleSelectSlot(idx)"
       >
-        <span v-if="slot.has_2x_boost || awardsSpecialJoker(slot)" class="qt-chips">
+        <span v-if="slot.has_2x_boost || awardsJoker(slot)" class="qt-chips">
           <span v-if="slot.has_2x_boost" class="qt-boost">{{ t('selection.twoXBadge') }}</span>
-          <span v-if="awardsSpecialJoker(slot)" class="qt-special">{{ t('selection.specialJoker') }}</span>
+          <span v-if="awardsJoker(slot)" class="qt-special">{{ t('selection.specialJoker') }}</span>
         </span>
 
         <div class="qt-slot-top">
