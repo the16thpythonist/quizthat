@@ -485,8 +485,8 @@
   }
   /* Both layers stay close to the app's normal 200px tile - the parallax
      should come from the differing speeds, not from blowing the glyphs up. */
-  .drift--far { background-size: 200px 200px; opacity: 0.10; animation: driftFar 120s linear infinite; }
-  .drift--near { background-size: 260px 260px; opacity: 0.06; animation: driftNear 75s linear infinite; }
+  .drift--far { background-size: 200px 200px; opacity: 0.10; animation: driftFar 40s linear infinite; }
+  .drift--near { background-size: 260px 260px; opacity: 0.06; animation: driftNear 25s linear infinite; }
   @keyframes driftFar  { from { background-position: 0 0; }   to { background-position: 200px -200px; } }
   @keyframes driftNear { from { background-position: 0 0; }   to { background-position: -260px 260px; } }
 
@@ -495,11 +495,11 @@
   .game-title {
     font-size: 52px; font-weight: 900; color: #fff; margin: 0; letter-spacing: -1px;
     text-shadow: 0 5px 0 rgba(0,0,0,0.22);
-    animation: bob 4.5s ease-in-out infinite;
+    animation: bob 3.6s ease-in-out infinite;
   }
   @keyframes bob {
     0%, 100% { transform: translateY(0) rotate(-1.2deg); }
-    50%      { transform: translateY(-9px) rotate(-1.2deg); }
+    50%      { transform: translateY(-14px) rotate(-1.2deg); }
   }
   @media (prefers-reduced-motion: reduce) {
     .drift, .game-title { animation: none; }

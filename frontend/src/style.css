@@ -859,8 +859,8 @@ html, body {
     pointer-events: none;
     z-index: 0;
   }
-  .qt-drift--far { background-size: 200px 200px; opacity: 0.10; animation: qt-drift-far 120s linear infinite; }
-  .qt-drift--near { background-size: 260px 260px; opacity: 0.06; animation: qt-drift-near 75s linear infinite; }
+  .qt-drift--far { background-size: 200px 200px; opacity: 0.10; animation: qt-drift-far 40s linear infinite; }
+  .qt-drift--near { background-size: 260px 260px; opacity: 0.06; animation: qt-drift-near 25s linear infinite; }
   @keyframes qt-drift-far { from { background-position: 0 0; } to { background-position: 200px -200px; } }
   @keyframes qt-drift-near { from { background-position: 0 0; } to { background-position: -260px 260px; } }
   .qt-title-wrap > *:not(.qt-drift) { position: relative; z-index: 1; }
@@ -872,11 +872,11 @@ html, body {
     margin: 0;
     letter-spacing: -1px;
     text-shadow: 0 5px 0 rgba(0, 0, 0, 0.22);
-    animation: qt-bob 4.5s ease-in-out infinite;
+    animation: qt-bob 3.6s ease-in-out infinite;
   }
   @keyframes qt-bob {
     0%, 100% { transform: translateY(0) rotate(-1.2deg); }
-    50% { transform: translateY(-9px) rotate(-1.2deg); }
+    50% { transform: translateY(-14px) rotate(-1.2deg); }
   }
   .qt-game-sub {
     font-size: 12px;
