@@ -275,10 +275,10 @@ html, body {
     top: 0;
     bottom: -26px;
     transform: translateX(-50%);
-    /* wide enough for six pips and the battle square, and it grows with the
-       player count rather than clipping them */
-    min-width: 124px;
-    padding: 0 14px;
+    /* Three pips across is the widest the track ever gets, so the badge keeps
+       its original width no matter how many players there are. */
+    min-width: 80px;
+    padding: 0 12px;
     border-radius: 0 0 30px 30px;
     background: var(--qt-ground-deep);
     border: var(--qt-edge);
@@ -322,7 +322,7 @@ html, body {
   }
   .qt-strip-identity { display: flex; align-items: center; gap: 9px; min-width: 0; }
   /* keeps the row clear of the badge hanging down into it */
-  .qt-strip-gutter { flex: 0 0 auto; width: 136px; }
+  .qt-strip-gutter { flex: 0 0 auto; width: 96px; }
   .qt-strip-right {
     flex: 1 1 0;
     min-width: 0;
@@ -378,12 +378,16 @@ html, body {
   .qt-rank-guess { font-size: 14px; opacity: 0.85; }
 
   /* ---------- round track ---------- */
+  /* Three across at most, then wrap. Six players plus the battle square would
+     otherwise stretch the badge into a bar. */
   .qt-round-track {
     flex: 0 0 auto;
-    display: flex;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(3, auto);
     justify-content: center;
-    gap: 5px;
+    justify-items: center;
+    align-items: center;
+    gap: 4px 5px;
     padding: 2px 0 1px;
   }
   .qt-pip {
