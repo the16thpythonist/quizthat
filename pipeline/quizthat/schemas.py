@@ -20,6 +20,15 @@ class QuestionType(str, Enum):
     sorting = "sorting"
     map_location = "map_location"
     calculation = "calculation"
+    # Battle-only types. These are never offered as ordinary turn questions:
+    # a value to be guessed cannot be posed as multiple choice, and both are
+    # answered by every player at once rather than by one.
+    estimation = "estimation"
+    battle_map = "battle_map"
+
+
+#: Types that only ever appear in a battle at the end of a round.
+BATTLE_QUESTION_TYPES = frozenset({QuestionType.estimation, QuestionType.battle_map})
 
 
 # --- answer_data variants ---
@@ -57,11 +66,34 @@ class CalculationAnswerData(BaseModel):
     unit: str
 
 
+class EstimationAnswerData(BaseModel):
+    """A number everyone guesses; ranked by absolute difference.
+
+    No tolerance, unlike a calculation: nobody is right or wrong in a battle,
+    they are only nearer or further away.
+    """
+
+    correct_value: float
+    unit: str
+
+
+class BattleMapAnswerData(BaseModel):
+    """A point everyone pins; ranked by great-circle distance.
+
+    Deliberately without the scoring bands a map_location carries — a battle
+    ranks by raw distance, so radius thresholds have nothing to decide.
+    """
+
+    target: MapTarget
+
+
 AnswerData = (
     MultipleChoiceAnswerData
     | SortingAnswerData
     | MapLocationAnswerData
     | CalculationAnswerData
+    | EstimationAnswerData
+    | BattleMapAnswerData
 )
 
 

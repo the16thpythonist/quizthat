@@ -1,0 +1,11 @@
+{
+  "teaser_title": "Insel im Nordatlantik",
+  "question_text": "Zeige auf der Karte, wo Reykjavík liegt.",
+  "hint": "Die nördlichste Hauptstadt der Welt.",
+  "answer_data": {
+    "target": {
+      "lat": 64.1466,
+      "lng": -21.9426
+    }
+  }
+}

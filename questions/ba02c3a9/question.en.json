@@ -1,0 +1,9 @@
+{
+  "teaser_title": "The long way",
+  "question_text": "How long is the Rhine?",
+  "hint": "From the Alps to the North Sea.",
+  "answer_data": {
+    "correct_value": 1233,
+    "unit": "km"
+  }
+}

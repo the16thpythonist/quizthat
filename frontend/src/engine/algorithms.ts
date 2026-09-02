@@ -12,7 +12,7 @@ import type {
   SpecialJokerType,
 } from '../types/session'
 import { GameRng } from './rng'
-import { BOARD_SIZE } from '../types/session'
+import { BOARD_SIZE, BATTLE_QUESTION_TYPES } from '../types/session'
 
 // ─── Win Detection ──────────────────────────────────────────────
 
@@ -392,10 +392,16 @@ export function filterQuestions(
     majorCategory?: string
     subcategory?: string
     excludeIds: Set<string>
+    /** Opt in to battle-only questions; ordinary turns never see them. */
+    battleOnly?: boolean
   },
 ): QuestionMeta[] {
   return corpus.filter(q => {
     if (!q.languages.includes(opts.language)) return false
+    // A value to be estimated cannot be posed as a turn question, so battle
+    // types are excluded unless explicitly asked for.
+    const isBattle = BATTLE_QUESTION_TYPES.includes(q.question_type)
+    if (isBattle !== Boolean(opts.battleOnly)) return false
     if (opts.excludeIds.has(q.id)) return false
     if (opts.difficulty && q.difficulty !== opts.difficulty) return false
     if (opts.majorCategory && q.major_category !== opts.majorCategory) return false

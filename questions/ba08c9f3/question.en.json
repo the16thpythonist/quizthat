@@ -1,0 +1,11 @@
+{
+  "teaser_title": "Roof of Africa",
+  "question_text": "Point to Kilimanjaro on the map.",
+  "hint": "Almost exactly on the equator.",
+  "answer_data": {
+    "target": {
+      "lat": -3.0674,
+      "lng": 37.3556
+    }
+  }
+}

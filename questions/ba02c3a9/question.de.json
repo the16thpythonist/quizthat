@@ -1,0 +1,9 @@
+{
+  "teaser_title": "Der lange Weg",
+  "question_text": "Wie lang ist der Rhein?",
+  "hint": "Von den Alpen bis in die Nordsee.",
+  "answer_data": {
+    "correct_value": 1233,
+    "unit": "km"
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "teaser_title": "Mauerjahre",
+  "question_text": "In welchem Jahr fiel die Berliner Mauer?",
+  "hint": "Ein Novemberabend.",
+  "answer_data": {
+    "correct_value": 1989,
+    "unit": ""
+  }
+}

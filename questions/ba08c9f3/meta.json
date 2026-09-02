@@ -1,0 +1,16 @@
+{
+  "id": "ba08c9f3",
+  "languages": [
+    "de",
+    "en"
+  ],
+  "major_category": "Geography",
+  "subcategory": "Mountains",
+  "difficulty": "medium",
+  "question_type": "battle_map",
+  "battle_only": true,
+  "time_limit_seconds": null,
+  "version": 1,
+  "created_at": "2026-09-02T00:00:00Z",
+  "generation_batch": null
+}

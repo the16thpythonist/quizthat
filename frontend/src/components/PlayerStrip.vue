@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { Player } from '../types/session'
+import RoundTrack from './RoundTrack.vue'
 import { COLOR_HEX } from '../types/session'
 
 /**
@@ -14,7 +15,8 @@ defineProps<{
 </script>
 
 <template>
-  <div v-if="player" class="qt-strip">
+  <div v-if="player">
+  <div class="qt-strip">
     <div class="qt-strip-left">
       <div class="qt-strip-identity">
         <div class="qt-chip" :style="{ backgroundColor: COLOR_HEX[player.color] }"></div>
@@ -27,5 +29,7 @@ defineProps<{
     <div class="qt-strip-right">
       <div v-if="context" class="qt-pmeta">{{ context }}</div>
     </div>
+  </div>
+  <RoundTrack />
   </div>
 </template>

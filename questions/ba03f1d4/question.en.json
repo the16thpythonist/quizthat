@@ -1,0 +1,9 @@
+{
+  "teaser_title": "Far away",
+  "question_text": "What is the Moon's average distance from Earth?",
+  "hint": "Light takes about 1.3 seconds to cover it.",
+  "answer_data": {
+    "correct_value": 384400,
+    "unit": "km"
+  }
+}

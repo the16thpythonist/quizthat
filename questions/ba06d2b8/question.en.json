@@ -1,0 +1,11 @@
+{
+  "teaser_title": "Island in the North Atlantic",
+  "question_text": "Point to Reykjavík on the map.",
+  "hint": "The world's northernmost capital.",
+  "answer_data": {
+    "target": {
+      "lat": 64.1466,
+      "lng": -21.9426
+    }
+  }
+}

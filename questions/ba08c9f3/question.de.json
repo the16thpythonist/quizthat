@@ -1,0 +1,11 @@
+{
+  "teaser_title": "Dach Afrikas",
+  "question_text": "Zeige auf der Karte, wo der Kilimandscharo liegt.",
+  "hint": "Fast genau am Äquator.",
+  "answer_data": {
+    "target": {
+      "lat": -3.0674,
+      "lng": 37.3556
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "teaser_title": "On the Río de la Plata",
+  "question_text": "Point to Montevideo on the map.",
+  "hint": "Across the water from Buenos Aires.",
+  "answer_data": {
+    "target": {
+      "lat": -34.9011,
+      "lng": -56.1645
+    }
+  }
+}

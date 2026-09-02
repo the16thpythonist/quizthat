@@ -27,7 +27,17 @@ export type GameState =
 export const BOARD_SIZE = 4
 export type Difficulty = 'easy' | 'medium' | 'hard' | 'very_hard'
 export type PlayerColor = 'red' | 'blue' | 'green' | 'yellow' | 'purple' | 'orange'
-export type QuestionType = 'multiple_choice' | 'sorting' | 'map_location' | 'calculation'
+export type QuestionType =
+  | 'multiple_choice'
+  | 'sorting'
+  | 'map_location'
+  | 'calculation'
+  /** Battle-only. Never offered as an ordinary turn question. */
+  | 'estimation'
+  | 'battle_map'
+
+/** Types that only appear in the battle at the end of a round. */
+export const BATTLE_QUESTION_TYPES: QuestionType[] = ['estimation', 'battle_map']
 export type SlotType = 'expertise' | 'standard' | 'hard'
 export type BasicJokerType =
   | 'reshuffle_selection'
@@ -242,6 +252,15 @@ export interface SortingAnswerData {
 export interface MapLocationAnswerData {
   target: { lat: number; lng: number }
   scoring: { radius_km: number; label: string }[]
+}
+
+export interface EstimationAnswerData {
+  correct_value: number
+  unit: string
+}
+
+export interface BattleMapAnswerData {
+  target: { lat: number; lng: number }
 }
 
 export interface CalculationAnswerData {

@@ -10,6 +10,7 @@ import {
   placementRuleForSlot,
   passPlacementRule,
   gamblerPlacementRule,
+  filterQuestions,
   previousRoundPlayer,
   generateStartingPegs,
   calculatePegCount,
@@ -609,6 +610,30 @@ describe('answer option order', () => {
       if (first.join() !== second.join()) differed++
     }
     expect(differed).toBeGreaterThan(runs * 0.6)
+  })
+})
+
+describe('battle questions are kept out of ordinary turns', () => {
+  const mixed = [
+    { id: 'mc', languages: ['de'], major_category: 'Science', subcategory: 'Physics',
+      difficulty: 'easy' as const, question_type: 'multiple_choice' as const,
+      time_limit_seconds: null, version: 1, created_at: '', generation_batch: null },
+    { id: 'est', languages: ['de'], major_category: 'Science', subcategory: 'Physics',
+      difficulty: 'easy' as const, question_type: 'estimation' as const,
+      time_limit_seconds: null, version: 1, created_at: '', generation_batch: null },
+    { id: 'bmap', languages: ['de'], major_category: 'Geography', subcategory: 'Cities',
+      difficulty: 'easy' as const, question_type: 'battle_map' as const,
+      time_limit_seconds: null, version: 1, created_at: '', generation_batch: null },
+  ]
+
+  it('excludes battle types by default', () => {
+    const found = filterQuestions(mixed, { language: 'de', excludeIds: new Set() })
+    expect(found.map((q) => q.id)).toEqual(['mc'])
+  })
+
+  it('returns only battle types when asked for them', () => {
+    const found = filterQuestions(mixed, { language: 'de', excludeIds: new Set(), battleOnly: true })
+    expect(found.map((q) => q.id).sort()).toEqual(['bmap', 'est'])
   })
 })
 

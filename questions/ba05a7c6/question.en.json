@@ -1,0 +1,9 @@
+{
+  "teaser_title": "Heavyweight",
+  "question_text": "What is the maximum weight of a blue whale?",
+  "hint": "The largest animal that ever lived.",
+  "answer_data": {
+    "correct_value": 190,
+    "unit": "t"
+  }
+}

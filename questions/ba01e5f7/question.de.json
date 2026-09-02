@@ -1,0 +1,9 @@
+{
+  "teaser_title": "Eisen und Nieten",
+  "question_text": "Wie hoch ist der Eiffelturm (mit Antenne)?",
+  "hint": "Er war bis 1930 das höchste Bauwerk der Welt.",
+  "answer_data": {
+    "correct_value": 330,
+    "unit": "m"
+  }
+}

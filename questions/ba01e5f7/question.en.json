@@ -1,0 +1,9 @@
+{
+  "teaser_title": "Iron and rivets",
+  "question_text": "How tall is the Eiffel Tower, antenna included?",
+  "hint": "It was the tallest structure in the world until 1930.",
+  "answer_data": {
+    "correct_value": 330,
+    "unit": "m"
+  }
+}

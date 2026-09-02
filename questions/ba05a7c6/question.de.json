@@ -1,0 +1,9 @@
+{
+  "teaser_title": "Schwergewicht",
+  "question_text": "Wie schwer wird ein Blauwal höchstens?",
+  "hint": "Das größte Tier, das je gelebt hat.",
+  "answer_data": {
+    "correct_value": 190,
+    "unit": "t"
+  }
+}

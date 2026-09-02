@@ -7,12 +7,14 @@ import logging
 from pathlib import Path
 
 from ..schemas import (
-    QuestionMeta,
-    QuestionContent,
-    MultipleChoiceAnswerData,
-    SortingAnswerData,
-    MapLocationAnswerData,
+    BattleMapAnswerData,
     CalculationAnswerData,
+    EstimationAnswerData,
+    MapLocationAnswerData,
+    MultipleChoiceAnswerData,
+    QuestionContent,
+    QuestionMeta,
+    SortingAnswerData,
 )
 
 logger = logging.getLogger(__name__)
@@ -80,6 +82,10 @@ def _validate_answer_data(
             MapLocationAnswerData(**answer_data)
         elif question_type == "calculation":
             CalculationAnswerData(**answer_data)
+        elif question_type == "estimation":
+            EstimationAnswerData(**answer_data)
+        elif question_type == "battle_map":
+            BattleMapAnswerData(**answer_data)
         else:
             errors.append(f"Unknown question_type: {question_type}")
     except Exception as e:

@@ -1,0 +1,11 @@
+{
+  "teaser_title": "Am Rio de la Plata",
+  "question_text": "Zeige auf der Karte, wo Montevideo liegt.",
+  "hint": "Gegenüber von Buenos Aires.",
+  "answer_data": {
+    "target": {
+      "lat": -34.9011,
+      "lng": -56.1645
+    }
+  }
+}
