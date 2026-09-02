@@ -9,8 +9,8 @@ const VALID_TRANSITIONS: Record<GameState, GameState[]> = {
   battle_intro: ['battle_gate'],
   battle_gate: ['battle_answering'],
   battle_answering: ['battle_gate', 'battle_reveal'],
-  battle_reveal: ['turn_start'],
-  selection: ['question_display', 'joker_award', 'selection', 'gambler_confirm'],
+  battle_reveal: ['turn_start', 'selection'],
+  selection: ['question_display', 'joker_award', 'selection', 'gambler_confirm', 'battle_intro'],
   joker_award: ['question_display'],
   gambler_confirm: ['gambler_question', 'selection'],
   gambler_question: ['gambler_resolve'],
@@ -38,7 +38,7 @@ export function isValidTransition(from: GameState, to: GameState): boolean {
  * Jokers legal in each game state.
  */
 const JOKERS_BY_STATE: Partial<Record<GameState, JokerType[]>> = {
-  selection: ['reshuffle_selection', 'the_gambler', 'steal', 'curse', 'snipe'],
+  selection: ['reshuffle_selection', 'the_gambler', 'duel', 'curse', 'snipe'],
   question_display: ['reshuffle_question', 'reveal_hint', 'double_down'],
 }
 

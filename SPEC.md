@@ -35,7 +35,7 @@ Internationalization applies to **all** layers of the system:
 - **Question content**: Each question in the corpus exists in all supported languages. The pipeline uses a **generate-then-adapt** strategy: questions are researched and constructed in English first, then the agent rewrites them for other languages using the same facts and answer structure. This is not machine translation — it is constrained rewriting with access to the original research sources, producing natural phrasing while preserving semantic equivalence (same correct answer, same distractors, same `correct_index` across all language files).
 - **Voice lines**: Narrator voice lines (UI announcements and question readouts) are generated per language with appropriate voices.
 - **Category and subcategory names**: Displayed in the selected language. Stored in the i18n key-value files (e.g. `i18n/en.json`) using stable machine keys from the category taxonomy config.
-- **Joker names**: Basic jokers (Reshuffle Selection, Reshuffle Question, Reveal Hint, The Gambler) are **translated** per language. Special jokers (Steal, Curse, Snipe, Double Down) are kept as **English proper nouns** across all languages — they are brand-like game terms.
+- **Joker names**: Basic jokers (Reshuffle Selection, Reshuffle Question, Reveal Hint, The Gambler) are **translated** per language. Special jokers (Duel, Curse, Snipe, Double Down) are kept as **English proper nouns** across all languages — they are brand-like game terms. Duel is the one exception: German says "Duell".
 - **Player references**: The narrator always refers to players by **color** (e.g. "Player Red"), never by custom name. Color names are translated per language. Custom player names appear in UI text only.
 
 ### Implementation
@@ -569,7 +569,7 @@ SELECTION ◄──────────────────────�
   │                               │                        │
   ├── [Reshuffle Selection] ──────┘ (regenerate 4 options)  │
   │                                                        │
-  ├── [Steal/Curse/Snipe] ──► target modal ──► resolve ──► SELECTION
+  ├── [Duel/Curse/Snipe] ──► target modal ──► resolve ──► SELECTION
   │                                                        │
   ├── [The Gambler] ──► GAMBLER_CONFIRM                    │
   │                         │                              │
@@ -658,7 +658,7 @@ SELECTION ◄──────────────────────�
 | Select a slot | — | QUESTION_DISPLAY | Load the selected question, record selected slot |
 | Use Reshuffle Selection | Joker available, not used this turn | SELECTION | Discard current 4 options, generate 4 new ones (preserving 2x badges if applicable), consume joker |
 | Use The Gambler | Joker available, player has ≥1 peg | GAMBLER_CONFIRM | Randomly select a peg to stake, show confirmation |
-| Use Steal | Joker available, ≥1 opponent has ≥1 peg | SELECTION (via modal) | Show target selection modal → remove random peg from target (peg is destroyed) → consume joker |
+| Use Duel | Joker available, ≥1 opponent has ≥1 peg | BATTLE_INTRO | Show opponent selection modal → run a two-player battle → challenger wins: one random peg of the opponent's moves to the same square of the challenger's board; challenger loses or ties: nothing happens → returns to SELECTION → consume joker |
 | Use Curse | Joker available | SELECTION (via modal) | Show target selection modal → mark target as cursed for next turn → consume joker |
 | Use Snipe | Joker available, ≥1 opponent has ≥1 peg | SELECTION (via modal) | Show target selection modal → show target's board → player taps field to remove → consume joker |
 
@@ -696,7 +696,7 @@ SELECTION ◄──────────────────────�
 
 | Event | Condition | Next State | Side Effects |
 |-------|-----------|------------|--------------|
-| Proceed | — | PEG_PLACEMENT | Calculate pegs_remaining (see Peg Count Calculation). If Slot 4: award a random special joker (Steal, Curse, Snipe, or Double Down). If Slot 1/2/3: roll for basic joker re-earn (see Basic Joker Re-Earning below). |
+| Proceed | — | PEG_PLACEMENT | Calculate pegs_remaining (see Peg Count Calculation). If Slot 4: award a random special joker (Duel, Curse, Snipe, or Double Down). If Slot 1/2/3: roll for basic joker re-earn (see Basic Joker Re-Earning below). |
 
 #### ANSWER_WRONG
 
@@ -763,7 +763,7 @@ SELECTION ◄──────────────────────�
 | Reshuffle Question | QUESTION_DISPLAY | Available in inventory, not yet used this turn | Use |
 | Reveal Hint | QUESTION_DISPLAY | Available in inventory, not yet used this turn, question has a hint | Use |
 | Double Down | QUESTION_DISPLAY | Available in inventory, not yet used this turn | Use |
-| Steal | SELECTION | Available in inventory, ≥1 opponent has ≥1 peg | Use |
+| Duel | SELECTION | Available in inventory, ≥1 opponent has ≥1 peg | Use |
 | Curse | SELECTION | Available in inventory | Use |
 | Snipe | SELECTION | Available in inventory, ≥1 opponent has ≥1 peg | Use |
 
@@ -799,7 +799,7 @@ Slot 4 correct answers also award a random special joker, independent of peg cou
 | Slot 4 correct | Free placement — player picks any empty field |
 | Pass correct | N random candidates from entire board (Slot 1 rules); pass player picks one |
 | Gambler correct (×3) | N random candidates from entire board (Slot 1 rules); player picks one, repeated 3 times |
-| Steal effect | Stolen peg is removed from target's board (peg is destroyed, not transferred) |
+| Duel effect | The challenger must win the battle question; the peg is then transferred to the same coordinates on their own board, skipping squares they already hold. A loss or a tie moves nothing |
 
 N = configured placement candidates (1–4). When N = 1, placement is automatic (no player choice).
 
@@ -817,15 +817,17 @@ Each peg placement uses the **same placement rules** as the originating slot. Fo
 
 ### Special Joker Activation Flow
 
-Special jokers (Steal, Curse, Snipe) are activated from the joker tray on the question selection screen. They open modals over the current screen:
+Special jokers (Duel, Curse, Snipe) are activated from the joker tray on the question selection screen. They open modals over the current screen:
 
-**Steal:**
+**Duel:**
 ```
-SELECTION → tap Steal in tray
-  → Target selection modal (opponent avatars)
+SELECTION → tap Duel in tray
+  → Opponent selection modal (opponent avatars, empty boards excluded)
   → Player taps an opponent
-  → Random peg removed from target's board (animated)
-  → Modal closes → SELECTION
+  → BATTLE_INTRO → BATTLE_GATE → BATTLE_ANSWERING (both players) → BATTLE_REVEAL
+  → Challenger closer: one random peg transfers to the same square of their board
+  → Challenger further off or tied: nothing happens
+  → Back to SELECTION, the challenger's turn continues
 ```
 
 **Curse:**
@@ -860,7 +862,7 @@ After any special joker resolves, the player still needs to select a question sl
 5. **Reshuffle Selection while cursed**: The new 4 options are also all cursed (Slots 1–3 Hard, Slot 4 normal) — the curse persists for the entire SELECTION phase.
 6. **Reshuffle Selection with 2x boost**: The 2x badges are re-randomized on the new 4 options (2 random slots get the badge again).
 7. **Pass player's entire board is full**: Impossible — if all fields are filled, they would have already completed a line and won.
-8. **Steal/Snipe when all opponents have 0 pegs**: The joker is dimmed in the tray and cannot be activated.
+8. **Duel/Snipe when all opponents have 0 pegs**: The joker is dimmed in the tray and cannot be activated.
 9. **Multiple special jokers in one turn**: Allowed (if different types). Each resolves via its modal before the next can be activated.
 10. **The Gambler with exactly 1 peg**: Allowed. If wrong, that peg is removed and the player drops to 0 pegs.
 11. **Win during multi-peg placement**: If peg #1 (of 2 or 3) completes a line, the game ends immediately. Remaining pegs are not placed.
@@ -959,7 +961,7 @@ Field "B3" = `fields[2][1]`.
 
 #### JokerInventory
 
-Tracks the count of each joker type. Starts at 1 each for basic jokers, 0 for special jokers. Basic joker counts can exceed 1 if jokers are re-earned. Special jokers are **capped at 1 per type** — a player can hold at most 1 Steal, 1 Curse, 1 Snipe, and 1 Double Down simultaneously.
+Tracks the count of each joker type. Starts at 1 each for basic jokers, 0 for special jokers. Basic joker counts can exceed 1 if jokers are re-earned. Special jokers are **capped at 1 per type** — a player can hold at most 1 Duel, 1 Curse, 1 Snipe, and 1 Double Down simultaneously.
 
 | Field | Type | Start | Description |
 |-------|------|-------|-------------|
@@ -967,7 +969,7 @@ Tracks the count of each joker type. Starts at 1 each for basic jokers, 0 for sp
 | reshuffle_question | int | 1 | Replace the current question |
 | reveal_hint | int | 1 | Show a hint |
 | the_gambler | int | 1 | Stake a peg for a high-risk question |
-| steal | int | 0 | Take a random peg from an opponent |
+| duel | int | 0 | Challenge an opponent for one of their pegs |
 | curse | int | 0 | Force Hard difficulty on an opponent's next turn |
 | snipe | int | 0 | Remove a specific peg from an opponent |
 | double_down | int | 0 | Next correct answer awards +1 extra peg |
@@ -983,7 +985,7 @@ Running statistics tracked per player throughout the game.
 | passes_received | int | Times this player received a passed question |
 | passes_correct | int | Times they answered a pass correctly |
 | jokers_used | int | Total jokers consumed |
-| pegs_stolen_from | int | Pegs lost to Steal/Snipe |
+| pegs_stolen_from | int | Pegs lost to a Duel, a Snipe or a round battle |
 
 ### TurnState
 
@@ -1066,7 +1068,7 @@ A log entry for each completed turn. Used for statistics, replay, and debugging.
 | pass_result | enum \| null | `correct`, `wrong`, `declined`, null |
 | special_joker_earned | string \| null | Which special joker was earned (if any) |
 | basic_joker_earned | string \| null | Which basic joker was re-earned (if any) |
-| steal_target | { player_index: int, field: [int, int] } \| null | Steal details if used |
+| duel_result | { opponent_index: int, won: bool, field: [int, int] \| null } \| null | Duel details if used |
 | snipe_target | { player_index: int, field: [int, int] } \| null | Snipe details if used |
 | curse_target | int \| null | Player index who was cursed (if any) |
 
@@ -1184,7 +1186,7 @@ If the player selected 2 subcategories and 2 major categories, the system first 
 
 - **Category**: Random.
 - **Difficulty**: **50/50** split between Hard and Very Hard.
-- **Special joker reward**: On correct answer, the game awards a **random** special joker (Steal, Curse, Snipe, or Double Down — chosen uniformly at random). A player can hold **at most 1 of each type**. If they would earn one they already hold, re-roll for a different type. If they hold all 4, no special joker is awarded.
+- **Special joker reward**: On correct answer, the game awards a **random** special joker (Duel, Curse, Snipe, or Double Down — chosen uniformly at random). A player can hold **at most 1 of each type**. If they would earn one they already hold, re-roll for a different type. If they hold all 4, no special joker is awarded.
 
 ### General Rules
 

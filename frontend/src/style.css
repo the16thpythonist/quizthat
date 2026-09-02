@@ -375,7 +375,14 @@ html, body {
   .qt-rank-row.is-loser { border-color: var(--qt-danger); background: rgba(196, 56, 79, 0.16); }
   .qt-rank-pos { width: 20px; text-align: center; opacity: 0.6; }
   .qt-rank-name { flex: 1 1 auto; min-width: 0; text-align: left; }
-  .qt-rank-guess { font-size: 14px; opacity: 0.85; }
+  /* Carries value plus deviation, so it must be allowed to shrink and wrap
+     rather than push the player's name out of the row. */
+  .qt-rank-guess {
+    font-size: 14px;
+    opacity: 0.85;
+    text-align: right;
+    min-width: 0;
+  }
 
   /* the peg changing hands, shown on both boards */
   .qt-swap {
@@ -788,6 +795,8 @@ html, body {
   /* ---------- verdict screens ---------- */
   .qt-verdict {
     flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -1206,6 +1215,31 @@ html, body {
     border-top: 2px solid rgba(255, 255, 255, 0.25);
   }
   .qt-map-canvas { flex: 1 1 auto; min-height: 0; width: 100%; }
+
+  /* Battle reveal: every pin, the answer, and the distances between them. */
+  .qt-result-map {
+    width: min(100%, 460px);
+    height: 190px;
+    flex: 0 0 auto;
+    margin: 16px 0 4px;
+    border-radius: 20px;
+    overflow: hidden;
+    border: 3px solid rgba(255, 255, 255, 0.28);
+    background: #1b0b2b;
+  }
+  .qt-result-map .qt-map-tip {
+    background: rgba(24, 8, 40, 0.9);
+    border: none;
+    box-shadow: none;
+    color: #fff;
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 11px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .qt-result-map .qt-map-tip::before { display: none; }
   .qt-map-cta {
     position: absolute;
     left: 18px;

@@ -245,6 +245,27 @@ The central Pinia store. 403 lines. All game state lives here. Screens read from
 - `useJoker(type)` — consume joker, add to jokers_used_this_turn set
 - `revealHint()` — set hint_revealed flag
 - `activateDoubleDown()` — set double_down_active flag
+- `applyCurse(index)` — mark an opponent; spent when their turn begins
+- `snipePeg(index, row, col)` — remove one chosen peg
+- `startDuel(index)` — challenge one opponent (see Battles below)
+
+**Battles and Duels:**
+
+Both run on the same `BattleState` and the same four screens
+(`battle_intro` → `battle_gate` → `battle_answering` → `battle_reveal`), which
+is why the Duel joker needed almost no new machinery.
+
+- `_startBattle()` closes every full round: all players in turn order answer one
+  `estimation` or `battle_map` question blind, and last place gives one random
+  peg to first place **on the same coordinates**. Returns `false` — and play
+  simply carries on — when there are no battle questions left.
+- `startDuel(index)` is the Duel joker: `challenger_index` is set, `order` is
+  exactly `[challenger, opponent]`, and `_resolveBattle` moves a peg **only if
+  the challenger wins**. Losing costs nothing but the joker. Afterwards
+  `proceedFromBattleReveal` returns to `selection` rather than opening the next
+  turn — a duel is an interlude inside the challenger's own turn.
+- `_pickBattleQuestion()` is the shared draw (battle-only questions, excluding
+  used ids).
 
 ### `frontend/src/stores/persistence.ts`
 
@@ -285,6 +306,10 @@ All screens are in `frontend/src/screens/`. Each is a Vue 3 SFC with `<script se
 | Pass Resolve | `PassResolveScreen.vue` | `pass_resolve` | Shows correct answer after pass declines. Tap to continue. |
 | Gambler Confirm | `GamblerConfirmScreen.vue` | `gambler_confirm` | Stub — "coming soon" placeholder. |
 | Gambler Resolve | `GamblerResolveScreen.vue` | `gambler_resolve` | Stub — "coming soon" placeholder. |
+| Battle Intro | `BattleIntroScreen.vue` | `battle_intro` | Announces the round battle, or names both players for a Duel and states that only the challenger can lose. |
+| Battle Gate | `BattleGateScreen.vue` | `battle_gate` | Handoff between battle answers — the reason nobody profits from going last. |
+| Battle Answer | `BattleAnswerScreen.vue` | `battle_answering` | Keypad for estimation, blind Leaflet pin for `battle_map`. No feedback of any kind. |
+| Battle Reveal | `BattleRevealScreen.vue` | `battle_reveal` | The true answer, every guess with its deviation, and — for map battles — `BattleResultMap`. The peg transfer is drawn on both boards. |
 
 ---
 
@@ -404,7 +429,7 @@ to survive that. It stops on `victory`.
 
 **Key namespaces:** `start.*`, `setup.*`, `colors.*`, `turnGate.*`, `selection.*`, `question.*`, `answer.*`, `passGate.*`, `passResolve.*`, `board.*`, `victory.*`, `jokerNames.*`, `difficulty.*`, `categories.*`, `settings.*`, `gambler.*`, `narrator.*`
 
-**Convention:** Screens use `$t('namespace.key')` or `$t('key', { name: value })` for interpolation. Special jokers (Steal, Curse, Snipe, Double Down) are English proper nouns in all languages per SPEC.
+**Convention:** Screens use `$t('namespace.key')` or `$t('key', { name: value })` for interpolation. Special jokers (Duel, Curse, Snipe, Double Down) are English proper nouns in all languages per SPEC — except Duel, which reads as "Duell" in German.
 
 ---
 

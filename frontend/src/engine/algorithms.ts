@@ -611,7 +611,7 @@ export function rollBasicJokerReEarn(rng: GameRng): BasicJokerType | null {
 
 // ─── Special Joker Award ────────────────────────────────────────
 
-const SPECIAL_JOKERS: SpecialJokerType[] = ['steal', 'curse', 'snipe', 'double_down']
+const SPECIAL_JOKERS: SpecialJokerType[] = ['duel', 'curse', 'snipe', 'double_down']
 
 /**
  * Award a random special joker from Slot 4 correct.
@@ -904,4 +904,34 @@ export function pickTurnLine(rng: GameRng, colour: PlayerColor): string {
 /** The "your chance" line when a wrong answer passes to the previous player. */
 export function passLine(colour: PlayerColor): string {
   return `pass_${colour}`
+}
+
+// ─── Narrator: round-closing battle ─────────────────────────────
+
+/** Announcement variants for the battle that closes a round. */
+export const BATTLE_INTRO_KEYS = [
+  'battle_intro_1',
+  'battle_intro_2',
+  'battle_intro_3',
+] as const
+
+/** Lines played when the battle result is revealed. */
+export const BATTLE_REVEAL_KEYS = ['battle_reveal_1', 'battle_reveal_2'] as const
+
+/**
+ * Pick the battle announcement, as a voice-line key. The format callout that
+ * follows is not random — it names which format this battle is.
+ */
+export function pickBattleIntro(rng: GameRng): string {
+  return rng.pick(BATTLE_INTRO_KEYS)
+}
+
+/** Pick the reveal line. */
+export function pickBattleReveal(rng: GameRng): string {
+  return rng.pick(BATTLE_REVEAL_KEYS)
+}
+
+/** Voice-line key naming the battle format, e.g. 'battle_format_estimation'. */
+export function battleFormatLine(format: string): string {
+  return `battle_format_${format}`
 }

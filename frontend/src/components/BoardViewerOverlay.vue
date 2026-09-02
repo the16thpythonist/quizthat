@@ -24,7 +24,7 @@ const JOKER_ORDER: JokerType[] = [
   'reshuffle_question',
   'reveal_hint',
   'the_gambler',
-  'steal',
+  'duel',
   'curse',
   'snipe',
   'double_down',

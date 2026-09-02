@@ -49,7 +49,7 @@ export type BasicJokerType =
   | 'reveal_hint'
   | 'the_gambler'
 
-export type SpecialJokerType = 'steal' | 'curse' | 'snipe' | 'double_down'
+export type SpecialJokerType = 'duel' | 'curse' | 'snipe' | 'double_down'
 
 export type JokerType = BasicJokerType | SpecialJokerType
 
@@ -100,7 +100,7 @@ export interface JokerInventory {
   reshuffle_question: number
   reveal_hint: number
   the_gambler: number
-  steal: number
+  duel: number
   curse: number
   snipe: number
   double_down: number
@@ -179,6 +179,12 @@ export interface BattleAnswer {
 
 export interface BattleState {
   question_id: string
+  /**
+   * Set when this is a Duel joker rather than the battle that closes a round.
+   * A duel is between two players only, the transfer happens exclusively when
+   * the challenger wins, and play returns to their selection screen afterwards.
+   */
+  challenger_index: number | null
   question_type: 'estimation' | 'battle_map'
   /** Turn order for this battle; the device passes down this list. */
   order: number[]
@@ -239,7 +245,8 @@ export interface TurnHistory {
   pass_result: 'correct' | 'wrong' | 'declined' | null
   special_joker_earned: SpecialJokerType | null
   basic_joker_earned: BasicJokerType | null
-  steal_target: { player_index: number; field: [number, number] } | null
+  /** A duel joker played this turn: who was challenged and what it won. */
+  duel_result: { opponent_index: number; won: boolean; field: [number, number] | null } | null
   snipe_target: { player_index: number; field: [number, number] } | null
   curse_target: number | null
 }

@@ -12,6 +12,7 @@ import type {
   TurnState,
   OfferedSlot,
   QuestionData,
+  QuestionMeta,
   MultipleChoiceAnswerData,
   BattleState,
   BattleAnswer,
@@ -26,6 +27,8 @@ import { PLAYER_COLORS, BOARD_SIZE } from '../types/session'
 import { rankBattle, pickTransferField, haversineKm, checkWin, generateSlots, assignBoostSlots, assignJokerSlots, isBoostEligible, placementRuleForSlot, generateCandidates, passPlacementRule, gamblerPlacementRule, filterQuestions } from '../engine/algorithms'
 import { GameRng } from '../engine/rng'
 import {
+  pickBattleIntro,
+  pickBattleReveal,
   pickPlayerIntroLine,
   pickTurnLine,
   pickVerdictRemark,
@@ -41,14 +44,14 @@ function createBoard(size: number): Board {
   }
 }
 
-const SPECIAL_JOKER_TYPES: SpecialJokerType[] = ['steal', 'curse', 'snipe', 'double_down']
+const SPECIAL_JOKER_TYPES: SpecialJokerType[] = ['duel', 'curse', 'snipe', 'double_down']
 
 const ALL_JOKER_TYPES: JokerType[] = [
   'reshuffle_selection',
   'reshuffle_question',
   'reveal_hint',
   'the_gambler',
-  'steal',
+  'duel',
   'curse',
   'snipe',
   'double_down',
@@ -60,7 +63,7 @@ function createJokerInventory(): JokerInventory {
     reshuffle_question: 1,
     reveal_hint: 1,
     the_gambler: 1,
-    steal: 0,
+    duel: 0,
     curse: 0,
     snipe: 0,
     double_down: 0,
@@ -145,6 +148,9 @@ export const useGameStore = defineStore('game', () => {
    * every turn, off the session RNG, so the variant sequence replays too.
    */
   const turnLine = ref<string | null>(null)
+  /** Which announcement / reveal phrasing this battle uses. */
+  const battleIntroLine = ref<string | null>(null)
+  const battleRevealLine = ref<string | null>(null)
 
   // UI sub-state: which phase of setup we're in
   const setupPhase = ref<'start' | 'player_setup' | 'game_settings' | 'app_settings'>('start')
@@ -656,21 +662,28 @@ export const useGameStore = defineStore('game', () => {
    * fewer than two players — so the caller can simply carry on to the next
    * round rather than stranding play on a screen with no question.
    */
-  function _startBattle(): boolean {
-    if (!rng.value || players.value.length < 2) return false
+  function _pickBattleQuestion(): QuestionMeta | null {
+    if (!rng.value) return null
     const corpus = useCorpusStore()
     const candidates = filterQuestions(corpus.questions, {
       language: settings.value.language,
       excludeIds: usedQuestionIds.value,
       battleOnly: true,
     })
-    if (candidates.length === 0) return false
-
+    if (candidates.length === 0) return null
     const question = rng.value.pick(candidates)
     usedQuestionIds.value.add(question.id)
+    return question
+  }
+
+  function _startBattle(): boolean {
+    if (!rng.value || players.value.length < 2) return false
+    const question = _pickBattleQuestion()
+    if (!question) return false
 
     battle.value = {
       question_id: question.id,
+      challenger_index: null,
       question_type: question.question_type as 'estimation' | 'battle_map',
       order: players.value.map((p) => p.index),
       answers: [],
@@ -678,6 +691,9 @@ export const useGameStore = defineStore('game', () => {
       winner_index: null,
       loser_index: null,
     }
+    // Narrator phrasings for this battle, seeded so a replay says the same.
+    battleIntroLine.value = pickBattleIntro(rng.value)
+    battleRevealLine.value = pickBattleReveal(rng.value)
     state.value = 'battle_intro'
     return true
   }
@@ -749,7 +765,11 @@ export const useGameStore = defineStore('game', () => {
     const winner = outcome.winnerIndex !== null ? players.value[outcome.winnerIndex] : null
     const loser = outcome.loserIndex !== null ? players.value[outcome.loserIndex] : null
 
-    if (winner && loser && loser.board.peg_count > 0) {
+    // A duel only ever moves a peg towards the challenger: losing it costs
+    // them nothing but the joker.
+    const duelLost = b.challenger_index !== null && outcome.winnerIndex !== b.challenger_index
+
+    if (winner && loser && !duelLost && loser.board.peg_count > 0) {
       const field = pickTransferField(rng.value, loser.board, winner.board)
       if (field) {
         const [row, col] = field
@@ -767,10 +787,21 @@ export const useGameStore = defineStore('game', () => {
     state.value = 'battle_reveal'
   }
 
-  /** Leave the battle and open the next round. */
+  /**
+   * Leave the battle.
+   *
+   * A round battle opens the next turn; a duel was only an interlude inside the
+   * challenger's own turn, so it hands them back their selection screen.
+   */
   function proceedFromBattleReveal() {
+    const wasDuel = battle.value !== null && battle.value.challenger_index !== null
     battle.value = null
     currentQuestion.value = null
+    if (wasDuel) {
+      state.value = 'selection'
+      if (turn.value) turn.value.phase = 'selection'
+      return
+    }
     state.value = 'turn_start'
     _initTurn()
   }
@@ -846,6 +877,36 @@ export const useGameStore = defineStore('game', () => {
     useJoker('snipe')
     boardRow[col] = false
     target.board.peg_count--
+  }
+
+  /**
+   * Challenge one opponent to a battle question for one of their pegs.
+   *
+   * The softer half of the old Steal: the peg only moves if the challenger is
+   * closer, and a loss costs them nothing beyond the joker itself. Runs the
+   * round battle's own screens with an order of exactly two.
+   */
+  function startDuel(targetIndex: number) {
+    if (!turn.value || !rng.value) return
+    const target = players.value[targetIndex]
+    if (!target || targetIndex === currentPlayerIndex.value) return
+    const question = _pickBattleQuestion()
+    if (!question) return
+
+    useJoker('duel')
+    battle.value = {
+      question_id: question.id,
+      challenger_index: currentPlayerIndex.value,
+      question_type: question.question_type as 'estimation' | 'battle_map',
+      order: [currentPlayerIndex.value, targetIndex],
+      answers: [],
+      transfer: null,
+      winner_index: null,
+      loser_index: null,
+    }
+    battleIntroLine.value = pickBattleIntro(rng.value)
+    battleRevealLine.value = pickBattleReveal(rng.value)
+    state.value = 'battle_intro'
   }
 
   // ─── The Gambler ──────────────────────────────────────────────
@@ -987,6 +1048,8 @@ export const useGameStore = defineStore('game', () => {
     verdictRemark.value = null
     victoryRemark.value = null
     turnLine.value = null
+    battleIntroLine.value = null
+    battleRevealLine.value = null
   }
 
   return {
@@ -1013,6 +1076,8 @@ export const useGameStore = defineStore('game', () => {
     verdictRemark,
     victoryRemark,
     turnLine,
+    battleIntroLine,
+    battleRevealLine,
 
     // Computed
     currentPlayer,
@@ -1055,6 +1120,7 @@ export const useGameStore = defineStore('game', () => {
     reshuffleQuestion,
     applyCurse,
     snipePeg,
+    startDuel,
     startGambler,
     cancelGambler,
     confirmGambler,

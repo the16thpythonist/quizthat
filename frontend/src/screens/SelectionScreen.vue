@@ -51,15 +51,15 @@ function handleSelectSlot(index: number) {
   game.selectSlot(index)
 }
 
-/** Curse and Snipe both need a target, so they open the same sheet. */
-const targeting = ref<'curse' | 'snipe' | null>(null)
+/** Curse, Snipe and Duel all need a target, so they open the same sheet. */
+const targeting = ref<'curse' | 'snipe' | 'duel' | null>(null)
 
 function handleUseJoker(type: JokerType) {
   if (type === 'reshuffle_selection') {
     void game.reshuffleSelection()
   } else if (type === 'the_gambler') {
     game.startGambler()
-  } else if (type === 'curse' || type === 'snipe') {
+  } else if (type === 'curse' || type === 'snipe' || type === 'duel') {
     targeting.value = type
   }
 }

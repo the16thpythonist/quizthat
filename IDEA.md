@@ -68,7 +68,7 @@ Each player has their own 4x4 bingo board. Columns are labeled with letters, row
 
 A player wins by completing a **full line** of pegs — horizontal, vertical, or diagonal.
 
-All boards are **always visible** to all players — this enables strategic use of jokers like Steal and Snipe. The long-term vision includes physical board+peg sets that players have in front of them, with the digital board as a mirror.
+All boards are **always visible** to all players — this enables strategic use of jokers like Duel and Snipe. The long-term vision includes physical board+peg sets that players have in front of them, with the digital board as a mirror.
 
 ### Peg Placement Rules
 
@@ -168,9 +168,9 @@ The joker awarded is drawn at random from **all eight types**, basic or special.
 
 The four aggressive, board-affecting jokers, awarded through the mechanic above:
 
-- **Steal** — Take a random peg from another player's board.
+- **Duel** — Challenge one opponent to a battle question. Closest guess wins; if the challenger wins they take a random peg from the opponent's board, and if they lose nothing happens to them. The softer replacement for the original Steal, which took a peg unconditionally.
 - **Curse** — Force another player's next question to be "Hard" difficulty regardless of their slot selection.
-- **Snipe** — Choose a specific field on an opponent's board to remove their peg (targeted, unlike Steal's randomness).
+- **Snipe** — Choose a specific field on an opponent's board to remove their peg (targeted, and unlike a Duel it is not a contest).
 - **Double Down** — Your next correct answer awards 2 pegs instead of 1.
 
 ### Additional Joker Acquisition

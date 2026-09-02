@@ -7,27 +7,28 @@ import BoardGrid from './BoardGrid.vue'
 import JokerIcon from './JokerIcon.vue'
 
 /**
- * Target picker for the two jokers that reach across the table.
+ * Target picker for the jokers that reach across the table.
  *
- * Curse needs only a player. Snipe needs a player and then one of their pegs,
- * so it runs the same picker and follows it with their board. With a single
- * opponent the player step is skipped — there is nothing to choose.
+ * Curse and Duel need only a player. Snipe needs a player and then one of their
+ * pegs, so it runs the same picker and follows it with their board. With a
+ * single opponent the player step is skipped — there is nothing to choose.
  */
 const { t } = useI18n()
 const game = useGameStore()
 
-const props = defineProps<{ joker: 'curse' | 'snipe' }>()
+const props = defineProps<{ joker: 'curse' | 'snipe' | 'duel' }>()
 const emit = defineEmits<{ close: [] }>()
 
 const opponents = computed(() =>
   game.players.filter((p) => p.index !== game.currentPlayerIndex),
 )
 
-/** Snipe is pointless against a player with nothing on the board. */
+/** Snipe and Duel are both pointless against an empty board — there is
+ *  nothing there to take. */
 const eligible = computed(() =>
-  props.joker === 'snipe'
-    ? opponents.value.filter((p) => p.board.peg_count > 0)
-    : opponents.value,
+  props.joker === 'curse'
+    ? opponents.value
+    : opponents.value.filter((p) => p.board.peg_count > 0),
 )
 
 const chosenIndex = ref<number | null>(
@@ -44,6 +45,11 @@ function choose(index: number) {
     emit('close')
     return
   }
+  if (props.joker === 'duel') {
+    game.startDuel(index)
+    emit('close')
+    return
+  }
   chosenIndex.value = index
 }
 
@@ -53,7 +59,8 @@ function snipe(row: number, col: number) {
   emit('close')
 }
 
-// a single eligible opponent and a Curse needs no interaction at all
+// a single eligible opponent and a Curse needs no interaction at all — a Duel
+// still asks, because it is worth seeing who you are about to take on
 if (props.joker === 'curse' && eligible.value.length === 1) {
   const only = eligible.value[0]
   if (only) {
@@ -75,8 +82,8 @@ if (props.joker === 'curse' && eligible.value.length === 1) {
     <p v-if="eligible.length === 0" class="qt-joker-desc">{{ t('joker.noTarget') }}</p>
 
     <!-- choose a player -->
-    <template v-else-if="!chosen">
-      <p class="qt-joker-desc">{{ t('joker.chooseTarget') }}</p>
+    <template v-else-if="!chosen || joker === 'duel'">
+      <p class="qt-joker-desc">{{ t(joker === 'duel' ? 'joker.chooseOpponent' : 'joker.chooseTarget') }}</p>
       <div class="qt-settings-list">
         <button
           v-for="opponent in eligible"

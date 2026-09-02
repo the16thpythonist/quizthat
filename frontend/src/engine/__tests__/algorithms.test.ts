@@ -57,7 +57,7 @@ function makePlayer(overrides: Partial<Player> = {}): Player {
       reshuffle_question: 1,
       reveal_hint: 1,
       the_gambler: 1,
-      steal: 0,
+      duel: 0,
       curse: 0,
       snipe: 0,
       double_down: 0,
@@ -417,7 +417,7 @@ describe('awardSpecialJoker', () => {
     const rng = new GameRng(42)
     const player = makePlayer()
     const joker = awardSpecialJoker(rng, player)
-    expect(['steal', 'curse', 'snipe', 'double_down']).toContain(joker)
+    expect(['duel', 'curse', 'snipe', 'double_down']).toContain(joker)
   })
 
   it('returns null when all held', () => {
@@ -425,7 +425,7 @@ describe('awardSpecialJoker', () => {
     const player = makePlayer({
       jokers: {
         ...makePlayer().jokers,
-        steal: 1,
+        duel: 1,
         curse: 1,
         snipe: 1,
         double_down: 1,
@@ -438,7 +438,7 @@ describe('awardSpecialJoker', () => {
     const player = makePlayer({
       jokers: {
         ...makePlayer().jokers,
-        steal: 1,
+        duel: 1,
         curse: 1,
         snipe: 1,
         double_down: 0,
@@ -762,7 +762,7 @@ describe('generateSlots', () => {
     board: { size: 4, fields: Array.from({ length: 4 }, () => Array(4).fill(false)), peg_count: 0 },
     jokers: {
       reshuffle_selection: 1, reshuffle_question: 1, reveal_hint: 1, the_gambler: 1,
-      steal: 0, curse: 0, snipe: 0, double_down: 0,
+      duel: 0, curse: 0, snipe: 0, double_down: 0,
     },
     stats: {
       questions_attempted: 0, questions_correct: 0, passes_received: 0,
