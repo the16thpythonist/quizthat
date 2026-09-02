@@ -27,6 +27,35 @@ const doubleDownActive = computed(() => game.turn?.double_down_active ?? false)
 
 /** The slot this question came from — it carries the category, which the
  *  question payload itself does not. */
+/**
+ * During a pass, the same screen is being answered by a *different* player, so
+ * the answer belongs to the pass flow. Routing it through submitAnswer() instead
+ * re-ran the whole verdict: a wrong pass answer set state to answer_wrong, which
+ * handed the question on again, and again — an endless chain of second chances.
+ * It also credited the attempt to the wrong player's stats.
+ */
+function submitCurrentAnswer(correct: boolean) {
+  if (isPassPhase.value) {
+    game.submitPassAnswer(correct ? 'correct' : 'wrong')
+  } else {
+    game.submitAnswer(correct)
+  }
+}
+
+/**
+ * Whether a wrong answer may reveal the solution straight away.
+ *
+ * It may not while the question still has somewhere to go: per IDEA.md the
+ * answer stays hidden until the player one round behind has also had their
+ * turn. During the pass itself revealing is fine, since PassResolve shows it
+ * immediately afterwards anyway.
+ */
+const revealOnWrong = computed(() => {
+  if (isPassPhase.value) return true
+  const idx = game.turn?.previous_round_player_index
+  return !(game.round >= 2 && idx !== null && idx !== undefined)
+})
+
 const selectedSlot = computed(() => {
   const idx = game.turn?.selected_slot_index
   if (idx === null || idx === undefined) return null
@@ -55,7 +84,7 @@ function handleMultipleChoiceAnswer(index: number) {
   if (!question.value || question.value.question_type !== 'multiple_choice') return
   const data = question.value.answer_data as MultipleChoiceAnswerData
   const correct = index === data.correct_index
-  game.submitAnswer(correct)
+  submitCurrentAnswer(correct)
 }
 
 // --- Sorting (drag & drop) ---
@@ -163,7 +192,7 @@ function submitSortAnswer() {
   const data = question.value.answer_data as SortingAnswerData
   const userOrder = sortItems.value.map((item) => item.originalIndex)
   const correct = userOrder.every((val, idx) => val === data.correct_order[idx])
-  game.submitAnswer(correct)
+  submitCurrentAnswer(correct)
 }
 
 // --- Calculation ---
@@ -187,7 +216,7 @@ function submitCalcAnswer() {
   const diff = Math.abs(userValue - data.correct_value)
   const threshold = Math.abs(data.correct_value * data.tolerance)
   const correct = diff <= threshold
-  game.submitAnswer(correct)
+  submitCurrentAnswer(correct)
 }
 
 // --- Joker handlers ---
@@ -323,7 +352,8 @@ const HINT_ICON = JOKER_ICONS.reveal_hint
         <div class="qt-map-frame">
           <MapQuestion
             :answer-data="(question.answer_data as MapLocationAnswerData)"
-            @answer="(correct: boolean) => game.submitAnswer(correct)"
+            :reveal-on-wrong="revealOnWrong"
+            @answer="submitCurrentAnswer"
           />
         </div>
       </div>

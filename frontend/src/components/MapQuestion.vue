@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import L from 'leaflet'
 import type { MapLocationAnswerData } from '../types/session'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   answerData: MapLocationAnswerData
-}>()
+  /**
+   * Whether a wrong guess may show where the answer actually was. False while
+   * the question is still going to be passed to another player.
+   */
+  revealOnWrong?: boolean
+}>(), {
+  revealOnWrong: true,
+})
 
 const emit = defineEmits<{
   answer: [correct: boolean]
@@ -14,6 +21,7 @@ const emit = defineEmits<{
 const mapContainer = ref<HTMLDivElement | null>(null)
 let map: L.Map | null = null
 let answered = false
+let resizeObserver: ResizeObserver | null = null
 
 function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371
@@ -39,6 +47,13 @@ onMounted(() => {
     maxZoom: 18,
   }).addTo(map)
 
+  // Leaflet measures its container once, on creation. Inside a flex column that
+  // happens before the row has been given its height, so without this the map
+  // renders at the wrong size and leaves a gap below it.
+  void nextTick(() => map?.invalidateSize())
+  resizeObserver = new ResizeObserver(() => map?.invalidateSize())
+  resizeObserver.observe(mapContainer.value)
+
   map.on('click', (e: L.LeafletMouseEvent) => {
     if (answered || !map) return
     answered = true
@@ -57,6 +72,13 @@ onMounted(() => {
       fillOpacity: 0.9,
       weight: 2,
     }).addTo(map)
+
+    // A wrong guess that is about to be passed on must not give the answer
+    // away; show only where they tapped, then hand over.
+    if (!correct && !props.revealOnWrong) {
+      setTimeout(() => emit('answer', correct), 900)
+      return
+    }
 
     // After delay, show target + line, then emit
     setTimeout(() => {
@@ -90,6 +112,8 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  resizeObserver?.disconnect()
+  resizeObserver = null
   if (map) {
     map.remove()
     map = null
@@ -98,12 +122,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div
-    ref="mapContainer"
-    class="w-full flex-1 rounded-xl overflow-hidden"
-    :style="{
-      minHeight: '300px',
-      border: '1px solid rgba(255, 255, 255, 0.08)',
-    }"
-  ></div>
+  <!-- Fills its frame: the parent is a flex row, and min-height:0 lets this
+       shrink below its content so the map really reaches the bottom edge. -->
+  <div ref="mapContainer" class="qt-map-canvas"></div>
 </template>
