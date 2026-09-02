@@ -50,6 +50,18 @@ function submitCurrentAnswer(correct: boolean) {
  * turn. During the pass itself revealing is fine, since PassResolve shows it
  * immediately afterwards anyway.
  */
+/**
+ * The order the options are presented in, as chosen by the store. Falls back to
+ * file order if it is missing or stale, so a question always renders.
+ */
+const answerOrder = computed<number[]>(() => {
+  const q = question.value
+  if (!q || q.question_type !== 'multiple_choice') return []
+  const options = (q.answer_data as MultipleChoiceAnswerData).options
+  const order = game.turn?.answer_order ?? []
+  return order.length === options.length ? order : options.map((_, i) => i)
+})
+
 const revealOnWrong = computed(() => {
   if (isPassPhase.value) return true
   const idx = game.turn?.previous_round_player_index
@@ -292,14 +304,18 @@ const HINT_ICON = JOKER_ICONS.reveal_hint
 
       <!-- Multiple Choice -->
       <div v-if="question.question_type === 'multiple_choice'" class="qt-options">
+        <!-- position drives the letter, originalIndex drives the answer, so the
+             options can be shown in any order without breaking the check -->
         <button
-          v-for="(option, idx) in (question.answer_data as MultipleChoiceAnswerData).options"
-          :key="idx"
+          v-for="(originalIndex, position) in answerOrder"
+          :key="originalIndex"
           class="qt-pill"
-          @click="handleMultipleChoiceAnswer(idx)"
+          @click="handleMultipleChoiceAnswer(originalIndex)"
         >
-          <span class="qt-pill-letter">{{ String.fromCharCode(65 + idx) }}</span>
-          <span class="flex-1">{{ option }}</span>
+          <span class="qt-pill-letter">{{ String.fromCharCode(65 + position) }}</span>
+          <span class="flex-1">
+            {{ (question.answer_data as MultipleChoiceAnswerData).options[originalIndex] }}
+          </span>
         </button>
       </div>
 

@@ -562,6 +562,46 @@ describe('pickSlot1Difficulty', () => {
   })
 })
 
+describe('answer option order', () => {
+  /**
+   * The corpus puts the correct answer first in 13 of 16 multiple-choice
+   * questions, so presenting options in file order would make "A" almost
+   * always right. Display order therefore has to be randomised independently
+   * of how the question stores its answer.
+   */
+  it('does not leave the options in file order', () => {
+    let moved = 0
+    const runs = 60
+    for (let seed = 0; seed < runs; seed++) {
+      const rng = new GameRng(seed)
+      const order = rng.shuffle([0, 1, 2, 3])
+      if (order[0] !== 0) moved++
+    }
+    // the correct answer should sit somewhere other than first most of the time
+    expect(moved).toBeGreaterThan(runs * 0.5)
+  })
+
+  it('is a permutation — every option shown exactly once', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const rng = new GameRng(seed)
+      const order = rng.shuffle([0, 1, 2, 3])
+      expect([...order].sort()).toEqual([0, 1, 2, 3])
+    }
+  })
+
+  it('gives the pass player a different arrangement', () => {
+    const rng = new GameRng(11)
+    let differed = 0
+    const runs = 40
+    for (let i = 0; i < runs; i++) {
+      const first = rng.shuffle([0, 1, 2, 3])
+      const second = rng.shuffle([0, 1, 2, 3])
+      if (first.join() !== second.join()) differed++
+    }
+    expect(differed).toBeGreaterThan(runs * 0.6)
+  })
+})
+
 describe('generateSlots', () => {
   /** Mirrors the real corpus shape: plenty of medium, no very_hard at all. */
   function corpus(count: number) {

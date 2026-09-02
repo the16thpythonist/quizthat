@@ -165,6 +165,12 @@ export interface TurnState {
   special_joker_earned: SpecialJokerType | null
   basic_joker_earned: BasicJokerType | null
   candidate_fields: [number, number][]
+  /**
+   * Which order the current question's answer options are shown in, as indices
+   * into the question's own options array. Display-only: the stored question is
+   * never modified, so correctness is still checked against the real index.
+   */
+  answer_order: number[]
 }
 
 export interface GameSettings {
