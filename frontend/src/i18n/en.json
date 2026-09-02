@@ -35,7 +35,9 @@
     "expertiseHint": "Pick up to 2 major categories. Tap a selected one to open its subcategories — up to 2 of those.",
     "expertiseLoading": "Loading categories…",
     "introExpertise": "Every player picks an expertise: up to 2 major categories (e.g. Science) and up to 2 subcategories (e.g. Physics). Your first question each round is drawn from those areas.",
-    "introTrade": "The narrower the claim, the dearer it is: a subcategory never yields an easy question — there, hard and very hard are the rule."
+    "introTrade": "The narrower the claim, the dearer it is: a subcategory never yields an easy question — there, hard and very hard are the rule.",
+    "chooseExpertise": "Choose expertise",
+    "expertiseDone": "Done"
   },
   "colors": {
     "red": "Red",

@@ -5,19 +5,25 @@ import { useCorpusStore } from '../stores/corpus'
 import type { Expertise } from '../types/session'
 
 /**
- * Two-tier expertise picker.
+ * Two-tier expertise picker, shown as a sheet rising from the bottom.
  *
  * A major category is the generic claim; its subcategories are the specific
  * ones. Picking specific is deliberately a bargain rather than a free upgrade:
  * the engine draws those questions from a harsher difficulty band, so claiming
  * you know Physics never gets you an easy question, while claiming Science
  * still can.
+ *
+ * Edits apply live, so the sheet only ever needs closing — there is nothing to
+ * confirm and nothing to lose by dismissing it.
  */
 const { t } = useI18n()
 const corpus = useCorpusStore()
 
-const props = defineProps<{ modelValue: Expertise }>()
-const emit = defineEmits<{ 'update:modelValue': [value: Expertise] }>()
+const props = defineProps<{ modelValue: Expertise; title?: string }>()
+const emit = defineEmits<{
+  'update:modelValue': [value: Expertise]
+  close: []
+}>()
 
 const MAX_MAJORS = 2
 const MAX_SUBS = 2
@@ -73,11 +79,15 @@ function canPickSub(sub: string) {
 </script>
 
 <template>
-  <div class="qt-setting">
-    <div class="qt-setting-label">
-      {{ t('setup.expertise') }} · {{ majors.length }}/{{ MAX_MAJORS }}
+  <div class="qt-backdrop" @click="emit('close')"></div>
+
+  <div class="qt-sheet qt-sheet--up qt-sheet--tall">
+    <div class="qt-sheet-title">
+      {{ title || t('setup.expertise') }} ·
+      {{ majors.length }}/{{ MAX_MAJORS }}
       <span v-if="subs.length"> · {{ t('setup.expertiseSpecificShort') }} {{ subs.length }}/{{ MAX_SUBS }}</span>
     </div>
+
     <p class="qt-expertise-hint">{{ t('setup.expertiseHint') }}</p>
 
     <p v-if="corpus.categories.length === 0" class="qt-expertise-hint" style="opacity: 0.5">
@@ -116,6 +126,10 @@ function canPickSub(sub: string) {
           >{{ sub }}</button>
         </div>
       </div>
+    </div>
+
+    <div class="qt-sheet-foot">
+      <button class="qt-cta qt-cta--accent" @click="emit('close')">{{ t('setup.expertiseDone') }}</button>
     </div>
   </div>
 </template>

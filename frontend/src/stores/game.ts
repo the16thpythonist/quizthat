@@ -136,6 +136,13 @@ export const useGameStore = defineStore('game', () => {
     players.value.push(player)
   }
 
+  /** Lets an expertise be corrected without removing and re-adding the player. */
+  function updatePlayerExpertise(index: number, expertise: Expertise) {
+    const player = players.value[index]
+    if (!player) return
+    player.expertise = { ...expertise }
+  }
+
   function removePlayer(index: number) {
     players.value.splice(index, 1)
     players.value.forEach((p, i) => (p.index = i))
@@ -498,6 +505,7 @@ export const useGameStore = defineStore('game', () => {
     goToPlayerSetup,
     goToStart,
     addPlayer,
+    updatePlayerExpertise,
     removePlayer,
     updateSettings,
     getAvailableColors,

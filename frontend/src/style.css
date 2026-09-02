@@ -825,6 +825,20 @@ html, body {
   .qt-swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.25); }
   .qt-swatch.is-on { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25); }
   .qt-swatch:disabled { opacity: 0.25; }
+  /* The expertise sheet is the one sheet with more content than fits, so its
+     list scrolls while the title and the done button stay put. */
+  .qt-sheet--tall {
+    display: flex;
+    flex-direction: column;
+    max-height: 85dvh;
+  }
+  .qt-sheet--tall .qt-expertise-list {
+    flex: 1 1 auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .qt-sheet-foot { flex: 0 0 auto; padding-top: 14px; }
+
   /* ---------- expertise picker ---------- */
   .qt-expertise-hint {
     margin: 0 0 10px;
@@ -882,6 +896,39 @@ html, body {
   }
   .qt-sub.is-on { background: var(--qt-gold); border-color: var(--qt-gold); color: #4A2C00; }
   .qt-sub:disabled { opacity: 0.3; }
+
+  /* Opens the expertise sheet, and shows what is currently picked so the
+     card does not have to be opened just to check. */
+  .qt-expertise-trigger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 12px;
+    padding: 11px 16px;
+    border-radius: var(--qt-radius-pill);
+    border: 2px solid rgba(255, 255, 255, 0.28);
+    background: rgba(0, 0, 0, 0.18);
+    color: #fff;
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 13px;
+    text-align: left;
+  }
+  .qt-expertise-trigger.is-empty { border-style: dashed; opacity: 0.8; }
+  .qt-expertise-trigger-value { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .qt-expertise-trigger-arrow {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-right: 3px solid rgba(255, 255, 255, 0.8);
+    border-top: 3px solid rgba(255, 255, 255, 0.8);
+    transform: rotate(45deg);
+  }
+
+  /* a player row is tappable to re-open their expertise */
+  .qt-player-row--tappable { cursor: pointer; }
 
   .qt-input {
     width: 100%;

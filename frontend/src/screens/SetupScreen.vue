@@ -35,6 +35,37 @@ function expertiseLine(expertise: Expertise): string {
   return [...expertise.major_categories, ...expertise.subcategories].join(' · ')
 }
 
+/**
+ * Which expertise the sheet is editing: the player being added, or the index
+ * of one already in the list.
+ */
+const editingExpertise = ref<'new' | number | null>(null)
+
+const sheetExpertise = computed<Expertise>({
+  get() {
+    if (editingExpertise.value === 'new') return newPlayerExpertise.value
+    if (typeof editingExpertise.value === 'number') {
+      return game.players[editingExpertise.value]?.expertise
+        ?? { major_categories: [], subcategories: [] }
+    }
+    return { major_categories: [], subcategories: [] }
+  },
+  set(value) {
+    if (editingExpertise.value === 'new') {
+      newPlayerExpertise.value = value
+    } else if (typeof editingExpertise.value === 'number') {
+      game.updatePlayerExpertise(editingExpertise.value, value)
+    }
+  },
+})
+
+const sheetTitle = computed(() => {
+  if (typeof editingExpertise.value === 'number') {
+    return game.players[editingExpertise.value]?.name ?? t('setup.expertise')
+  }
+  return t('setup.expertise')
+})
+
 function isColorTaken(color: PlayerColor): boolean {
   return !availableColors.value.includes(color)
 }
@@ -121,7 +152,12 @@ const STARTING_PEG_OPTIONS = [0, 2, 4, 6]
         </p>
       </div>
 
-      <div v-for="(player, idx) in game.players" :key="idx" class="qt-player-row">
+      <div
+        v-for="(player, idx) in game.players"
+        :key="idx"
+        class="qt-player-row qt-player-row--tappable"
+        @click="editingExpertise = idx"
+      >
         <div class="qt-avatar" :style="{ backgroundColor: COLOR_HEX[player.color] }">
           {{ player.name.charAt(0).toUpperCase() }}
         </div>
@@ -132,7 +168,7 @@ const STARTING_PEG_OPTIONS = [0, 2, 4, 6]
             style="font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; opacity: 0.6"
           >{{ expertiseLine(player.expertise) }}</span>
         </div>
-        <button class="qt-row-x" :aria-label="t('setup.removePlayer')" @click="handleRemovePlayer(idx)">✕</button>
+        <button class="qt-row-x" :aria-label="t('setup.removePlayer')" @click.stop="handleRemovePlayer(idx)">✕</button>
       </div>
 
       <!-- add a player -->
@@ -157,9 +193,20 @@ const STARTING_PEG_OPTIONS = [0, 2, 4, 6]
             @click="newPlayerColor = color"
           ></button>
         </div>
+
+        <button
+          class="qt-expertise-trigger"
+          :class="{ 'is-empty': !expertiseLine(newPlayerExpertise) }"
+          @click="editingExpertise = 'new'"
+        >
+          <span class="qt-expertise-trigger-value">
+            {{ expertiseLine(newPlayerExpertise) || t('setup.chooseExpertise') }}
+          </span>
+          <span class="qt-expertise-trigger-arrow"></span>
+        </button>
       </div>
 
-      <ExpertisePicker v-if="game.players.length < 6" v-model="newPlayerExpertise" />
+
 
       <button class="qt-cta qt-cta--ghost" :disabled="!canAddPlayer" @click="handleAddPlayer">
         + {{ t('setup.addPlayer') }}
@@ -206,5 +253,12 @@ const STARTING_PEG_OPTIONS = [0, 2, 4, 6]
         {{ t('setup.startGame') }}
       </button>
     </div>
+
+    <ExpertisePicker
+      v-if="editingExpertise !== null"
+      v-model="sheetExpertise"
+      :title="sheetTitle"
+      @close="editingExpertise = null"
+    />
   </div>
 </template>
