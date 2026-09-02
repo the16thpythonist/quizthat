@@ -6,6 +6,7 @@ export type GameState =
   | 'gambler_confirm'
   | 'gambler_question'
   | 'gambler_resolve'
+  | 'joker_award'
   | 'question_display'
   | 'answer_correct'
   | 'answer_wrong'

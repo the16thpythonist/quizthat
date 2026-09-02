@@ -6,7 +6,8 @@ import type { GameState, JokerType } from '../types/session'
 const VALID_TRANSITIONS: Record<GameState, GameState[]> = {
   setup: ['turn_start'],
   turn_start: ['selection'],
-  selection: ['question_display', 'selection', 'gambler_confirm'],
+  selection: ['question_display', 'joker_award', 'selection', 'gambler_confirm'],
+  joker_award: ['question_display'],
   gambler_confirm: ['gambler_question', 'selection'],
   gambler_question: ['gambler_resolve'],
   gambler_resolve: ['peg_placement', 'turn_end'],

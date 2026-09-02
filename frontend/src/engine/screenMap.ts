@@ -8,6 +8,7 @@ const screenComponents: Record<GameState, Component> = {
   gambler_confirm: defineAsyncComponent(() => import('../screens/GamblerConfirmScreen.vue')),
   gambler_question: defineAsyncComponent(() => import('../screens/QuestionScreen.vue')),
   gambler_resolve: defineAsyncComponent(() => import('../screens/GamblerResolveScreen.vue')),
+  joker_award: defineAsyncComponent(() => import('../screens/JokerAwardScreen.vue')),
   question_display: defineAsyncComponent(() => import('../screens/QuestionScreen.vue')),
   answer_correct: defineAsyncComponent(() => import('../screens/AnswerResultScreen.vue')),
   answer_wrong: defineAsyncComponent(() => import('../screens/AnswerResultScreen.vue')),
