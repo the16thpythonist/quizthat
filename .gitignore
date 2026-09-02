@@ -40,3 +40,6 @@ questions/corpus-index.json
 
 # Logs
 *.log
+
+# Sound design scratch (personal-use-only free-tier generations)
+sfx-candidates/

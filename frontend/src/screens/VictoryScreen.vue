@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { audioManager } from '../audio/audioManager'
+import { SFX, VOICE, VICTORY_LINE_DELAY_MS, voiceLine } from '../audio/sfx'
 import BoardGrid from '../components/BoardGrid.vue'
 import { COLOR_HEX } from '../types/session'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const game = useGameStore()
 
 const winner = computed(() => {
@@ -15,11 +17,43 @@ const winner = computed(() => {
 
 const showConfetti = ref(false)
 
+/**
+ * Celebration: the crowd cheer lands with the confetti, then the narrator names
+ * the winner in their own colour once the cheer has peaked.
+ *
+ * App.vue has already brought the gameplay loop down and started the applause
+ * bed; the applause deliberately keeps running under the callout, since voice
+ * ducking applies to music only.
+ */
+let victoryTimer: ReturnType<typeof setTimeout> | null = null
+let confettiTimer: ReturnType<typeof setTimeout> | null = null
+
 onMounted(() => {
-  // Trigger confetti animation after a brief delay
-  setTimeout(() => {
+  audioManager.playSfx(SFX.VICTORY_FANFARE)
+  confettiTimer = setTimeout(() => {
     showConfetti.value = true
   }, 300)
+
+  const colour = winner.value?.color
+  if (!colour) return
+  victoryTimer = setTimeout(() => {
+    // Winner callout first, then a colour-independent follow-up. enqueueVoice
+    // queues behind it, so the two play in order with the queue's normal gap
+    // rather than talking over each other.
+    audioManager.playVoiceNow(
+      voiceLine(VOICE.VICTORY, locale.value, { key: `victory_${colour}` }),
+    )
+    if (game.victoryRemark) {
+      audioManager.enqueueVoice(
+        voiceLine(VOICE.VICTORY, locale.value, { key: game.victoryRemark }),
+      )
+    }
+  }, VICTORY_LINE_DELAY_MS)
+})
+
+onUnmounted(() => {
+  if (victoryTimer) clearTimeout(victoryTimer)
+  if (confettiTimer) clearTimeout(confettiTimer)
 })
 
 function handlePlayAgain() {

@@ -339,12 +339,27 @@ Singleton `audioManager` wrapping Howler.js. 294 lines.
 - Lines play sequentially with 200ms gaps between them
 
 **Background Music:**
-- `startMusic(src)` — start looping background music
+- `startMusic(src, { fadeInMs })` — start the looping track. `src` may be a list of
+  sources in preference order (ogg, then mp3); formats are derived from the file
+  extensions. Idempotent: calling it with the track already playing is a no-op, so
+  it can be re-fired on every state transition. Returns a promise that resolves
+  once playback has *actually* begun — see autoplay below.
 - `stopMusic()` — fade out and stop
 - Automatic ducking: music volume drops to 15% during voice playback, restores after
 
+**Autoplay unlock:**
+- `whenAudible()` — resolves once the browser permits playback: immediately if the
+  AudioContext is already running, otherwise on the first `pointerdown`/`touchstart`/
+  `keydown`. Browsers *queue* a `play()` issued against a suspended context rather
+  than refusing it, so anything timed against playback (a fade, a line scheduled
+  after one) would otherwise elapse silently before the user hears anything.
+  Howler creates its AudioContext lazily on the first `Howl`, so this reports
+  "audible" when no context exists yet — call it after some audio is constructed.
+
 **Sound Effects:**
-- `playSfx(src)` — one-shot playback, cached by path
+- `playSfx(src)` — one-shot playback, cached by path. A source that fails to load is
+  recorded as unavailable and skipped from then on, so the SFX slots with no file yet
+  stay silent instead of throwing every turn.
 
 **Settings:**
 - `updateSettings(settings)` — master volume, music volume, mute, music enabled, sfx enabled
@@ -352,8 +367,32 @@ Singleton `audioManager` wrapping Howler.js. 294 lines.
 
 ### `frontend/src/audio/sfx.ts`
 
-Path constants for sound effects (all `/sfx/*.mp3`):
-`CORRECT`, `INCORRECT`, `PEG_DROP`, `ROULETTE_TICK`, `VICTORY_FANFARE`, `HEARTBEAT`, `JOKER_USE`, `CARD_SELECT`, `BUTTON_TAP`
+Asset paths, served from `public/` (not bundled).
+
+- `SFX` — the nine effect slots (all `/sfx/*.mp3`): `CORRECT`, `INCORRECT`, `PEG_DROP`,
+  `ROULETTE_TICK`, `VICTORY_FANFARE`, `HEARTBEAT`, `JOKER_USE`, `CARD_SELECT`,
+  `BUTTON_TAP`. Only `INCORRECT` has a file so far; the rest are silent no-ops.
+- `MUSIC.GAMEPLAY_LOOP` — `['/music/quizshow_loop.ogg', '/music/quizshow_loop.mp3']`.
+  **Ogg first, deliberately:** MP3 cannot loop gaplessly because the format pads every
+  file with encoder delay (~32 ms here), audible as a hiccup on every wrap. The MP3 is
+  a fallback for browsers without Vorbis (Safari); Howler picks the first playable one.
+- `VOICE` — UI narrator lines as `{lang}` templates, resolved by `voiceLine(tpl, lang)`
+  against the active i18n locale. Adding a language means dropping
+  `welcome.<lang>.mp3` into `public/voice/` — no code change. A missing file is silent:
+  the voice queue skips entries that fail to load. Currently German only.
+- `MUSIC_FADE_IN_MS` — title-screen fade duration (3000).
+
+### Opening sequence (`App.vue`)
+
+Once per page load: music fades up over `MUSIC_FADE_IN_MS`, then the welcome voice line
+plays (ducking the music automatically). Sequenced off the promise from `startMusic()`
+rather than a bare timer, so a blocked autoplay delays the whole sequence to the user's
+first tap instead of running it against silence. The welcome is skipped if the player
+has already left the title screen during the fade.
+
+Music start/stop is driven by a `watch` on `game.state` in `App.vue`, not from a
+screen's `onMounted` — screens mount and unmount on every transition and the music has
+to survive that. It stops on `victory`.
 
 ---
 

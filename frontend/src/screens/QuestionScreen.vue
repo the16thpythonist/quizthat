@@ -1,7 +1,10 @@
 <script setup lang="ts">
-import { ref, computed, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useCorpusStore } from '../stores/corpus'
+import { audioManager } from '../audio/audioManager'
+import { QUESTION_READ_DELAY_MS } from '../audio/sfx'
 import JokerTray from '../components/JokerTray.vue'
 import MapQuestion from '../components/MapQuestion.vue'
 import GameBar from '../components/GameBar.vue'
@@ -15,8 +18,39 @@ import type {
 } from '../types/session'
 import { JOKER_ICONS } from '../components/jokerIcons'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const game = useGameStore()
+const corpus = useCorpusStore()
+
+/**
+ * The narrator reads the question aloud shortly after the screen appears — long
+ * enough for the tick bed to establish first. The bed ducks to 15% under the
+ * voice on its own and recovers when the reading ends.
+ *
+ * Only the question text is read; the four options are on screen. A question
+ * with no audio yet is silently skipped by the voice queue.
+ */
+let readTimer: ReturnType<typeof setTimeout> | null = null
+
+function stopNarration() {
+  if (readTimer) {
+    clearTimeout(readTimer)
+    readTimer = null
+  }
+  audioManager.clearQueue()
+}
+
+onMounted(() => {
+  const id = game.turn?.selected_question_id
+  if (!id) return
+  readTimer = setTimeout(() => {
+    audioManager.playVoiceNow(
+      audioManager.questionAudioPath(id, 'question', locale.value, corpus.corpusBaseUrl),
+    )
+  }, QUESTION_READ_DELAY_MS)
+})
+
+onUnmounted(() => stopNarration())
 
 const player = computed(() => game.currentPlayer)
 const question = computed(() => game.currentQuestion)
@@ -35,6 +69,16 @@ const doubleDownActive = computed(() => game.turn?.double_down_active ?? false)
  * It also credited the attempt to the wrong player's stats.
  */
 function submitCurrentAnswer(correct: boolean) {
+  // A player who already knows the answer should never be made to wait for the
+  // narrator (SPEC §6: lines are skippable, 200ms fade).
+  stopNarration()
+  // The Gambler has its own resolution: three random pegs or the staked one
+  // taken. Routing it through the ordinary verdict left the turn with no
+  // placement rule and stranded the player on an empty placement board.
+  if (game.state === 'gambler_question') {
+    game.resolveGambler(correct)
+    return
+  }
   if (isPassPhase.value) {
     game.submitPassAnswer(correct ? 'correct' : 'wrong')
   } else {
@@ -238,7 +282,7 @@ function handleUseJoker(type: JokerType) {
   } else if (type === 'double_down') {
     game.activateDoubleDown()
   } else if (type === 'reshuffle_question') {
-    game.useJoker('reshuffle_question')
+    void game.reshuffleQuestion()
   }
 }
 

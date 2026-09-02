@@ -7,6 +7,9 @@ import {
   assignJokerSlots,
   pickSlot1Difficulty,
   generateSlots,
+  placementRuleForSlot,
+  passPlacementRule,
+  gamblerPlacementRule,
   previousRoundPlayer,
   generateStartingPegs,
   calculatePegCount,
@@ -17,7 +20,6 @@ import {
   rollBasicJokerReEarn,
   awardSpecialJoker,
   scrambleAnswerOrder,
-  placementRuleForSlot,
 } from '../algorithms'
 import {
   pickPlayerIntroLine,
@@ -308,7 +310,7 @@ describe('generateCandidates', () => {
     const candidates = generateCandidates(rng, board, {
       type: 'random_board',
       constraint: null,
-      candidates_count: 2,
+      candidates_count: 2, mode: 'choose' as const,
     })
     expect(candidates).toHaveLength(2)
   })
@@ -319,7 +321,7 @@ describe('generateCandidates', () => {
     const candidates = generateCandidates(rng, board, {
       type: 'free',
       constraint: null,
-      candidates_count: 0,
+      candidates_count: 0, mode: 'choose' as const,
     })
     expect(candidates).toHaveLength(7)
   })
@@ -330,7 +332,7 @@ describe('generateCandidates', () => {
     const candidates = generateCandidates(rng, board, {
       type: 'constrained',
       constraint: { type: 'row', index: 1, display: 'Row 2' },
-      candidates_count: 2,
+      candidates_count: 2, mode: 'choose' as const,
     })
     expect(candidates).toHaveLength(2)
     // All candidates should be in row 1
@@ -346,7 +348,7 @@ describe('generateCandidates', () => {
     const candidates = generateCandidates(rng, board, {
       type: 'constrained',
       constraint: { type: 'row', index: 1, display: 'Row 2' },
-      candidates_count: 3,
+      candidates_count: 3, mode: 'choose' as const,
     })
     expect(candidates).toHaveLength(1)
     expect(candidates[0]).toEqual([1, 2])
@@ -461,11 +463,19 @@ describe('scrambleAnswerOrder', () => {
 // ─── Boost and joker assignment ─────────────────────────────────
 
 describe('assignBoostSlots', () => {
+  it('never boosts the expertise slot — both sweeteners lure away from it', () => {
+    const rng = new GameRng(1)
+    for (let i = 0; i < 200; i++) {
+      expect(assignBoostSlots(rng, true)).not.toContain(0)
+      expect(assignBoostSlots(rng, false)).not.toContain(0)
+    }
+  })
+
   it('only ever returns valid slot indices', () => {
     const rng = new GameRng(1)
     for (let i = 0; i < 50; i++) {
       for (const idx of assignBoostSlots(rng, false)) {
-        expect([0, 1, 2, 3]).toContain(idx)
+        expect([1, 2, 3]).toContain(idx)
       }
     }
   })
@@ -479,7 +489,7 @@ describe('assignBoostSlots', () => {
       base += assignBoostSlots(rng, false).length
       behind += assignBoostSlots(rng, true).length
     }
-    // ~8% vs ~35% per card, 4 cards per run
+    // ~8% vs ~35% per card, 3 eligible cards per run
     expect(behind).toBeGreaterThan(base * 2)
   })
 
@@ -488,8 +498,8 @@ describe('assignBoostSlots', () => {
     let boosted = 0
     const rng = new GameRng(7)
     for (let i = 0; i < runs; i++) boosted += assignBoostSlots(rng, false).length
-    // well under half of the 4 cards per run
-    expect(boosted).toBeLessThan(runs * 4 * 0.2)
+    // well under a fifth of the 3 eligible cards per run
+    expect(boosted).toBeLessThan(runs * 3 * 0.2)
   })
 })
 
@@ -599,6 +609,47 @@ describe('answer option order', () => {
       if (first.join() !== second.join()) differed++
     }
     expect(differed).toBeGreaterThan(runs * 0.6)
+  })
+})
+
+describe('placement rules', () => {
+  const settings = {
+    placement_candidates: 2,
+    starting_pegs: 0,
+    lines_to_win: 1,
+    language: 'de',
+  }
+
+  it('lets the player choose when there is more than one candidate', () => {
+    const rule = placementRuleForSlot(
+      { slot_type: 'expertise', question_id: 'q', teaser_title: '', major_category: 'Science',
+        difficulty: 'easy', constraint: null, has_2x_boost: false, awards_joker: false },
+      settings,
+    )
+    expect(rule.mode).toBe('choose')
+  })
+
+  it('is automatic when the setting leaves only one candidate', () => {
+    const rule = placementRuleForSlot(
+      { slot_type: 'expertise', question_id: 'q', teaser_title: '', major_category: 'Science',
+        difficulty: 'easy', constraint: null, has_2x_boost: false, awards_joker: false },
+      { ...settings, placement_candidates: 1 },
+    )
+    expect(rule.mode).toBe('auto')
+  })
+
+  it('gives the second chance one automatic field, whatever the setting', () => {
+    for (const count of [1, 2, 3, 4]) {
+      const rule = passPlacementRule({ ...settings, placement_candidates: count })
+      expect(rule.candidates_count).toBe(1)
+      expect(rule.mode).toBe('auto')
+    }
+  })
+
+  it('gives the Gambler three fields, all taken', () => {
+    const rule = gamblerPlacementRule(settings)
+    expect(rule.candidates_count).toBe(3)
+    expect(rule.mode).toBe('auto')
   })
 })
 

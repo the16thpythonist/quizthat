@@ -1,25 +1,41 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { audioManager } from '../audio/audioManager'
+import { VOICE, voiceLine } from '../audio/sfx'
 import { COLOR_HEX } from '../types/session'
 import BoardGrid from '../components/BoardGrid.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const game = useGameStore()
 
 const locked = ref(true)
 const showTapHint = ref(false)
 
+const player = computed(() => game.currentPlayer)
+
+/**
+ * The narrator announces whose turn it is, after the tap lockout — the gate
+ * exists for a device handoff, so the line should land once the tablet has
+ * actually changed hands rather than while it is still moving.
+ */
+let lockTimer: ReturnType<typeof setTimeout> | null = null
+
 onMounted(() => {
   // 0.5s tap lockout to prevent accidental tap-through during device handoff
-  setTimeout(() => {
+  lockTimer = setTimeout(() => {
     locked.value = false
     showTapHint.value = true
   }, 500)
+
+  const key = game.turnLine
+  if (key) audioManager.playVoiceNow(voiceLine(VOICE.TRANSITION, locale.value, { key }))
 })
 
-const player = computed(() => game.currentPlayer)
+onUnmounted(() => {
+  if (lockTimer) clearTimeout(lockTimer)
+})
 const playerName = computed(() => player.value?.name ?? '')
 const colorHex = computed(() => (player.value ? COLOR_HEX[player.value.color] : '#666'))
 

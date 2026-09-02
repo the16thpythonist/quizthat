@@ -1,11 +1,14 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { audioManager } from '../audio/audioManager'
+import { VOICE, voiceLine } from '../audio/sfx'
+import { passLine } from '../engine/algorithms'
 import { COLOR_HEX } from '../types/session'
 import BoardGrid from '../components/BoardGrid.vue'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const game = useGameStore()
 
 const locked = ref(true)
@@ -16,12 +19,27 @@ const passPlayer = computed(() => {
   return game.players[game.turn.pass.pass_player_index] ?? null
 })
 
+let lockTimer: ReturnType<typeof setTimeout> | null = null
+
 onMounted(() => {
   // 0.5s tap lockout
-  setTimeout(() => {
+  lockTimer = setTimeout(() => {
     locked.value = false
     showTapHint.value = true
   }, 500)
+
+  // Only one phrasing per colour here — the pass gate is comparatively rare, so
+  // it does not wear the way the turn callout does.
+  const colour = passPlayer.value?.color
+  if (colour) {
+    audioManager.playVoiceNow(
+      voiceLine(VOICE.TRANSITION, locale.value, { key: passLine(colour) }),
+    )
+  }
+})
+
+onUnmounted(() => {
+  if (lockTimer) clearTimeout(lockTimer)
 })
 
 const colorHex = computed(() => (passPlayer.value ? COLOR_HEX[passPlayer.value.color] : '#666'))

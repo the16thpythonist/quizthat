@@ -136,6 +136,15 @@ export interface PlacementRule {
   type: 'random_board' | 'constrained' | 'free'
   constraint: Constraint | null
   candidates_count: number
+  /**
+   * What happens once the reveal settles.
+   *
+   * 'choose' — the revealed fields are offered and the player taps one.
+   * 'auto'   — every revealed field is taken, no tap. Used where the player has
+   *            no say: a single candidate, and the Gambler's three pegs, which
+   *            rattle together and then all land.
+   */
+  mode: 'choose' | 'auto'
 }
 
 export interface PassState {

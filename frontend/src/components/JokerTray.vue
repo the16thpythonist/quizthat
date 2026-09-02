@@ -23,7 +23,9 @@ interface JokerDisplay {
   usable: boolean
 }
 
-const SELECTION_JOKERS: JokerType[] = ['reshuffle_selection', 'the_gambler', 'steal', 'curse', 'snipe']
+// 'steal' is deliberately absent: it is being reworked, so it stays dimmed
+// rather than being a button that consumes nothing and does nothing.
+const SELECTION_JOKERS: JokerType[] = ['reshuffle_selection', 'the_gambler', 'curse', 'snipe']
 const QUESTION_JOKERS: JokerType[] = ['reshuffle_question', 'reveal_hint', 'double_down']
 
 const ALL_JOKERS: JokerType[] = [

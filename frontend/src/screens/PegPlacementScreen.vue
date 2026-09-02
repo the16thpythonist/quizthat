@@ -2,6 +2,8 @@
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { audioManager } from '../audio/audioManager'
+import { SFX, RATTLE_PITCH_JITTER } from '../audio/sfx'
 import BoardGrid from '../components/BoardGrid.vue'
 import GameBar from '../components/GameBar.vue'
 import PlayerStrip from '../components/PlayerStrip.vue'
@@ -24,6 +26,13 @@ const candidates = computed(() => {
 const isFree = computed(() => {
   return game.turn?.placement_rule?.type === 'free'
 })
+
+/**
+ * 'auto' means the reveal settles and the fields are simply taken — the player
+ * has no say. That covers a placement setting of 1, the second chance, and the
+ * Gambler, whose three fields rattle together and all land.
+ */
+const isAuto = computed(() => game.turn?.placement_rule?.mode === 'auto')
 
 // For free placement, all empty fields are candidates
 const effectiveCandidates = computed(() => {
@@ -84,6 +93,10 @@ function startReveal(finalCandidates: [number, number][]) {
     return
   }
 
+  // Swell under the whole reveal; the rattle ticks ride on top of it, one per
+  // visual step, so the audio decelerates exactly as the animation does.
+  audioManager.playSfx(SFX.PEG_RISER)
+
   const candidateCount = finalCandidates.length
   const totalDuration = 1000
   let elapsed = 0
@@ -98,6 +111,7 @@ function startReveal(finalCandidates: [number, number][]) {
     // Pick random subset of eligible fields
     const shuffled = [...eligible].sort(() => Math.random() - 0.5)
     revealingFields.value = shuffled.slice(0, candidateCount)
+    audioManager.playSfx(SFX.ROULETTE_TICK, { pitchJitter: RATTLE_PITCH_JITTER })
 
     elapsed += interval
     // Slow down over time: ease-out curve
@@ -112,6 +126,7 @@ function startReveal(finalCandidates: [number, number][]) {
 }
 
 function finishReveal(finalCandidates: [number, number][]) {
+  audioManager.playSfx(SFX.PEG_LAND)
   revealingFields.value = []
   revealedCandidates.value = finalCandidates
   isRevealing.value = false
@@ -149,6 +164,7 @@ const awaitingContinueTap = ref(false)
 const donePlacing = computed(() => !isRevealing.value && pegsRemaining.value === 0)
 
 function handleFieldClick(row: number, col: number) {
+  audioManager.playSfx(SFX.PEG_DROP)
   lastPlacedField.value = [row, col]
   canInteract.value = false
   game.placePeg(row, col)
@@ -210,7 +226,7 @@ function handleContinueTap() {
       <p v-if="donePlacing" class="qt-gate-tap animate-pulse" style="margin-top: 26px">
         {{ t('board.tapToContinue') }}
       </p>
-      <p v-else-if="!isRevealing" class="qt-gate-tap" style="margin-top: 26px">
+      <p v-else-if="!isRevealing && !isAuto" class="qt-gate-tap" style="margin-top: 26px">
         {{ t('board.tapToPlace') }}
       </p>
     </div>

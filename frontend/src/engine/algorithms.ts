@@ -7,6 +7,7 @@ import type {
   Player,
   PlacementRule,
   QuestionMeta,
+  PlayerColor,
   BasicJokerType,
   SpecialJokerType,
 } from '../types/session'
@@ -98,10 +99,14 @@ export const JOKER_CHANCE_STANDARD = 0.35
  * Everyone has a small chance, so a 2x can surprise anyone, and the trailing
  * player's chance is raised sharply from round 3 — that raised rate is what
  * carries the catch-up mechanic.
+ *
+ * Never the expertise slot: like the joker chip, a sweetener there would
+ * reward the safe pick, when the whole point of both is to tempt a player off
+ * it.
  */
 export function assignBoostSlots(rng: GameRng, behind: boolean): number[] {
   const chance = behind ? BOOST_CHANCE_BEHIND : BOOST_CHANCE_BASE
-  return [0, 1, 2, 3].filter(() => rng.chance(chance))
+  return [1, 2, 3].filter(() => rng.chance(chance))
 }
 
 /**
@@ -637,6 +642,7 @@ export function placementRuleForSlot(
       type: 'free',
       constraint: null,
       candidates_count: 0, // not used for free
+      mode: 'choose',
     }
   } else if (slot.slot_type === 'standard' && slot.constraint) {
     // Slots 2/3: constrained to row/column
@@ -644,6 +650,8 @@ export function placementRuleForSlot(
       type: 'constrained',
       constraint: slot.constraint,
       candidates_count: settings.placement_candidates,
+      // one candidate is no choice at all — IDEA.md calls that automatic
+      mode: settings.placement_candidates === 1 ? 'auto' : 'choose',
     }
   } else {
     // Slot 1 (expertise): random on entire board
@@ -651,29 +659,43 @@ export function placementRuleForSlot(
       type: 'random_board',
       constraint: null,
       candidates_count: settings.placement_candidates,
+      mode: settings.placement_candidates === 1 ? 'auto' : 'choose',
     }
   }
 }
 
 /**
- * Placement rule for pass correct (Slot 1 rules — random on entire board).
+ * Placement rule for a correct pass answer.
+ *
+ * Always exactly one candidate, whatever the game's placement setting: the
+ * second chance is a consolation, not a turn, so the peg lands where it lands.
+ * A count of 1 is the documented way to say "purely random, no player choice"
+ * (IDEA.md, Peg Placement Rules).
  */
-export function passPlacementRule(settings: GameSettings): PlacementRule {
+export function passPlacementRule(_settings: GameSettings): PlacementRule {
   return {
     type: 'random_board',
     constraint: null,
-    candidates_count: settings.placement_candidates,
+    candidates_count: 1,
+    mode: 'auto',
   }
 }
 
 /**
  * Placement rule for Gambler correct (Slot 1 rules — random on entire board).
  */
-export function gamblerPlacementRule(settings: GameSettings): PlacementRule {
+/**
+ * The Gambler's winnings: three fields rattle together and all three are taken.
+ *
+ * Not three separate reveals — the Gambler is one bet with one outcome, so it
+ * resolves in one roulette.
+ */
+export function gamblerPlacementRule(_settings: GameSettings): PlacementRule {
   return {
     type: 'random_board',
     constraint: null,
-    candidates_count: settings.placement_candidates,
+    candidates_count: 3,
+    mode: 'auto',
   }
 }
 
@@ -768,4 +790,40 @@ export const VERDICT_WRONG_KEYS = [
  */
 export function pickVerdictRemark(rng: GameRng, correct: boolean): string {
   return rng.pick(correct ? VERDICT_CORRECT_KEYS : VERDICT_WRONG_KEYS)
+}
+
+/** Colour-independent victory lines, played after the winner callout. */
+export const VICTORY_REMARK_KEYS = [
+  'victory_any_1',
+  'victory_any_2',
+  'victory_any_3',
+  'victory_any_4',
+  'victory_any_5',
+  'victory_any_6',
+] as const
+
+/** Pick the follow-up line after the winner is named. Seeded, as ever. */
+export function pickVictoryRemark(rng: GameRng): string {
+  return rng.pick(VICTORY_REMARK_KEYS)
+}
+
+// ─── Narrator: turn and pass transitions ────────────────────────
+
+/** How many phrasings exist per colour for the turn callout. */
+export const TURN_LINE_VARIANTS = 3
+
+/**
+ * Pick the "your turn" line for a player, as a voice-line key
+ * (e.g. 'turn_red_2').
+ *
+ * This is the most-heard line in the game — once per turn, so dozens of times a
+ * session — hence the variants. Seeded, so a replay says the same thing.
+ */
+export function pickTurnLine(rng: GameRng, colour: PlayerColor): string {
+  return `turn_${colour}_${rng.int(1, TURN_LINE_VARIANTS)}`
+}
+
+/** The "your chance" line when a wrong answer passes to the previous player. */
+export function passLine(colour: PlayerColor): string {
+  return `pass_${colour}`
 }

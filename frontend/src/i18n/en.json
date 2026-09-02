@@ -152,15 +152,38 @@
     "musicVolume": "Music Volume",
     "mute": "Mute",
     "musicOn": "Music",
-    "sfxOn": "Sound Effects"
+    "sfxOn": "Sound Effects",
+    "master": "Master volume",
+    "music": "Music",
+    "voice": "Narrator",
+    "sfx": "Sound effects",
+    "sound": "Sound",
+    "on": "On",
+    "off": "Off",
+    "voiceNote": "Off means questions and answers are never read aloud at all — not merely silenced.",
+    "languageNote": "Applies to the interface and to the language questions are drawn in. The current question is unaffected.",
+    "credits": "Credits",
+    "creditsIcons": "Joker icons: Font Awesome Free 6.7.2, licensed under CC BY 4.0.",
+    "creditsFont": "Typeface: Nunito, licensed under the SIL Open Font License.",
+    "abandon": "Abandon game",
+    "abandonNote": "Ends the running game and returns to the main menu.",
+    "abandonConfirmTitle": "Really abandon the game?",
+    "abandonConfirmBody": "The current game is lost — every player's pegs, jokers and progress. This cannot be undone.",
+    "abandonConfirm": "Yes, abandon"
   },
   "gambler": {
-    "title": "The Gambler",
+    "title": "All on one card",
     "stakedPeg": "Your staked peg: {field}",
-    "confirm": "Risk it!",
+    "confirm": "Place the bet",
     "cancel": "Back out",
     "correct": "You win 3 pegs!",
-    "wrong": "You lose your staked peg!"
+    "wrong": "You lose your staked peg!",
+    "staking": "You are staking your peg on {field}",
+    "terms": "Right: three pegs, placed at random — you do not choose where. Wrong: the staked peg is gone. Either way your turn ends.",
+    "won": "Won!",
+    "wonNote": "Three pegs — placed at random",
+    "lost": "Lost!",
+    "lostNote": "The staked peg is gone"
   },
   "narrator": {
     "playerTurn": "Player {color}, your turn.",
@@ -187,7 +210,11 @@
   },
   "joker": {
     "use": "Use",
-    "cancel": "Back"
+    "cancel": "Back",
+    "awarded": "Joker won!",
+    "chooseTarget": "Target whom?",
+    "choosePeg": "Which of {name}'s pegs?",
+    "noTarget": "No valid target available."
   },
   "jokerDesc": {
     "reshuffle_selection": "Discards the four offered questions and draws four new ones. This joker is spent afterwards.",

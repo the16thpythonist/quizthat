@@ -5,6 +5,7 @@ import { useGameStore } from '../stores/game'
 import type { PlayerColor, Expertise } from '../types/session'
 import { COLOR_HEX, PLAYER_COLORS } from '../types/session'
 import ExpertisePicker from '../components/ExpertisePicker.vue'
+import SettingsPanel from '../components/SettingsPanel.vue'
 
 const { t } = useI18n()
 const game = useGameStore()
@@ -14,6 +15,7 @@ const game = useGameStore()
 const isStart = computed(() => game.setupPhase === 'start')
 const isPlayerSetup = computed(() => game.setupPhase === 'player_setup')
 const isGameSettings = computed(() => game.setupPhase === 'game_settings')
+const isAppSettings = computed(() => game.setupPhase === 'app_settings')
 
 // New player form
 const newPlayerName = ref('')
@@ -129,7 +131,7 @@ const LINES_TO_WIN_OPTIONS = [1, 2]
 
       <div class="qt-menu">
         <button class="qt-cta qt-cta--accent" @click="handleNewGame">{{ t('start.newGame') }}</button>
-        <button class="qt-cta qt-cta--ghost">{{ t('start.settings') }}</button>
+        <button class="qt-cta qt-cta--ghost" @click="game.goToAppSettings()">{{ t('start.settings') }}</button>
         <button class="qt-cta qt-cta--ghost">{{ t('start.howToPlay') }}</button>
       </div>
     </div>
@@ -230,6 +232,17 @@ const LINES_TO_WIN_OPTIONS = [1, 2]
       :title="sheetTitle"
       @close="editingExpertise = null"
     />
+  </div>
+
+  <!-- ---------- App settings ---------- -->
+  <div v-else-if="isAppSettings" class="qt-screen">
+    <div class="qt-topbar qt-doodles qt-doodles--deep">
+      <button class="qt-icon-btn" :aria-label="t('setup.backToMenu')" @click="game.goToStart()">‹</button>
+    </div>
+
+    <div class="qt-setup-body qt-doodles">
+      <SettingsPanel />
+    </div>
   </div>
 
   <!-- ---------- Game settings ---------- -->

@@ -1,14 +1,39 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { audioManager } from '../audio/audioManager'
+import { SFX, VOICE, VERDICT_REMARK_DELAY_MS, voiceLine } from '../audio/sfx'
 import { COLOR_HEX } from '../types/session'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const game = useGameStore()
 
 const isCorrect = computed(() => game.state === 'answer_correct')
 const player = computed(() => game.currentPlayer)
+
+/**
+ * Verdict sting, then the narrator's remark once it has had its moment. App.vue
+ * has already pulled the music down to a quiet bed for this screen, so both land
+ * in the clear.
+ *
+ * The timer is cancelled on unmount: tapping through quickly should not have the
+ * remark arrive over the next screen.
+ */
+let remarkTimer: ReturnType<typeof setTimeout> | null = null
+
+onMounted(() => {
+  audioManager.playSfx(isCorrect.value ? SFX.CORRECT : SFX.INCORRECT)
+  const key = game.verdictRemark
+  if (!key) return
+  remarkTimer = setTimeout(() => {
+    audioManager.playVoiceNow(voiceLine(VOICE.VERDICT, locale.value, { key }))
+  }, VERDICT_REMARK_DELAY_MS)
+})
+
+onUnmounted(() => {
+  if (remarkTimer) clearTimeout(remarkTimer)
+})
 
 /**
  * On a wrong answer the question passes on, so the answer is deliberately NOT

@@ -172,6 +172,10 @@ html, body {
   /* Highlight — win line, 2x boost, the "special" tier */
   --qt-gold: #F0C24B;
 
+  /* Destructive actions only. The wrong-answer plum is deliberately not red,
+     so red is free to mean "this throws something away". */
+  --qt-danger: #C4384F;
+
   /* Form */
   --qt-radius-pill: 999px;
   --qt-shadow-pill: 0 4px 0 rgba(0, 0, 0, 0.18);
@@ -426,6 +430,7 @@ html, body {
   .qt-cta:active:not(:disabled) { transform: translateY(3px); box-shadow: var(--qt-shadow-pill-sm); }
   .qt-cta:disabled { opacity: 0.35; }
   .qt-cta--accent { background: var(--qt-accent); color: #fff; }
+  .qt-cta--danger { background: var(--qt-danger); color: #fff; }
   .qt-cta--ghost {
     background: rgba(255, 255, 255, 0.14);
     color: #fff;
@@ -518,6 +523,9 @@ html, body {
 
   /* ---------- sheets ---------- */
   .qt-backdrop { position: fixed; inset: 0; background: rgba(10, 2, 18, 0.55); z-index: 40; }
+  /* A second layer, for a confirmation raised over a sheet that is already open. */
+  .qt-backdrop--over { z-index: 60; background: rgba(10, 2, 18, 0.7); }
+  .qt-sheet--over { z-index: 70; }
   .qt-sheet {
     position: fixed;
     top: 0;
@@ -637,6 +645,25 @@ html, body {
     margin: 0 auto 14px;
     box-shadow: var(--qt-shadow-pill);
   }
+  /* Bigger than the confirm sheet's tile: here the prize is the whole point. */
+  .qt-joker-prize {
+    width: 112px;
+    height: 112px;
+    border-radius: 32px;
+    background: var(--qt-accent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 22px;
+    box-shadow: var(--qt-shadow-pill), 0 10px 30px rgba(0, 0, 0, 0.35);
+    animation: qt-prize-pop 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @keyframes qt-prize-pop {
+    0% { transform: scale(0.4) rotate(-12deg); opacity: 0; }
+    60% { transform: scale(1.12) rotate(4deg); opacity: 1; }
+    100% { transform: scale(1) rotate(0deg); }
+  }
+
   .qt-joker-name { font-size: 21px; font-weight: 900; margin-bottom: 7px; }
   .qt-joker-desc { font-size: 13px; font-weight: 700; line-height: 1.5; opacity: 0.7; margin: 0 0 18px; }
 
@@ -832,6 +859,66 @@ html, body {
     font-size: 13px;
   }
   .qt-seg > button.is-on { background: var(--qt-accent); border-color: var(--qt-accent); box-shadow: var(--qt-shadow-pill-sm); }
+  /* ---------- settings ---------- */
+  .qt-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: var(--qt-radius-pill);
+    background: rgba(255, 255, 255, 0.2);
+    outline: none;
+  }
+  .qt-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--qt-accent);
+    border: 3px solid #fff;
+    box-shadow: var(--qt-shadow-pill-sm);
+    cursor: pointer;
+  }
+  .qt-slider::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: var(--qt-accent);
+    border: 3px solid #fff;
+    box-shadow: var(--qt-shadow-pill-sm);
+    cursor: pointer;
+    border-width: 3px;
+  }
+  .qt-slider:disabled { opacity: 0.35; }
+  .qt-slider:disabled::-webkit-slider-thumb { background: rgba(255, 255, 255, 0.4); }
+
+  /* A switch that says what it is and what state it is in, rather than a bare
+     track the player has to interpret. */
+  .qt-toggle {
+    width: 100%;
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 9px 15px;
+    border-radius: var(--qt-radius-pill);
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    background: transparent;
+    color: #fff;
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 13px;
+  }
+  .qt-toggle.is-on { background: var(--qt-accent); border-color: var(--qt-accent); box-shadow: var(--qt-shadow-pill-sm); }
+  .qt-toggle-state {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    opacity: 0.75;
+  }
+
   .qt-swatches { display: flex; gap: 9px; flex-wrap: wrap; }
   .qt-swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.25); }
   .qt-swatch.is-on { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25); }
@@ -843,11 +930,13 @@ html, body {
     flex-direction: column;
     max-height: 85dvh;
   }
-  .qt-sheet--tall .qt-expertise-list {
+  .qt-sheet--tall .qt-expertise-list,
+  .qt-sheet--tall .qt-settings-list {
     flex: 1 1 auto;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
   }
+  .qt-settings-list { display: flex; flex-direction: column; gap: 11px; }
   .qt-sheet-foot { flex: 0 0 auto; padding-top: 14px; }
 
   /* ---------- expertise picker ---------- */
@@ -1018,7 +1107,15 @@ html, body {
 
   /* ---------- map question ---------- */
   .qt-map-wrap { flex: 1 1 auto; position: relative; display: flex; }
-  .qt-map-frame { flex: 1 1 auto; overflow: hidden; border-top: 2px solid rgba(255, 255, 255, 0.25); }
+  /* display:flex so the map canvas inside can actually stretch — as a plain
+     block its flex-1 was inert and the map stood at its min-height. */
+  .qt-map-frame {
+    flex: 1 1 auto;
+    display: flex;
+    overflow: hidden;
+    border-top: 2px solid rgba(255, 255, 255, 0.25);
+  }
+  .qt-map-canvas { flex: 1 1 auto; min-height: 0; width: 100%; }
   .qt-map-cta {
     position: absolute;
     left: 18px;
@@ -1112,5 +1209,6 @@ html, body {
   .qt-board .qt-cell--cand,
   .animate-confetti,
   .animate-peg-slam,
-  .animate-board-shake { animation: none; }
+  .animate-board-shake,
+  .qt-joker-prize { animation: none; }
 }

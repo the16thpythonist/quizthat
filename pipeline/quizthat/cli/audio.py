@@ -175,7 +175,12 @@ def _create_audio_group() -> click.Group:
         default=DEFAULT_LANGUAGES,
         help="Comma-separated language codes",
     )
-    def generate(question_dir: str, languages: str) -> None:
+    @click.option(
+        "--only",
+        default=None,
+        help="Comma-separated clip kinds: teaser, question, answers (default: all)",
+    )
+    def generate(question_dir: str, languages: str, only: str | None) -> None:
         """Generate TTS audio for a single question directory."""
         from quizthat.tts.client import (
             estimate_cost,
@@ -193,7 +198,8 @@ def _create_audio_group() -> click.Group:
         console.print(f"\n  Generating audio for [cyan]{qdir.name}[/cyan]...")
         console.print(f"  Languages: {', '.join(lang_list)}")
 
-        results = generate_all_voice_lines(qdir, lang_list)
+        kinds = {k.strip() for k in only.split(",")} if only else None
+        results = generate_all_voice_lines(qdir, lang_list, kinds)
 
         total_chars = sum(r.characters_used for r in results.values())
         total_files = sum(len(r.files) for r in results.values())

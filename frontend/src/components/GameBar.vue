@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useGameStore } from '../stores/game'
 import { useBoardSheet } from '../composables/useBoardSheet'
+import { useSettingsSheet } from '../composables/useSettingsSheet'
 import MiniBoard from './MiniBoard.vue'
 
 /**
@@ -11,6 +12,7 @@ import MiniBoard from './MiniBoard.vue'
  */
 const game = useGameStore()
 const sheet = useBoardSheet()
+const settingsSheet = useSettingsSheet()
 
 const player = computed(() => game.currentPlayer)
 </script>
@@ -35,6 +37,6 @@ const player = computed(() => game.currentPlayer)
       <span class="qt-badge-chevron"></span>
     </button>
 
-    <button class="qt-icon-btn" aria-label="Einstellungen">⚙</button>
+    <button class="qt-icon-btn" aria-label="Einstellungen" @click="settingsSheet.open()">⚙</button>
   </div>
 </template>

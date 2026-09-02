@@ -152,15 +152,38 @@
     "musicVolume": "Musiklautstärke",
     "mute": "Stumm",
     "musicOn": "Musik",
-    "sfxOn": "Soundeffekte"
+    "sfxOn": "Soundeffekte",
+    "master": "Gesamtlautstärke",
+    "music": "Musik",
+    "voice": "Sprecher",
+    "sfx": "Soundeffekte",
+    "sound": "Ton",
+    "on": "An",
+    "off": "Aus",
+    "voiceNote": "Aus bedeutet, dass Fragen und Antworten gar nicht erst vorgelesen werden — nicht nur stumm.",
+    "languageNote": "Gilt für die Oberfläche und für die Sprache, in der Fragen gezogen werden. Die aktuelle Frage bleibt unverändert.",
+    "credits": "Credits",
+    "creditsIcons": "Joker-Symbole: Font Awesome Free 6.7.2, lizenziert unter CC BY 4.0.",
+    "creditsFont": "Schrift: Nunito, lizenziert unter der SIL Open Font License.",
+    "abandon": "Spiel abbrechen",
+    "abandonNote": "Beendet das laufende Spiel und kehrt zum Hauptmenü zurück.",
+    "abandonConfirmTitle": "Spiel wirklich abbrechen?",
+    "abandonConfirmBody": "Der aktuelle Spielstand geht verloren — Stifte, Joker und Fortschritt aller Spieler. Das lässt sich nicht rückgängig machen.",
+    "abandonConfirm": "Ja, abbrechen"
   },
   "gambler": {
-    "title": "The Gambler",
+    "title": "Alles auf eine Karte",
     "stakedPeg": "Dein eingesetzter Stift: {field}",
-    "confirm": "Riskieren!",
+    "confirm": "Wetten!",
     "cancel": "Zurückziehen",
     "correct": "Du gewinnst 3 Stifte!",
-    "wrong": "Du verlierst deinen eingesetzten Stift!"
+    "wrong": "Du verlierst deinen eingesetzten Stift!",
+    "staking": "Du setzt deinen Stift auf {field}",
+    "terms": "Richtig: drei Stifte, zufällig gesetzt — du suchst sie dir nicht aus. Falsch: der eingesetzte Stift ist weg. So oder so endet dein Zug danach.",
+    "won": "Gewonnen!",
+    "wonNote": "Drei Stifte — zufällig gesetzt",
+    "lost": "Verloren!",
+    "lostNote": "Der eingesetzte Stift ist weg"
   },
   "narrator": {
     "playerTurn": "Spieler {color}, du bist dran.",
@@ -187,7 +210,11 @@
   },
   "joker": {
     "use": "Einsetzen",
-    "cancel": "Zurück"
+    "cancel": "Zurück",
+    "awarded": "Joker erhalten!",
+    "chooseTarget": "Auf wen?",
+    "choosePeg": "Welchen Stift von {name} entfernen?",
+    "noTarget": "Kein gültiges Ziel vorhanden."
   },
   "jokerDesc": {
     "reshuffle_selection": "Verwirft die vier angebotenen Fragen und zieht vier neue. Dieser Joker ist danach verbraucht.",

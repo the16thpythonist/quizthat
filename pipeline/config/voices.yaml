@@ -10,11 +10,17 @@ narrators:
       use_speaker_boost: true
     output_format: mp3_44100_64
   de:
-    voice_id: pNInz6obpgDQGcFmaJgB
-    name: German Narrator
-    model_id: eleven_multilingual_v2
+    # Henry - Fun and Cheerful (voice library, verified de + en). Energetic
+    # game-show host register. Requires a paid plan: library voices are blocked
+    # via the API on the free tier.
+    voice_id: LMwgkTZL66bLQfT9Y7py
+    name: Henry
+    # eleven_v3, matching every hand-generated host line, so the narrator is
+    # recognisably one person. v3 accepts only 0.0 / 0.5 / 1.0 for stability
+    # (Creative / Natural / Robust) -- it is a mode switch, not a dial.
+    model_id: eleven_v3
     settings:
-      stability: 0.55
+      stability: 0.0
       similarity_boost: 0.80
       style: 0.00
       use_speaker_boost: true

@@ -1,8 +1,20 @@
 <script setup lang="ts">
-import { ref, computed, reactive } from 'vue'
+import { ref, computed, reactive, onUnmounted } from 'vue'
 import BoardGrid from '../components/BoardGrid.vue'
 import type { Board, PlayerColor } from '../types/session'
 import { PLAYER_COLORS, COLOR_HEX } from '../types/session'
+import { audioManager } from '../audio/audioManager'
+import { SFX, RATTLE_PITCH_JITTER } from '../audio/sfx'
+
+// --- Reveal settings, adjustable so the animation can be tuned against the
+// --- audio without editing PegPlacementScreen.
+const candidateCount = ref(2)
+const revealDuration = ref(1000)
+const startInterval = ref(60)
+const slowdown = ref(240)
+const soundOn = ref(true)
+const revealCounts = [1, 2, 3, 4]
+const durations = [600, 1000, 1600, 2400]
 
 const boardSize = ref(4)
 const playerColor = ref<PlayerColor>('red')
@@ -52,30 +64,38 @@ function triggerReveal() {
   lastPlacedField.value = null
 
   const eligible = getEmptyFields()
-  if (eligible.length < 2) return
+  if (eligible.length < candidateCount.value) return
 
-  // Pick 2 random final candidates
   const shuffled = [...eligible].sort(() => Math.random() - 0.5)
-  const finalCandidates = shuffled.slice(0, 2)
+  const finalCandidates = shuffled.slice(0, candidateCount.value)
 
-  const totalDuration = 1000
+  if (soundOn.value) audioManager.playSfx(SFX.PEG_RISER)
+
+  const totalDuration = revealDuration.value
   let elapsed = 0
-  let interval = 60
+  let interval = startInterval.value
+  let ticks = 0
 
   function tick() {
     if (elapsed >= totalDuration) {
       revealingFields.value = []
       candidateFields.value = finalCandidates
       isRevealing.value = false
+      if (soundOn.value) audioManager.playSfx(SFX.PEG_LAND)
+      lastRevealTicks.value = ticks
       return
     }
 
     const s = [...eligible].sort(() => Math.random() - 0.5)
-    revealingFields.value = s.slice(0, 2)
+    revealingFields.value = s.slice(0, candidateCount.value)
+    ticks++
+    if (soundOn.value) {
+      audioManager.playSfx(SFX.ROULETTE_TICK, { pitchJitter: RATTLE_PITCH_JITTER })
+    }
 
     elapsed += interval
     const progress = elapsed / totalDuration
-    interval = 60 + Math.floor(240 * (progress * progress))
+    interval = startInterval.value + Math.floor(slowdown.value * (progress * progress))
 
     const timer = setTimeout(tick, interval)
     revealTimers.value.push(timer)
@@ -84,10 +104,34 @@ function triggerReveal() {
   tick()
 }
 
+/** How many rattle hits the last run produced — useful when tuning the curve. */
+const lastRevealTicks = ref(0)
+
+/** Fire the reveal repeatedly, for judging whether it wears well. */
+const looping = ref(false)
+let loopTimer: ReturnType<typeof setTimeout> | null = null
+function toggleLoop() {
+  looping.value = !looping.value
+  if (!looping.value) {
+    if (loopTimer) clearTimeout(loopTimer)
+    return
+  }
+  const run = () => {
+    resetBoard()
+    triggerReveal()
+    loopTimer = setTimeout(() => {
+      triggerPlacePeg()
+      loopTimer = setTimeout(run, 900)
+    }, revealDuration.value + 400)
+  }
+  run()
+}
+
 function triggerPlacePeg() {
   // Place on a random candidate, or random empty field
   const targets = candidateFields.value.length > 0 ? candidateFields.value : getEmptyFields()
   if (targets.length === 0) return
+  if (soundOn.value) audioManager.playSfx(SFX.PEG_DROP)
 
   const [row, col] = targets[Math.floor(Math.random() * targets.length)]!
   const boardRow = board.fields[row]
@@ -104,6 +148,7 @@ function triggerPlacePeg() {
 function handleFieldClick(row: number, col: number) {
   const boardRow = board.fields[row]
   if (!boardRow || boardRow[col]) return
+  if (soundOn.value) audioManager.playSfx(SFX.PEG_DROP)
 
   boardRow[col] = true
   board.peg_count++
@@ -123,8 +168,14 @@ const displayCandidates = computed(() => {
 })
 
 function goBack() {
+  if (loopTimer) clearTimeout(loopTimer)
+  looping.value = false
   window.location.hash = ''
 }
+
+onUnmounted(() => {
+  if (loopTimer) clearTimeout(loopTimer)
+})
 </script>
 
 <template>
@@ -170,6 +221,49 @@ function goBack() {
       </div>
     </div>
 
+    <!-- Reveal + audio settings -->
+    <div class="flex flex-wrap items-center justify-center gap-4 mb-6">
+      <div class="flex items-center gap-2">
+        <span class="text-gray-400 text-sm">Candidates:</span>
+        <button
+          v-for="n in revealCounts"
+          :key="'c' + n"
+          class="px-3 py-1.5 rounded-lg text-sm font-medium"
+          :style="{
+            background: candidateCount === n ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.05)',
+            border: candidateCount === n ? '1px solid rgba(99, 102, 241, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
+          }"
+          @click="candidateCount = n"
+        >{{ n }}</button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="text-gray-400 text-sm">Duration:</span>
+        <button
+          v-for="d in durations"
+          :key="'d' + d"
+          class="px-3 py-1.5 rounded-lg text-sm font-medium"
+          :style="{
+            background: revealDuration === d ? 'rgba(99, 102, 241, 0.3)' : 'rgba(255, 255, 255, 0.05)',
+            border: revealDuration === d ? '1px solid rgba(99, 102, 241, 0.5)' : '1px solid rgba(255, 255, 255, 0.08)',
+          }"
+          @click="revealDuration = d"
+        >{{ d }}ms</button>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <span class="text-gray-400 text-sm">Slowdown:</span>
+        <input v-model.number="slowdown" type="range" min="0" max="600" step="20" class="w-32" />
+        <span class="text-gray-300 text-sm w-10">{{ slowdown }}</span>
+      </div>
+
+      <label class="flex items-center gap-2 text-sm text-gray-300">
+        <input v-model="soundOn" type="checkbox" /> sound
+      </label>
+
+      <span class="text-gray-500 text-xs">last run: {{ lastRevealTicks }} rattle hits</span>
+    </div>
+
     <!-- Action buttons -->
     <div class="flex gap-3 mb-8">
       <button
@@ -205,7 +299,15 @@ function goBack() {
       >
         Reset
       </button>
-    </div>
+          <button
+        class="px-4 py-2 rounded-lg text-sm font-medium"
+        :style="{
+          background: looping ? 'rgba(220, 80, 80, 0.35)' : 'rgba(255,255,255,0.06)',
+          border: '1px solid rgba(255,255,255,0.12)',
+        }"
+        @click="toggleLoop"
+      >{{ looping ? 'Stop loop' : 'Loop reveal' }}</button>
+</div>
 
     <!-- Board -->
     <BoardGrid

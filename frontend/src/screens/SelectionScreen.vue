@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import GameBar from '../components/GameBar.vue'
 import PlayerStrip from '../components/PlayerStrip.vue'
 import JokerTray from '../components/JokerTray.vue'
+import JokerTargetSheet from '../components/JokerTargetSheet.vue'
 import type { JokerType, OfferedSlot } from '../types/session'
 import { SKULL_ICON } from '../components/jokerIcons'
 
@@ -50,9 +51,16 @@ function handleSelectSlot(index: number) {
   game.selectSlot(index)
 }
 
+/** Curse and Snipe both need a target, so they open the same sheet. */
+const targeting = ref<'curse' | 'snipe' | null>(null)
+
 function handleUseJoker(type: JokerType) {
   if (type === 'reshuffle_selection') {
-    game.useJoker('reshuffle_selection')
+    void game.reshuffleSelection()
+  } else if (type === 'the_gambler') {
+    game.startGambler()
+  } else if (type === 'curse' || type === 'snipe') {
+    targeting.value = type
   }
 }
 </script>
@@ -111,6 +119,12 @@ function handleUseJoker(type: JokerType) {
       :player-color="player.color"
       game-state="selection"
       @use-joker="handleUseJoker"
+    />
+
+    <JokerTargetSheet
+      v-if="targeting"
+      :joker="targeting"
+      @close="targeting = null"
     />
   </div>
 </template>
