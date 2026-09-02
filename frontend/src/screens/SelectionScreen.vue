@@ -15,7 +15,16 @@ const player = computed(() => game.currentPlayer)
 const slots = computed(() => game.turn?.offered_slots ?? [])
 const usedJokers = computed(() => game.turn?.jokers_used_this_turn ?? new Set<JokerType>())
 
-const SLOT_LABELS = ['slot1Label', 'slot2Label', 'slot3Label', 'slot4Label']
+/**
+ * The badge follows the slot's own type rather than its position. Keying it on
+ * the index meant that if a card was ever missing, the remaining ones inherited
+ * the wrong labels — a hard slot showing "Standard".
+ */
+const SLOT_LABEL_BY_TYPE: Record<string, string> = {
+  expertise: 'slot1Label',
+  standard: 'slot2Label',
+  hard: 'slot4Label',
+}
 const MAX_SKULLS = 4
 
 /** Difficulty is shown as filled skulls — comparable across categories,
@@ -88,7 +97,7 @@ function handleUseJoker(type: JokerType) {
 
         <div class="qt-slot-bottom">
           <span class="qt-tier" :class="{ 'qt-tier--special': slot.slot_type === 'hard' }">
-            {{ t('selection.' + SLOT_LABELS[idx]) }}
+            {{ t('selection.' + (SLOT_LABEL_BY_TYPE[slot.slot_type] ?? 'slot2Label')) }}
           </span>
           <span class="qt-placement">{{ placementText(slot) }}</span>
         </div>

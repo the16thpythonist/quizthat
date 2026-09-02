@@ -6,6 +6,7 @@ import {
   assignBoostSlots,
   assignJokerSlots,
   pickSlot1Difficulty,
+  generateSlots,
   previousRoundPlayer,
   generateStartingPegs,
   calculatePegCount,
@@ -558,6 +559,71 @@ describe('pickSlot1Difficulty', () => {
     }
     // 35 + 35 of 100
     expect(gentle).toBeGreaterThan(runs * 0.55)
+  })
+})
+
+describe('generateSlots', () => {
+  /** Mirrors the real corpus shape: plenty of medium, no very_hard at all. */
+  function corpus(count: number) {
+    const difficulties = ['easy', 'medium', 'medium', 'hard'] as const
+    return Array.from({ length: count }, (_, i) => ({
+      id: 'q' + i,
+      languages: ['de', 'en'],
+      major_category: i % 2 ? 'Science' : 'History',
+      subcategory: i % 2 ? 'Physics' : 'World Wars',
+      difficulty: difficulties[i % difficulties.length]!,
+      question_type: 'multiple_choice' as const,
+      time_limit_seconds: null,
+      version: 1,
+      created_at: '',
+      generation_batch: null,
+    }))
+  }
+
+  const player = {
+    index: 0,
+    name: 'Jonas',
+    color: 'blue' as const,
+    expertise: { major_categories: ['Science'], subcategories: ['Physics'] },
+    board: { size: 4, fields: Array.from({ length: 4 }, () => Array(4).fill(false)), peg_count: 0 },
+    jokers: {
+      reshuffle_selection: 1, reshuffle_question: 1, reveal_hint: 1, the_gambler: 1,
+      steal: 0, curse: 0, snipe: 0, double_down: 0,
+    },
+    stats: {
+      questions_attempted: 0, questions_correct: 0, passes_received: 0,
+      passes_correct: 0, jokers_used: 0, pegs_stolen_from: 0,
+    },
+    is_cursed: false,
+  }
+
+  const settings = {
+    placement_candidates: 2,
+    starting_pegs: 0,
+    lines_to_win: 1,
+    language: 'de',
+  }
+
+  it('always offers four slots, even though the corpus has no very_hard questions', () => {
+    for (let seed = 0; seed < 40; seed++) {
+      const rng = new GameRng(seed)
+      const slots = generateSlots(rng, corpus(24), player, settings, new Set(), false, [], [3])
+      expect(slots).toHaveLength(4)
+    }
+  })
+
+  it('still offers four when most of the corpus is already used', () => {
+    const all = corpus(24)
+    const used = new Set(all.slice(0, 22).map((q) => q.id))
+    const rng = new GameRng(5)
+    const slots = generateSlots(rng, all, player, settings, used, false, [], [3])
+    expect(slots).toHaveLength(4)
+  })
+
+  it('keeps the slot types in order', () => {
+    const rng = new GameRng(3)
+    const slots = generateSlots(rng, corpus(24), player, settings, new Set(), false, [], [3])
+    expect(slots.map((s) => s.slot_type)).toEqual(['expertise', 'standard', 'standard', 'hard'])
   })
 })
 

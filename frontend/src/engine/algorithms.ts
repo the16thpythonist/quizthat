@@ -400,6 +400,43 @@ export function filterQuestions(
 }
 
 /**
+ * Pick a question for a slot, widening the search rather than coming back
+ * empty-handed.
+ *
+ * A slot used to be dropped whenever its drawn difficulty had no match, and the
+ * player was simply offered fewer than four cards. That is easy to hit: the
+ * corpus is small and unevenly spread — at the time of writing it holds no
+ * very_hard questions at all — so any slot that rolled very_hard vanished.
+ *
+ * Order of preference: the difficulties the slot asked for, then anything else
+ * in the language, and only as a last resort a question already seen this game.
+ * Repeating a question is a lesser evil than showing a missing card.
+ */
+function pickForSlot(
+  rng: GameRng,
+  corpus: QuestionMeta[],
+  language: string,
+  preferred: Difficulty[],
+  excludeIds: Set<string>,
+): QuestionMeta | null {
+  for (const difficulty of preferred) {
+    const candidates = filterQuestions(corpus, { language, difficulty, excludeIds })
+    if (candidates.length > 0) return rng.pick(candidates)
+  }
+
+  const anyDifficulty = filterQuestions(corpus, { language, excludeIds })
+  if (anyDifficulty.length > 0) return rng.pick(anyDifficulty)
+
+  const repeat = filterQuestions(corpus, { language, excludeIds: new Set<string>() })
+  return repeat.length > 0 ? rng.pick(repeat) : null
+}
+
+/** The drawn difficulty first, then the rest as fallbacks. */
+function difficultyOrder(first: Difficulty): Difficulty[] {
+  return [first, ...ALL_DIFFICULTIES.filter((d) => d !== first)]
+}
+
+/**
  * Generate 4 question slots for a turn.
  * Slot 1: Expertise (player's categories)
  * Slots 2/3: Random category, with board constraints
@@ -446,8 +483,7 @@ export function generateSlots(
     const difficulty = curseActive ? 'hard' as Difficulty : pickUniformDifficulty(rng)
     const constraint = slot23Constraints[slotIdx - 1]!
 
-    const candidates = filterQuestions(corpus, { language: lang, difficulty, excludeIds })
-    const question = candidates.length > 0 ? rng.pick(candidates) : null
+    const question = pickForSlot(rng, corpus, lang, difficultyOrder(difficulty), excludeIds)
     if (question) {
       excludeIds.add(question.id)
       slots.push({
@@ -465,12 +501,15 @@ export function generateSlots(
 
   // Slot 4: Hard/Very Hard (fall back to the other if no questions match)
   const slot4Difficulty = pickSlot4Difficulty(rng)
-  let slot4Candidates = filterQuestions(corpus, { language: lang, difficulty: slot4Difficulty, excludeIds })
-  if (slot4Candidates.length === 0) {
-    const fallback: Difficulty = slot4Difficulty === 'very_hard' ? 'hard' : 'very_hard'
-    slot4Candidates = filterQuestions(corpus, { language: lang, difficulty: fallback, excludeIds })
-  }
-  const slot4Question = slot4Candidates.length > 0 ? rng.pick(slot4Candidates) : null
+  const slot4Other: Difficulty = slot4Difficulty === 'very_hard' ? 'hard' : 'very_hard'
+  const slot4Question = pickForSlot(
+    rng,
+    corpus,
+    lang,
+    // both hard tiers first — an easy question here is a last resort, not a choice
+    [slot4Difficulty, slot4Other],
+    excludeIds,
+  )
   if (slot4Question) {
     excludeIds.add(slot4Question.id)
     slots.push({
@@ -534,11 +573,10 @@ function pickExpertiseQuestion(
 
   // Final fallback: any category, on the generic band — the player has no
   // expertise, or nothing in it matched, so there is nothing to charge them for.
+  // Widened like the other slots so the card is never simply missing.
   const difficulty = curseActive ? ('hard' as Difficulty) : pickSlot1Difficulty(rng, false)
-  const candidates = filterQuestions(corpus, { language, difficulty, excludeIds })
-  if (candidates.length > 0) return { question: rng.pick(candidates), difficulty, specific: false }
-
-  return null
+  const question = pickForSlot(rng, corpus, language, difficultyOrder(difficulty), excludeIds)
+  return question ? { question, difficulty, specific: false } : null
 }
 
 // ─── Basic Joker Re-Earning ─────────────────────────────────────
@@ -694,4 +732,40 @@ export function pickPlayerIntroLine(rng: GameRng, playerCount: number): string {
     return `players_${playerCount}`
   }
   return rng.pick(GENERIC_PLAYER_INTRO_KEYS)
+}
+
+// ─── Narrator: verdict remark ───────────────────────────────────
+
+/** Remarks after a correct answer, keyed to /voice/verdict_correct_N.<lang>.mp3 */
+export const VERDICT_CORRECT_KEYS = [
+  'verdict_correct_1',
+  'verdict_correct_2',
+  'verdict_correct_3',
+  'verdict_correct_4',
+  'verdict_correct_5',
+  'verdict_correct_6',
+  'verdict_correct_7',
+  'verdict_correct_8',
+] as const
+
+/** Remarks after a wrong answer. */
+export const VERDICT_WRONG_KEYS = [
+  'verdict_wrong_1',
+  'verdict_wrong_2',
+  'verdict_wrong_3',
+  'verdict_wrong_4',
+  'verdict_wrong_5',
+  'verdict_wrong_6',
+  'verdict_wrong_7',
+  'verdict_wrong_8',
+] as const
+
+/**
+ * Pick the narrator's remark for an answer verdict, as a voice-line key.
+ *
+ * Seeded like every other random decision. This screen is seen more than any
+ * other in the game, which is why there are four of each rather than one.
+ */
+export function pickVerdictRemark(rng: GameRng, correct: boolean): string {
+  return rng.pick(correct ? VERDICT_CORRECT_KEYS : VERDICT_WRONG_KEYS)
 }
