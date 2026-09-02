@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import type { PlayerColor, Expertise } from '../types/session'
 import { COLOR_HEX, PLAYER_COLORS } from '../types/session'
+import ExpertisePicker from '../components/ExpertisePicker.vue'
 
 const { t } = useI18n()
 const game = useGameStore()
@@ -20,10 +21,16 @@ const newPlayerExpertise = ref<Expertise>({ major_categories: [], subcategories:
 const showSettings = ref(false)
 
 const availableColors = computed(() => game.getAvailableColors())
-const canAddPlayer = computed(() => game.players.length < 6 && newPlayerColor.value !== null)
+const canAddPlayer = computed(
+  () =>
+    game.players.length < 6 &&
+    newPlayerColor.value !== null &&
+    // an expertise slot that means nothing is worse than a slower setup
+    newPlayerExpertise.value.major_categories.length > 0,
+)
 const canStart = computed(() => game.players.length >= 2)
 
-/** Expertise has no picker yet, so this is empty for now. */
+/** Generic claims first, then the specific ones. */
 function expertiseLine(expertise: Expertise): string {
   return [...expertise.major_categories, ...expertise.subcategories].join(' · ')
 }
@@ -103,8 +110,14 @@ const STARTING_PEG_OPTIONS = [0, 2, 4, 6]
       <!-- current players -->
       <div v-if="game.players.length === 0" class="qt-setting">
         <div class="qt-setting-label">{{ t('setup.title') }}</div>
-        <p style="margin: 0; font-weight: 700; font-size: 13px; opacity: 0.55">
+        <p style="margin: 0 0 8px; font-weight: 900; font-size: 13px">
           {{ t('setup.minPlayers') }}
+        </p>
+        <p style="margin: 0; font-weight: 700; font-size: 12px; line-height: 1.55; opacity: 0.65">
+          {{ t('setup.introExpertise') }}
+        </p>
+        <p style="margin: 8px 0 0; font-weight: 700; font-size: 12px; line-height: 1.55; opacity: 0.65">
+          {{ t('setup.introTrade') }}
         </p>
       </div>
 
@@ -145,6 +158,8 @@ const STARTING_PEG_OPTIONS = [0, 2, 4, 6]
           ></button>
         </div>
       </div>
+
+      <ExpertisePicker v-if="game.players.length < 6" v-model="newPlayerExpertise" />
 
       <button class="qt-cta qt-cta--ghost" :disabled="!canAddPlayer" @click="handleAddPlayer">
         + {{ t('setup.addPlayer') }}

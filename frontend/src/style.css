@@ -825,6 +825,64 @@ html, body {
   .qt-swatch { width: 34px; height: 34px; border-radius: 50%; border: 3px solid rgba(255, 255, 255, 0.25); }
   .qt-swatch.is-on { border-color: #fff; box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.25); }
   .qt-swatch:disabled { opacity: 0.25; }
+  /* ---------- expertise picker ---------- */
+  .qt-expertise-hint {
+    margin: 0 0 10px;
+    font-weight: 700;
+    font-size: 11px;
+    line-height: 1.5;
+    opacity: 0.6;
+  }
+  .qt-expertise-list { display: flex; flex-direction: column; gap: 7px; }
+  .qt-cat {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: var(--qt-radius-pill);
+    border: 2px solid rgba(255, 255, 255, 0.22);
+    background: transparent;
+    color: #fff;
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 14px;
+    text-align: left;
+  }
+  .qt-cat.is-on { background: var(--qt-accent); border-color: var(--qt-accent); box-shadow: var(--qt-shadow-pill-sm); }
+  .qt-cat:disabled { opacity: 0.3; }
+  .qt-cat-name { flex: 1 1 auto; min-width: 0; }
+  .qt-cat-chevron {
+    flex: 0 0 auto;
+    width: 10px;
+    height: 10px;
+    border-right: 3px solid rgba(255, 255, 255, 0.85);
+    border-bottom: 3px solid rgba(255, 255, 255, 0.85);
+    transform: rotate(45deg) translate(-2px, -2px);
+    transition: transform 0.18s ease;
+  }
+  .qt-cat-chevron.is-open { transform: rotate(225deg) translate(-2px, -2px); }
+  /* the specific tier sits indented under the major it belongs to */
+  .qt-subs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 9px 0 4px 16px;
+  }
+  .qt-sub {
+    padding: 6px 13px;
+    border-radius: var(--qt-radius-pill);
+    border: 2px solid rgba(255, 255, 255, 0.25);
+    background: rgba(0, 0, 0, 0.18);
+    color: #fff;
+    font-family: var(--qt-font);
+    font-weight: 900;
+    font-size: 12px;
+  }
+  .qt-sub.is-on { background: var(--qt-gold); border-color: var(--qt-gold); color: #4A2C00; }
+  .qt-sub:disabled { opacity: 0.3; }
+
   .qt-input {
     width: 100%;
     padding: 11px 14px;

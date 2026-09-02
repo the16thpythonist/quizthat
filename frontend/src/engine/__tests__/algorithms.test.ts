@@ -4,6 +4,7 @@ import {
   isBoostEligible,
   assignBoostSlots,
   assignJokerSlots,
+  pickSlot1Difficulty,
   previousRoundPlayer,
   generateStartingPegs,
   calculatePegCount,
@@ -470,6 +471,46 @@ describe('assignJokerSlots', () => {
     // ~35% of the 2 standard cards per run
     expect(marked).toBeGreaterThan(runs * 2 * 0.2)
     expect(marked).toBeLessThan(runs * 2 * 0.5)
+  })
+})
+
+describe('pickSlot1Difficulty', () => {
+  it('can hand a generic expertise an easy question', () => {
+    const rng = new GameRng(9)
+    const seen = new Set<string>()
+    for (let i = 0; i < 300; i++) seen.add(pickSlot1Difficulty(rng, false))
+    expect(seen.has('easy')).toBe(true)
+  })
+
+  it('never hands a specific expertise an easy question', () => {
+    const rng = new GameRng(9)
+    for (let i = 0; i < 500; i++) {
+      expect(pickSlot1Difficulty(rng, true)).not.toBe('easy')
+    }
+  })
+
+  it('weights a specific expertise towards the hard end', () => {
+    const rng = new GameRng(21)
+    let hardish = 0
+    const runs = 600
+    for (let i = 0; i < runs; i++) {
+      const d = pickSlot1Difficulty(rng, true)
+      if (d === 'hard' || d === 'very_hard') hardish++
+    }
+    // 45 + 30 of 100 → about three quarters
+    expect(hardish).toBeGreaterThan(runs * 0.6)
+  })
+
+  it('leaves the generic band mostly easy or medium', () => {
+    const rng = new GameRng(33)
+    let gentle = 0
+    const runs = 600
+    for (let i = 0; i < runs; i++) {
+      const d = pickSlot1Difficulty(rng, false)
+      if (d === 'easy' || d === 'medium') gentle++
+    }
+    // 35 + 35 of 100
+    expect(gentle).toBeGreaterThan(runs * 0.55)
   })
 })
 

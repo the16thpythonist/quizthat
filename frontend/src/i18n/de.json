@@ -30,7 +30,12 @@
     "placementCandidates": "Platzierungskandidaten",
     "startingPegs": "Start-Stifte",
     "boardFixed": "4×4 — immer",
-    "boardFixedHint": "Eine Reihe, Spalte oder Diagonale gewinnt."
+    "boardFixedHint": "Eine Reihe, Spalte oder Diagonale gewinnt.",
+    "expertiseSpecificShort": "speziell",
+    "expertiseHint": "Wähle bis zu 2 Hauptkategorien. Tippe auf eine ausgewählte Kategorie, um Unterkategorien zu öffnen — bis zu 2 davon.",
+    "expertiseLoading": "Kategorien werden geladen…",
+    "introExpertise": "Jeder Spieler wählt eine Expertise: bis zu 2 Hauptkategorien (z. B. Wissenschaft) und bis zu 2 Unterkategorien (z. B. Physik). Deine erste Frage jede Runde kommt aus diesen Gebieten.",
+    "introTrade": "Je spezieller die Wahl, desto teurer: Aus einer Unterkategorie kommt nie eine leichte Frage — dort sind schwere und sehr schwere Fragen die Regel."
   },
   "colors": {
     "red": "Rot",

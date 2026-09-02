@@ -291,15 +291,33 @@ const SLOT1_DIFFICULTY_WEIGHTS: Record<Difficulty, number> = {
   very_hard: 10,
 }
 
+/**
+ * Slot 1 distribution when the pick came from a specific subcategory.
+ *
+ * Easy is impossible: a narrow expertise is paid for with harder questions.
+ * Claiming you know Physics should not hand you the same gentle questions as
+ * claiming you know Science.
+ */
+const SLOT1_SPECIFIC_DIFFICULTY_WEIGHTS: Record<Difficulty, number> = {
+  easy: 0,
+  medium: 25,
+  hard: 45,
+  very_hard: 30,
+}
+
 const ALL_DIFFICULTIES: Difficulty[] = ['easy', 'medium', 'hard', 'very_hard']
 
 /**
- * Pick a difficulty based on the Slot 1 distribution.
+ * Pick a difficulty for Slot 1.
+ *
+ * `specific` shifts to the harsher band used when the question is drawn from
+ * one of the player's subcategories rather than a whole major category.
  */
-export function pickSlot1Difficulty(rng: GameRng): Difficulty {
+export function pickSlot1Difficulty(rng: GameRng, specific = false): Difficulty {
+  const weights = specific ? SLOT1_SPECIFIC_DIFFICULTY_WEIGHTS : SLOT1_DIFFICULTY_WEIGHTS
   return rng.weightedPick(
     ALL_DIFFICULTIES,
-    ALL_DIFFICULTIES.map(d => SLOT1_DIFFICULTY_WEIGHTS[d]),
+    ALL_DIFFICULTIES.map(d => weights[d]),
   )
 }
 
@@ -394,9 +412,11 @@ export function generateSlots(
   const excludeIds = new Set(usedIds)
   const slots: OfferedSlot[] = []
 
-  // Slot 1: Expertise
-  const slot1Difficulty = curseActive ? 'hard' as Difficulty : pickSlot1Difficulty(rng)
-  const slot1Question = pickExpertiseQuestion(rng, corpus, player, lang, slot1Difficulty, excludeIds)
+  // Slot 1: Expertise. The difficulty band depends on which tier of the
+  // player's expertise the question ends up being drawn from, so the picker
+  // decides it rather than the caller.
+  const slot1Pick = pickExpertiseQuestion(rng, corpus, player, lang, curseActive, excludeIds)
+  const slot1Question = slot1Pick?.question ?? null
   if (slot1Question) {
     excludeIds.add(slot1Question.id)
     slots.push({
@@ -460,46 +480,55 @@ export function generateSlots(
   return slots
 }
 
+export interface ExpertisePick {
+  question: QuestionMeta
+  difficulty: Difficulty
+  /** true when it came from a subcategory, i.e. the harsher band applied */
+  specific: boolean
+}
+
 /**
  * Pick a question from the player's expertise areas.
- * 60% chance subcategory, 40% chance major category.
+ *
+ * Rolls 60/40 for the specific tier (a subcategory) over the generic one (a
+ * whole major category), then draws the difficulty from the band that tier
+ * deserves — so a player who claims a narrow expertise never sees an easy
+ * question from it, while their generic pick still can. A player holding both
+ * therefore gets a different bargain depending on which one comes up.
  */
 function pickExpertiseQuestion(
   rng: GameRng,
   corpus: QuestionMeta[],
   player: Player,
   language: string,
-  difficulty: Difficulty,
+  curseActive: boolean,
   excludeIds: Set<string>,
-): QuestionMeta | null {
-  const useSubcategory = rng.chance(0.6)
+): ExpertisePick | null {
+  const subs = player.expertise.subcategories
+  const majors = player.expertise.major_categories
 
-  if (useSubcategory && player.expertise.subcategories.length > 0) {
-    const sub = rng.pick(player.expertise.subcategories)
+  const preferSpecific = subs.length > 0 && rng.chance(0.6)
+  const order: boolean[] = preferSpecific ? [true, false] : [false, true]
+
+  for (const specific of order) {
+    const pool = specific ? subs : majors
+    if (pool.length === 0) continue
+    const key = rng.pick(pool)
+    const difficulty = curseActive ? ('hard' as Difficulty) : pickSlot1Difficulty(rng, specific)
     const candidates = filterQuestions(corpus, {
       language,
       difficulty,
-      subcategory: sub,
       excludeIds,
+      ...(specific ? { subcategory: key } : { majorCategory: key }),
     })
-    if (candidates.length > 0) return rng.pick(candidates)
+    if (candidates.length > 0) return { question: rng.pick(candidates), difficulty, specific }
   }
 
-  // Fall back to major category
-  if (player.expertise.major_categories.length > 0) {
-    const major = rng.pick(player.expertise.major_categories)
-    const candidates = filterQuestions(corpus, {
-      language,
-      difficulty,
-      majorCategory: major,
-      excludeIds,
-    })
-    if (candidates.length > 0) return rng.pick(candidates)
-  }
-
-  // Final fallback: any category
+  // Final fallback: any category, on the generic band — the player has no
+  // expertise, or nothing in it matched, so there is nothing to charge them for.
+  const difficulty = curseActive ? ('hard' as Difficulty) : pickSlot1Difficulty(rng, false)
   const candidates = filterQuestions(corpus, { language, difficulty, excludeIds })
-  if (candidates.length > 0) return rng.pick(candidates)
+  if (candidates.length > 0) return { question: rng.pick(candidates), difficulty, specific: false }
 
   return null
 }

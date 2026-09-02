@@ -52,6 +52,28 @@ export const useCorpusStore = defineStore('corpus', () => {
     }
   }
 
+  /**
+   * The expertise taxonomy, derived from the questions actually present.
+   *
+   * Built from the corpus rather than a fixed list so every option offered at
+   * setup has questions behind it, and so it grows on its own as the corpus
+   * does. The engine matches expertise against these exact strings.
+   */
+  const categories = computed(() => {
+    const byMajor = new Map<string, Set<string>>()
+    for (const q of questions.value) {
+      if (!q.major_category) continue
+      if (!byMajor.has(q.major_category)) byMajor.set(q.major_category, new Set())
+      if (q.subcategory) byMajor.get(q.major_category)!.add(q.subcategory)
+    }
+    return [...byMajor.entries()]
+      .map(([major, subs]) => ({
+        major,
+        subcategories: [...subs].sort((a, b) => a.localeCompare(b)),
+      }))
+      .sort((a, b) => a.major.localeCompare(b.major))
+  })
+
   async function fetchQuestionData(questionId: string, language: string): Promise<QuestionData | null> {
     try {
       const url = `${corpusBaseUrl.value}${questionId}/question.${language}.json`
@@ -71,5 +93,5 @@ export const useCorpusStore = defineStore('corpus', () => {
     }
   }
 
-  return { questions, loading, error, loaded, corpusBaseUrl, loadCorpus, fetchTeaserTitle, fetchQuestionData }
+  return { questions, loading, error, loaded, corpusBaseUrl, categories, loadCorpus, fetchTeaserTitle, fetchQuestionData }
 })

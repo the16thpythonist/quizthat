@@ -4,8 +4,8 @@
     "en",
     "de"
   ],
-  "major_category": "sport",
-  "subcategory": "tennis",
+  "major_category": "Sports",
+  "subcategory": "Tennis",
   "difficulty": "hard",
   "question_type": "multiple_choice",
   "time_limit_seconds": 45,
