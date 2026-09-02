@@ -377,6 +377,26 @@ html, body {
   .qt-rank-name { flex: 1 1 auto; min-width: 0; text-align: left; }
   .qt-rank-guess { font-size: 14px; opacity: 0.85; }
 
+  /* the peg changing hands, shown on both boards */
+  .qt-swap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 20px;
+  }
+  .qt-swap-side { display: flex; flex-direction: column; align-items: center; gap: 7px; }
+  .qt-swap-name { font-weight: 900; font-size: 13px; opacity: 0.8; }
+  .qt-swap-arrow { font-size: 26px; font-weight: 900; opacity: 0.7; }
+  .qt-swap-label {
+    font-weight: 900;
+    font-size: 13px;
+    padding: 3px 12px;
+    border-radius: var(--qt-radius-pill);
+  }
+  .qt-swap-label--loss { background: rgba(196, 56, 79, 0.28); color: #FFD3DB; }
+  .qt-swap-label--gain { background: rgba(240, 194, 75, 0.24); color: #FFE9AE; }
+
   /* ---------- round track ---------- */
   /* Three across at most, then wrap. Six players plus the battle square would
      otherwise stretch the badge into a bar. */

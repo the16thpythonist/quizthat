@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import BoardGrid from '../components/BoardGrid.vue'
 import { COLOR_HEX } from '../types/session'
 import type { EstimationAnswerData } from '../types/session'
 
@@ -49,6 +50,35 @@ const ranked = computed(() => {
     })
 })
 
+/**
+ * The two boards that changed, so the swap is seen rather than read.
+ *
+ * The move has already been applied to the store, so the loser's square is
+ * empty and the winner's is filled. Marking the square on both sides is what
+ * makes it legible: one shows the gap it left, the other the peg that arrived.
+ */
+const boards = computed(() => {
+  const b = battle.value
+  if (!b?.transfer) return null
+  const from = game.players[b.transfer.from]
+  const to = game.players[b.transfer.to]
+  if (!from || !to) return null
+  return { from, to, field: b.transfer.field }
+})
+
+/** Held back a beat so the peg visibly lands rather than being there already. */
+const landed = ref<[number, number] | null>(null)
+let timer: ReturnType<typeof setTimeout> | null = null
+
+onMounted(() => {
+  const field = boards.value?.field
+  if (field) timer = setTimeout(() => { landed.value = field }, 700)
+})
+
+onUnmounted(() => {
+  if (timer) clearTimeout(timer)
+})
+
 const transfer = computed(() => {
   const b = battle.value
   if (!b?.transfer) return null
@@ -85,9 +115,37 @@ const transfer = computed(() => {
         </div>
       </div>
 
-      <p v-if="transfer" class="qt-reveal" style="margin-top: 22px">
-        {{ t('battle.transfer', { from: transfer.from, to: transfer.to, field: transfer.field }) }}
-      </p>
+      <!-- the swap, shown on both boards -->
+      <div v-if="boards" class="qt-swap">
+        <div class="qt-swap-side">
+          <div class="qt-swap-name">{{ boards.from.name }}</div>
+          <BoardGrid
+            :board="boards.from.board"
+            :player-color="boards.from.color"
+            :candidate-fields="[boards.field]"
+            :cell-size="34"
+          />
+          <div class="qt-swap-label qt-swap-label--loss">
+            − {{ transfer?.field }}
+          </div>
+        </div>
+
+        <div class="qt-swap-arrow">→</div>
+
+        <div class="qt-swap-side">
+          <div class="qt-swap-name">{{ boards.to.name }}</div>
+          <BoardGrid
+            :board="boards.to.board"
+            :player-color="boards.to.color"
+            :last-placed-field="landed"
+            :cell-size="34"
+          />
+          <div class="qt-swap-label qt-swap-label--gain">
+            + {{ transfer?.field }}
+          </div>
+        </div>
+      </div>
+
       <p v-else class="qt-reveal" style="margin-top: 22px">{{ t('battle.noTransfer') }}</p>
 
       <p class="qt-gate-tap" style="margin-top: 26px">{{ t('answer.continue') }}</p>
