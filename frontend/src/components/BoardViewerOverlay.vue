@@ -100,7 +100,6 @@ function onTouchEnd(e: TouchEvent) {
           <BoardGrid
             :board="current.board"
             :player-color="current.color"
-            :winning-line="game.winnerPlayerIndex === current.index ? game.winningLine : null"
           />
 
           <div class="qt-slide-stats">

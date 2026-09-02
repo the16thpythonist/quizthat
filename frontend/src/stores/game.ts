@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { ref, computed, shallowRef } from 'vue'
 import type {
   GameState,
   GameSettings,
@@ -20,6 +20,7 @@ import type {
 import { PLAYER_COLORS, BOARD_SIZE } from '../types/session'
 import { checkWin, generateSlots, assignBoostSlots, assignJokerSlots, isBoostEligible, placementRuleForSlot, generateCandidates, passPlacementRule } from '../engine/algorithms'
 import { GameRng } from '../engine/rng'
+import { pickPlayerIntroLine } from '../engine/algorithms'
 import { useCorpusStore } from './corpus'
 
 function createBoard(size: number): Board {
@@ -89,11 +90,12 @@ export const useGameStore = defineStore('game', () => {
   const round = ref(1)
   const turn = ref<TurnState | null>(null)
   const winnerPlayerIndex = ref<number | null>(null)
-  const winningLine = ref<[number, number][] | null>(null)
+  const winningLines = ref<[number, number][][] | null>(null)
   const usedQuestionIds = ref<Set<string>>(new Set())
   const settings = ref<GameSettings>({
     placement_candidates: 2,
     starting_pegs: 0,
+    lines_to_win: 1,
     language: 'de',
   })
 
@@ -101,10 +103,20 @@ export const useGameStore = defineStore('game', () => {
   const currentQuestion = ref<QuestionData | null>(null)
 
   // Seeded RNG for deterministic gameplay
-  const rng = ref<GameRng | null>(null)
+  // shallowRef, not ref: Vue's deep unwrapping rewrites a class instance into a
+  // structural type that drops its private members, so `ref<GameRng>` no longer
+  // satisfies `GameRng` at any call site. A PRNG has no business being deeply
+  // reactive either — nothing renders from its internals.
+  const rng = shallowRef<GameRng | null>(null)
+  /**
+   * Voice-line key for the narrator's roster callout, chosen once at startGame()
+   * so it is seeded off the session RNG and replays identically. App.vue plays it;
+   * the store stays free of audio concerns.
+   */
+  const playerIntroLine = ref<string | null>(null)
 
   // UI sub-state: which phase of setup we're in
-  const setupPhase = ref<'start' | 'player_setup'>('start')
+  const setupPhase = ref<'start' | 'player_setup' | 'game_settings'>('start')
 
   // Computed
   const currentPlayer = computed<Player | null>(() =>
@@ -120,6 +132,10 @@ export const useGameStore = defineStore('game', () => {
 
   function goToStart() {
     setupPhase.value = 'start'
+  }
+
+  function goToGameSettings() {
+    setupPhase.value = 'game_settings'
   }
 
   function addPlayer(name: string, color: PlayerColor, expertise: Expertise) {
@@ -161,6 +177,7 @@ export const useGameStore = defineStore('game', () => {
   function startGame() {
     if (players.value.length < 2) return
     rng.value = new GameRng(Date.now())
+    playerIntroLine.value = pickPlayerIntroLine(rng.value, players.value.length)
     sessionId.value = newSessionId()
     status.value = 'in_progress'
     currentPlayerIndex.value = 0
@@ -371,10 +388,10 @@ export const useGameStore = defineStore('game', () => {
     placingPlayer.board.peg_count++
     turn.value.pegs_remaining--
     // Check for win
-    const line = checkWin(placingPlayer.board)
-    if (line) {
+    const lines = checkWin(placingPlayer.board, settings.value.lines_to_win)
+    if (lines) {
       winnerPlayerIndex.value = turn.value.placing_player_index
-      winningLine.value = line
+      winningLines.value = lines
       state.value = 'victory'
       status.value = 'finished'
       if (turn.value) turn.value.phase = 'victory'
@@ -475,10 +492,11 @@ export const useGameStore = defineStore('game', () => {
     round.value = 1
     turn.value = null
     winnerPlayerIndex.value = null
-    winningLine.value = null
+    winningLines.value = null
     usedQuestionIds.value.clear()
     currentQuestion.value = null
     rng.value = null
+    playerIntroLine.value = null
   }
 
   return {
@@ -491,11 +509,12 @@ export const useGameStore = defineStore('game', () => {
     round,
     turn,
     winnerPlayerIndex,
-    winningLine,
+    winningLines,
     usedQuestionIds,
     settings,
     currentQuestion,
     setupPhase,
+    playerIntroLine,
 
     // Computed
     currentPlayer,
@@ -504,6 +523,7 @@ export const useGameStore = defineStore('game', () => {
     // Setup actions
     goToPlayerSetup,
     goToStart,
+    goToGameSettings,
     addPlayer,
     updatePlayerExpertise,
     removePlayer,

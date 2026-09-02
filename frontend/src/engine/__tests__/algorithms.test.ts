@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   checkWin,
+  findCompletedLines,
   isBoostEligible,
   assignBoostSlots,
   assignJokerSlots,
@@ -16,6 +17,10 @@ import {
   awardSpecialJoker,
   scrambleAnswerOrder,
   placementRuleForSlot,
+} from '../algorithms'
+import {
+  pickPlayerIntroLine,
+  GENERIC_PLAYER_INTRO_KEYS,
 } from '../algorithms'
 import { GameRng } from '../rng'
 import type { Board, Player, OfferedSlot } from '../../types/session'
@@ -73,26 +78,22 @@ describe('checkWin', () => {
 
   it('detects a complete row', () => {
     const board = makeBoard(4, [[1, 0], [1, 1], [1, 2], [1, 3]])
-    const result = checkWin(board)
-    expect(result).toEqual([[1, 0], [1, 1], [1, 2], [1, 3]])
+    expect(checkWin(board)).toEqual([[[1, 0], [1, 1], [1, 2], [1, 3]]])
   })
 
   it('detects a complete column', () => {
     const board = makeBoard(3, [[0, 2], [1, 2], [2, 2]])
-    const result = checkWin(board)
-    expect(result).toEqual([[0, 2], [1, 2], [2, 2]])
+    expect(checkWin(board)).toEqual([[[0, 2], [1, 2], [2, 2]]])
   })
 
   it('detects main diagonal', () => {
     const board = makeBoard(3, [[0, 0], [1, 1], [2, 2]])
-    const result = checkWin(board)
-    expect(result).toEqual([[0, 0], [1, 1], [2, 2]])
+    expect(checkWin(board)).toEqual([[[0, 0], [1, 1], [2, 2]]])
   })
 
   it('detects anti-diagonal', () => {
     const board = makeBoard(3, [[0, 2], [1, 1], [2, 0]])
-    const result = checkWin(board)
-    expect(result).toEqual([[0, 2], [1, 1], [2, 0]])
+    expect(checkWin(board)).toEqual([[[0, 2], [1, 1], [2, 0]]])
   })
 
   it('returns null for incomplete line', () => {
@@ -102,7 +103,53 @@ describe('checkWin', () => {
 
   it('works on 5x5 board', () => {
     const board = makeBoard(5, [[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]])
-    expect(checkWin(board)).toEqual([[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]])
+    expect(checkWin(board)).toEqual([[[0, 0], [1, 1], [2, 2], [3, 3], [4, 4]]])
+  })
+
+  it('does not win on one line when two are required', () => {
+    const board = makeBoard(4, [[1, 0], [1, 1], [1, 2], [1, 3]])
+    expect(checkWin(board, 2)).toBeNull()
+  })
+
+  it('wins on two crossing lines when two are required', () => {
+    // row 0 plus column 1, sharing the peg at 0,1 — seven pegs in all
+    const board = makeBoard(4, [
+      [0, 0], [0, 1], [0, 2], [0, 3],
+      [1, 1], [2, 1], [3, 1],
+    ])
+    const result = checkWin(board, 2)
+    expect(result).toHaveLength(2)
+    expect(result).toContainEqual([[0, 0], [0, 1], [0, 2], [0, 3]])
+    expect(result).toContainEqual([[0, 1], [1, 1], [2, 1], [3, 1]])
+  })
+
+  it('wins on two parallel lines when two are required', () => {
+    const board = makeBoard(4, [
+      [0, 0], [0, 1], [0, 2], [0, 3],
+      [2, 0], [2, 1], [2, 2], [2, 3],
+    ])
+    expect(checkWin(board, 2)).toHaveLength(2)
+  })
+})
+
+describe('findCompletedLines', () => {
+  it('finds nothing on an empty board', () => {
+    expect(findCompletedLines(makeBoard(4))).toEqual([])
+  })
+
+  it('counts a crossing row and column as two separate lines', () => {
+    const board = makeBoard(4, [
+      [0, 0], [0, 1], [0, 2], [0, 3],
+      [1, 1], [2, 1], [3, 1],
+    ])
+    expect(findCompletedLines(board)).toHaveLength(2)
+  })
+
+  it('finds a filled board\'s rows, columns and both diagonals', () => {
+    const all: [number, number][] = []
+    for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) all.push([r, c])
+    // 4 rows + 4 columns + 2 diagonals
+    expect(findCompletedLines(makeBoard(4, all))).toHaveLength(10)
   })
 })
 
@@ -520,6 +567,7 @@ describe('placementRuleForSlot', () => {
   const settings = {
     placement_candidates: 2,
     starting_pegs: 0,
+    lines_to_win: 1,
     language: 'en',
   }
 
@@ -569,5 +617,49 @@ describe('placementRuleForSlot', () => {
     const rule = placementRuleForSlot(slot, settings)
     expect(rule.type).toBe('random_board')
     expect(rule.candidates_count).toBe(2)
+  })
+})
+
+describe('pickPlayerIntroLine', () => {
+  const GENERIC: readonly string[] = GENERIC_PLAYER_INTRO_KEYS
+
+  it('is deterministic for a given seed', () => {
+    const a = pickPlayerIntroLine(new GameRng('seed-42'), 4)
+    const b = pickPlayerIntroLine(new GameRng('seed-42'), 4)
+    expect(a).toBe(b)
+  })
+
+  it('only ever returns a key that exists', () => {
+    for (let count = 2; count <= 6; count++) {
+      for (let seed = 0; seed < 40; seed++) {
+        const key = pickPlayerIntroLine(new GameRng(`s${seed}`), count)
+        const valid = GENERIC.includes(key) || key === `players_${count}`
+        expect(valid, `${key} for ${count} players`).toBe(true)
+      }
+    }
+  })
+
+  it('never returns another roster size\'s line', () => {
+    for (let seed = 0; seed < 60; seed++) {
+      const key = pickPlayerIntroLine(new GameRng(`x${seed}`), 2)
+      expect(key).not.toMatch(/^players_[3-6]$/)
+    }
+  })
+
+  it('uses the generic lines most of the time, but does use the specific one', () => {
+    let specific = 0
+    const runs = 400
+    for (let seed = 0; seed < runs; seed++) {
+      if (pickPlayerIntroLine(new GameRng(`w${seed}`), 3) === 'players_3') specific++
+    }
+    // SPECIFIC_PLAYER_INTRO_CHANCE is 0.3; allow generous slack for a seeded PRNG.
+    expect(specific).toBeGreaterThan(runs * 0.15)
+    expect(specific).toBeLessThan(runs * 0.45)
+  })
+
+  it('falls back to generic lines for a roster with no specific line', () => {
+    for (let seed = 0; seed < 20; seed++) {
+      expect(GENERIC).toContain(pickPlayerIntroLine(new GameRng(`y${seed}`), 7))
+    }
   })
 })

@@ -71,7 +71,6 @@ const winnerColor = computed(() => winner.value ? COLOR_HEX[winner.value.color] 
         <BoardGrid
           :board="winner.board"
           :player-color="winner.color"
-          :winning-line="game.winningLine"
           :cell-size="42"
         />
       </div>

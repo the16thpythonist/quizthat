@@ -169,6 +169,8 @@ export interface TurnState {
 export interface GameSettings {
   placement_candidates: number
   starting_pegs: number
+  /** How many completed lines a player needs to win. Lines may cross. */
+  lines_to_win: number
   language: string
 }
 

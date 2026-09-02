@@ -16,52 +16,60 @@ import { BOARD_SIZE } from '../types/session'
 // ─── Win Detection ──────────────────────────────────────────────
 
 /**
- * Check if a board has a completed line.
- * Returns the winning line coordinates or null.
+ * Every completed line on a board — rows, columns, both diagonals.
+ *
+ * Returned in a stable order so a line keeps its identity between calls, which
+ * matters because completed lines stay highlighted while play continues.
  */
-export function checkWin(board: Board): [number, number][] | null {
+export function findCompletedLines(board: Board): [number, number][][] {
   const n = board.size
-  // Check rows
+  const lines: [number, number][][] = []
+
   for (let r = 0; r < n; r++) {
-    let allFilled = true
+    let all = true
     for (let c = 0; c < n; c++) {
-      if (!board.fields[r]?.[c]) { allFilled = false; break }
+      if (!board.fields[r]?.[c]) { all = false; break }
     }
-    if (allFilled) {
-      return Array.from({ length: n }, (_, c) => [r, c] as [number, number])
-    }
+    if (all) lines.push(Array.from({ length: n }, (_, c) => [r, c] as [number, number]))
   }
-  // Check columns
+
   for (let c = 0; c < n; c++) {
-    let allFilled = true
+    let all = true
     for (let r = 0; r < n; r++) {
-      if (!board.fields[r]?.[c]) { allFilled = false; break }
+      if (!board.fields[r]?.[c]) { all = false; break }
     }
-    if (allFilled) {
-      return Array.from({ length: n }, (_, r) => [r, c] as [number, number])
-    }
+    if (all) lines.push(Array.from({ length: n }, (_, r) => [r, c] as [number, number]))
   }
-  // Main diagonal
+
   {
-    let allFilled = true
+    let all = true
     for (let i = 0; i < n; i++) {
-      if (!board.fields[i]?.[i]) { allFilled = false; break }
+      if (!board.fields[i]?.[i]) { all = false; break }
     }
-    if (allFilled) {
-      return Array.from({ length: n }, (_, i) => [i, i] as [number, number])
-    }
+    if (all) lines.push(Array.from({ length: n }, (_, i) => [i, i] as [number, number]))
   }
-  // Anti-diagonal
+
   {
-    let allFilled = true
+    let all = true
     for (let i = 0; i < n; i++) {
-      if (!board.fields[i]?.[n - 1 - i]) { allFilled = false; break }
+      if (!board.fields[i]?.[n - 1 - i]) { all = false; break }
     }
-    if (allFilled) {
-      return Array.from({ length: n }, (_, i) => [i, n - 1 - i] as [number, number])
-    }
+    if (all) lines.push(Array.from({ length: n }, (_, i) => [i, n - 1 - i] as [number, number]))
   }
-  return null
+
+  return lines
+}
+
+/**
+ * Check whether a board has won.
+ *
+ * Returns the completed lines once there are at least `linesToWin` of them, or
+ * null. Lines may cross: a row and a column that intersect count as two, so on
+ * a 4x4 seven pegs can already be a two-line win.
+ */
+export function checkWin(board: Board, linesToWin = 1): [number, number][][] | null {
+  const lines = findCompletedLines(board)
+  return lines.length >= linesToWin ? lines : null
 }
 
 // ─── 2x Boost Eligibility ───────────────────────────────────────
@@ -651,4 +659,39 @@ export function columnLabel(index: number): string {
 /** Row label for display (0 -> 1, 1 -> 2, etc.) */
 export function rowLabel(index: number): string {
   return String(index + 1)
+}
+
+// ─── Narrator: player-roster callout ────────────────────────────
+
+/** Voice lines that fit any roster size. */
+export const GENERIC_PLAYER_INTRO_KEYS = [
+  'players_any_1',
+  'players_any_2',
+  'players_any_3',
+  'players_any_4',
+] as const
+
+/**
+ * How often the roster-size-specific line is used instead of a generic one.
+ *
+ * Deliberately low. Only ever one specific line is eligible for a given roster,
+ * against four generics, so a 50/50 split would mean a two-player group hears
+ * "Ist das etwa ein Date?" every other game. At 0.3 the specific line stays a
+ * treat rather than becoming the default.
+ */
+export const SPECIFIC_PLAYER_INTRO_CHANCE = 0.3
+
+/**
+ * Pick the narrator line played once the roster is set, as a voice-line key
+ * (e.g. 'players_2', 'players_any_3').
+ *
+ * Seeded, like every other random decision — the same session seed must always
+ * replay the same game.
+ */
+export function pickPlayerIntroLine(rng: GameRng, playerCount: number): string {
+  const hasSpecificLine = playerCount >= 2 && playerCount <= 6
+  if (hasSpecificLine && rng.chance(SPECIFIC_PLAYER_INTRO_CHANCE)) {
+    return `players_${playerCount}`
+  }
+  return rng.pick(GENERIC_PLAYER_INTRO_KEYS)
 }

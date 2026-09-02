@@ -808,6 +808,13 @@ html, body {
   }
   .qt-setting { background: rgba(0, 0, 0, 0.2); border-radius: 20px; padding: 12px 14px; color: #fff; }
   .qt-setting-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.1px; opacity: 0.6; margin-bottom: 8px; }
+  .qt-setting-note {
+    margin: 8px 0 0;
+    font-weight: 700;
+    font-size: 11px;
+    line-height: 1.5;
+    opacity: 0.55;
+  }
   .qt-seg { display: flex; gap: 7px; }
   .qt-seg > button {
     flex: 1 1 0;

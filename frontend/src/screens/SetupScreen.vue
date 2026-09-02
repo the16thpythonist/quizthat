@@ -9,16 +9,16 @@ import ExpertisePicker from '../components/ExpertisePicker.vue'
 const { t } = useI18n()
 const game = useGameStore()
 
-// Start screen vs player setup
+// Title -> player list -> game settings. Each phase is matched explicitly:
+// a negated condition would have swallowed the third phase.
+const isStart = computed(() => game.setupPhase === 'start')
 const isPlayerSetup = computed(() => game.setupPhase === 'player_setup')
+const isGameSettings = computed(() => game.setupPhase === 'game_settings')
 
 // New player form
 const newPlayerName = ref('')
 const newPlayerColor = ref<PlayerColor | null>(null)
 const newPlayerExpertise = ref<Expertise>({ major_categories: [], subcategories: [] })
-
-// Settings visibility
-const showSettings = ref(false)
 
 const availableColors = computed(() => game.getAvailableColors())
 const canAddPlayer = computed(
@@ -108,13 +108,18 @@ function setStartingPegs(n: number) {
   game.updateSettings({ starting_pegs: n })
 }
 
+function setLinesToWin(n: number) {
+  game.updateSettings({ lines_to_win: n })
+}
+
 const CANDIDATE_OPTIONS = [1, 2, 3, 4]
 const STARTING_PEG_OPTIONS = [0, 2, 4, 6]
+const LINES_TO_WIN_OPTIONS = [1, 2]
 </script>
 
 <template>
   <!-- ---------- Title ---------- -->
-  <div v-if="!isPlayerSetup" class="qt-screen">
+  <div v-if="isStart" class="qt-screen">
     <div class="qt-title-wrap">
       <span class="qt-drift qt-drift--far"></span>
       <span class="qt-drift qt-drift--near"></span>
@@ -131,10 +136,9 @@ const STARTING_PEG_OPTIONS = [0, 2, 4, 6]
   </div>
 
   <!-- ---------- Player setup ---------- -->
-  <div v-else class="qt-screen">
+  <div v-else-if="isPlayerSetup" class="qt-screen">
     <div class="qt-topbar qt-doodles qt-doodles--deep">
       <button class="qt-icon-btn" :aria-label="t('setup.backToMenu')" @click="game.goToStart()">‹</button>
-      <button class="qt-icon-btn" aria-label="Einstellungen" @click="showSettings = !showSettings">⚙</button>
     </div>
 
     <div class="qt-setup-body qt-doodles">
@@ -212,45 +216,11 @@ const STARTING_PEG_OPTIONS = [0, 2, 4, 6]
         + {{ t('setup.addPlayer') }}
       </button>
 
-      <!-- settings -->
-      <template v-if="showSettings">
-        <div class="qt-setting">
-          <div class="qt-setting-label">{{ t('setup.boardSize') }}</div>
-          <p style="margin: 0; font-weight: 900; font-size: 15px">{{ t('setup.boardFixed') }}</p>
-          <p style="margin: 4px 0 0; font-weight: 700; font-size: 11px; opacity: 0.55">
-            {{ t('setup.boardFixedHint') }}
-          </p>
-        </div>
-
-        <div class="qt-setting">
-          <div class="qt-setting-label">{{ t('setup.placementCandidates') }}</div>
-          <div class="qt-seg">
-            <button
-              v-for="n in CANDIDATE_OPTIONS"
-              :key="n"
-              :class="{ 'is-on': game.settings.placement_candidates === n }"
-              @click="setPlacementCandidates(n)"
-            >{{ n }}</button>
-          </div>
-        </div>
-
-        <div class="qt-setting">
-          <div class="qt-setting-label">{{ t('setup.startingPegs') }}</div>
-          <div class="qt-seg">
-            <button
-              v-for="n in STARTING_PEG_OPTIONS"
-              :key="n"
-              :class="{ 'is-on': game.settings.starting_pegs === n }"
-              @click="setStartingPegs(n)"
-            >{{ n }}</button>
-          </div>
-        </div>
-      </template>
     </div>
 
     <div class="qt-cta-bar">
-      <button class="qt-cta qt-cta--accent" :disabled="!canStart" @click="handleStartGame">
-        {{ t('setup.startGame') }}
+      <button class="qt-cta qt-cta--accent" :disabled="!canStart" @click="game.goToGameSettings()">
+        {{ t('setup.continue') }}
       </button>
     </div>
 
@@ -260,5 +230,74 @@ const STARTING_PEG_OPTIONS = [0, 2, 4, 6]
       :title="sheetTitle"
       @close="editingExpertise = null"
     />
+  </div>
+
+  <!-- ---------- Game settings ---------- -->
+  <div v-else-if="isGameSettings" class="qt-screen">
+    <div class="qt-topbar qt-doodles qt-doodles--deep">
+      <button class="qt-icon-btn" :aria-label="t('setup.backToPlayers')" @click="game.goToPlayerSetup()">‹</button>
+    </div>
+
+    <div class="qt-setup-body qt-doodles">
+      <div class="qt-setting">
+        <div class="qt-setting-label">{{ t('setup.gameSettings') }}</div>
+        <p style="margin: 0; font-weight: 700; font-size: 12px; line-height: 1.55; opacity: 0.65">
+          {{ t('setup.settingsIntro', { count: game.players.length }) }}
+        </p>
+      </div>
+
+      <div class="qt-setting">
+        <div class="qt-setting-label">{{ t('setup.linesToWin') }}</div>
+        <div class="qt-seg">
+          <button
+            v-for="n in LINES_TO_WIN_OPTIONS"
+            :key="n"
+            :class="{ 'is-on': game.settings.lines_to_win === n }"
+            @click="setLinesToWin(n)"
+          >{{ n }}</button>
+        </div>
+        <p class="qt-setting-note">
+          {{ game.settings.lines_to_win === 1 ? t('setup.linesToWinOne') : t('setup.linesToWinTwo') }}
+        </p>
+      </div>
+
+      <div class="qt-setting">
+        <div class="qt-setting-label">{{ t('setup.startingPegs') }}</div>
+        <div class="qt-seg">
+          <button
+            v-for="n in STARTING_PEG_OPTIONS"
+            :key="n"
+            :class="{ 'is-on': game.settings.starting_pegs === n }"
+            @click="setStartingPegs(n)"
+          >{{ n }}</button>
+        </div>
+        <p class="qt-setting-note">{{ t('setup.startingPegsNote') }}</p>
+      </div>
+
+      <div class="qt-setting">
+        <div class="qt-setting-label">{{ t('setup.placementCandidates') }}</div>
+        <div class="qt-seg">
+          <button
+            v-for="n in CANDIDATE_OPTIONS"
+            :key="n"
+            :class="{ 'is-on': game.settings.placement_candidates === n }"
+            @click="setPlacementCandidates(n)"
+          >{{ n }}</button>
+        </div>
+        <p class="qt-setting-note">{{ t('setup.placementCandidatesNote') }}</p>
+      </div>
+
+      <div class="qt-setting">
+        <div class="qt-setting-label">{{ t('setup.boardSize') }}</div>
+        <p style="margin: 0; font-weight: 900; font-size: 15px">{{ t('setup.boardFixed') }}</p>
+        <p class="qt-setting-note">{{ t('setup.boardFixedHint') }}</p>
+      </div>
+    </div>
+
+    <div class="qt-cta-bar">
+      <button class="qt-cta qt-cta--accent" :disabled="!canStart" @click="handleStartGame">
+        {{ t('setup.startGame') }}
+      </button>
+    </div>
   </div>
 </template>

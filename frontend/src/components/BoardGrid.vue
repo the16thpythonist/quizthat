@@ -2,11 +2,11 @@
 import { ref, watch, computed } from 'vue'
 import type { Board, PlayerColor } from '../types/session'
 import { COLOR_HEX } from '../types/session'
+import { findCompletedLines } from '../engine/algorithms'
 
 const props = withDefaults(defineProps<{
   board: Board
   playerColor: PlayerColor
-  winningLine?: [number, number][] | null
   candidateFields?: [number, number][]
   interactive?: boolean
   revealingFields?: [number, number][]
@@ -40,8 +40,15 @@ watch(() => props.lastPlacedField, (newVal) => {
 const pegSize = computed(() => Math.round(props.cellSize * 0.65))
 const color = computed(() => COLOR_HEX[props.playerColor])
 
+/**
+ * Completed lines are derived from the board rather than passed in, so a line
+ * lights up the moment it closes and stays lit for the rest of the game. With
+ * two lines needed to win, that is how everyone can see who is one line away.
+ */
+const completed = computed(() => findCompletedLines(props.board).flat())
+
 function isWinningField(row: number, col: number): boolean {
-  return props.winningLine?.some(([r, c]) => r === row && c === col) ?? false
+  return completed.value.some(([r, c]) => r === row && c === col)
 }
 
 function isCandidateField(row: number, col: number): boolean {
