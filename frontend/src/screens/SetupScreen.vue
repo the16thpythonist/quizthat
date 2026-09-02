@@ -241,9 +241,7 @@ const LINES_TO_WIN_OPTIONS = [1, 2]
     <div class="qt-setup-body qt-doodles">
       <div class="qt-setting">
         <div class="qt-setting-label">{{ t('setup.gameSettings') }}</div>
-        <p style="margin: 0; font-weight: 700; font-size: 12px; line-height: 1.55; opacity: 0.65">
-          {{ t('setup.settingsIntro', { count: game.players.length }) }}
-        </p>
+        <p class="qt-setting-note">{{ t('setup.settingsIntro', { count: game.players.length }) }}</p>
       </div>
 
       <div class="qt-setting">
@@ -289,7 +287,7 @@ const LINES_TO_WIN_OPTIONS = [1, 2]
 
       <div class="qt-setting">
         <div class="qt-setting-label">{{ t('setup.boardSize') }}</div>
-        <p style="margin: 0; font-weight: 900; font-size: 15px">{{ t('setup.boardFixed') }}</p>
+        <p style="margin: 0; font-weight: 900; font-size: 14px">{{ t('setup.boardFixed') }}</p>
         <p class="qt-setting-note">{{ t('setup.boardFixedHint') }}</p>
       </div>
     </div>

@@ -808,13 +808,17 @@ html, body {
   }
   .qt-setting { background: rgba(0, 0, 0, 0.2); border-radius: 20px; padding: 12px 14px; color: #fff; }
   .qt-setting-label { font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 1.1px; opacity: 0.6; margin-bottom: 8px; }
+  /* The explanatory line under a setting: same hushed grey as the label
+     above it, so the card reads label / control / explanation. */
   .qt-setting-note {
-    margin: 8px 0 0;
+    margin: 10px 0 0;
     font-weight: 700;
     font-size: 11px;
-    line-height: 1.5;
+    line-height: 1.55;
     opacity: 0.55;
   }
+  /* directly under a label, with no control between them */
+  .qt-setting-label + .qt-setting-note { margin-top: 0; }
   .qt-seg { display: flex; gap: 7px; }
   .qt-seg > button {
     flex: 1 1 0;
