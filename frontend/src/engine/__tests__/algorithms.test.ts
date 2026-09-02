@@ -11,6 +11,8 @@ import {
   passPlacementRule,
   gamblerPlacementRule,
   filterQuestions,
+  rankBattle,
+  pickTransferField,
   previousRoundPlayer,
   generateStartingPegs,
   calculatePegCount,
@@ -610,6 +612,62 @@ describe('answer option order', () => {
       if (first.join() !== second.join()) differed++
     }
     expect(differed).toBeGreaterThan(runs * 0.6)
+  })
+})
+
+describe('rankBattle', () => {
+  const answers = (...d: number[]) => d.map((distance, i) => ({ player_index: i, distance }))
+
+  it('ranks nearest first and names both ends', () => {
+    const out = rankBattle(answers(30, 10, 80))
+    expect(out.ranking.map((r) => r.player_index)).toEqual([1, 0, 2])
+    expect(out.winnerIndex).toBe(1)
+    expect(out.loserIndex).toBe(2)
+  })
+
+  it('names nobody when the best is tied — no peg to a coin flip', () => {
+    const out = rankBattle(answers(10, 10, 80))
+    expect(out.winnerIndex).toBeNull()
+    expect(out.loserIndex).toBe(2)
+  })
+
+  it('names no loser when the worst is tied', () => {
+    const out = rankBattle(answers(10, 80, 80))
+    expect(out.winnerIndex).toBe(0)
+    expect(out.loserIndex).toBeNull()
+  })
+
+  it('does nothing with a single answer', () => {
+    const out = rankBattle(answers(5))
+    expect(out.winnerIndex).toBeNull()
+    expect(out.loserIndex).toBeNull()
+  })
+})
+
+describe('pickTransferField', () => {
+  const board = (filled: [number, number][]) => {
+    const b = createEmptyBoard(4)
+    for (const [r, c] of filled) { b.fields[r]![c] = true; b.peg_count++ }
+    return b
+  }
+
+  it('only offers squares the winner has free', () => {
+    const loser = board([[0, 0], [1, 1], [2, 2]])
+    const winner = board([[0, 0], [1, 1]])
+    const rng = new GameRng(4)
+    for (let i = 0; i < 20; i++) {
+      expect(pickTransferField(rng, loser, winner)).toEqual([2, 2])
+    }
+  })
+
+  it('returns null when every peg of the loser clashes', () => {
+    const loser = board([[0, 0], [1, 1]])
+    const winner = board([[0, 0], [1, 1]])
+    expect(pickTransferField(new GameRng(1), loser, winner)).toBeNull()
+  })
+
+  it('returns null for an empty board', () => {
+    expect(pickTransferField(new GameRng(1), board([]), board([]))).toBeNull()
   })
 })
 

@@ -4,6 +4,10 @@ import type { GameState } from '../types/session'
 const screenComponents: Record<GameState, Component> = {
   setup: defineAsyncComponent(() => import('../screens/SetupScreen.vue')),
   turn_start: defineAsyncComponent(() => import('../screens/TurnGateScreen.vue')),
+  battle_intro: defineAsyncComponent(() => import('../screens/BattleIntroScreen.vue')),
+  battle_gate: defineAsyncComponent(() => import('../screens/BattleGateScreen.vue')),
+  battle_answering: defineAsyncComponent(() => import('../screens/BattleAnswerScreen.vue')),
+  battle_reveal: defineAsyncComponent(() => import('../screens/BattleRevealScreen.vue')),
   selection: defineAsyncComponent(() => import('../screens/SelectionScreen.vue')),
   gambler_confirm: defineAsyncComponent(() => import('../screens/GamblerConfirmScreen.vue')),
   gambler_question: defineAsyncComponent(() => import('../screens/QuestionScreen.vue')),

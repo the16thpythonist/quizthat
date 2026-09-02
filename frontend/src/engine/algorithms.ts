@@ -705,6 +705,78 @@ export function gamblerPlacementRule(_settings: GameSettings): PlacementRule {
   }
 }
 
+// ─── Battles ────────────────────────────────────────────────────
+
+/** Great-circle distance in km — the ranking metric for a map battle. */
+export function haversineKm(a: [number, number], b: [number, number]): number {
+  const R = 6371
+  const dLat = ((b[0] - a[0]) * Math.PI) / 180
+  const dLng = ((b[1] - a[1]) * Math.PI) / 180
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((a[0] * Math.PI) / 180) *
+      Math.cos((b[0] * Math.PI) / 180) *
+      Math.sin(dLng / 2) ** 2
+  return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+}
+
+export interface BattleOutcome {
+  /** Sorted nearest-first; ties keep their entry order. */
+  ranking: { player_index: number; distance: number }[]
+  winnerIndex: number | null
+  loserIndex: number | null
+}
+
+/**
+ * Rank a battle by closeness and name the two players who matter.
+ *
+ * A tie at either end leaves that end unnamed, which cancels the transfer: a
+ * player should not lose a peg to a coin flip after answering exactly as well
+ * as somebody else.
+ */
+export function rankBattle(
+  answers: { player_index: number; distance: number }[],
+): BattleOutcome {
+  const ranking = [...answers].sort((a, b) => a.distance - b.distance)
+  if (ranking.length < 2) {
+    return { ranking, winnerIndex: null, loserIndex: null }
+  }
+
+  const best = ranking[0]!
+  const worst = ranking[ranking.length - 1]!
+  const bestTied = ranking.filter((r) => r.distance === best.distance).length > 1
+  const worstTied = ranking.filter((r) => r.distance === worst.distance).length > 1
+
+  return {
+    ranking,
+    winnerIndex: bestTied ? null : best.player_index,
+    loserIndex: worstTied ? null : worst.player_index,
+  }
+}
+
+/**
+ * Which of the loser's pegs moves, keeping its coordinates.
+ *
+ * The peg lands on the same square of the winner's board, so a square the
+ * winner already holds is no good; those are skipped and another of the
+ * loser's pegs is drawn. If every one clashes, nothing moves.
+ */
+export function pickTransferField(
+  rng: GameRng,
+  loserBoard: Board,
+  winnerBoard: Board,
+): [number, number] | null {
+  const movable: [number, number][] = []
+  for (let r = 0; r < loserBoard.size; r++) {
+    for (let c = 0; c < loserBoard.size; c++) {
+      if (loserBoard.fields[r]?.[c] && !winnerBoard.fields[r]?.[c]) {
+        movable.push([r, c])
+      }
+    }
+  }
+  return movable.length > 0 ? rng.pick(movable) : null
+}
+
 // ─── Board Helpers ──────────────────────────────────────────────
 
 export function createEmptyBoard(size: number): Board {

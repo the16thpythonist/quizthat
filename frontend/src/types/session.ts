@@ -10,6 +10,10 @@ export type GameState =
   | 'question_display'
   | 'answer_correct'
   | 'answer_wrong'
+  | 'battle_intro'
+  | 'battle_gate'
+  | 'battle_answering'
+  | 'battle_reveal'
   | 'pass_gate'
   | 'pass_answering'
   | 'pass_resolve'
@@ -162,6 +166,27 @@ export interface PassState {
   original_answer_index: number
   scrambled_order: number[]
   result: 'correct' | 'wrong' | 'declined' | null
+}
+
+/** One player's answer in a battle, and how far off it was. */
+export interface BattleAnswer {
+  player_index: number
+  /** Estimation: the number typed. Map: the pin, as [lat, lng]. */
+  value: number | [number, number]
+  /** Absolute difference, or great-circle distance in km. Lower is better. */
+  distance: number
+}
+
+export interface BattleState {
+  question_id: string
+  question_type: 'estimation' | 'battle_map'
+  /** Turn order for this battle; the device passes down this list. */
+  order: number[]
+  answers: BattleAnswer[]
+  /** Set at the reveal; null when a tie or an empty board cancelled it. */
+  transfer: { from: number; to: number; field: [number, number] } | null
+  winner_index: number | null
+  loser_index: number | null
 }
 
 export interface TurnState {

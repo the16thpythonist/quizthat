@@ -13,13 +13,17 @@ import type {
   OfferedSlot,
   QuestionData,
   MultipleChoiceAnswerData,
+  BattleState,
+  BattleAnswer,
+  EstimationAnswerData,
+  BattleMapAnswerData,
   JokerType,
   BasicJokerType,
   SpecialJokerType,
   SessionStatus,
 } from '../types/session'
 import { PLAYER_COLORS, BOARD_SIZE } from '../types/session'
-import { checkWin, generateSlots, assignBoostSlots, assignJokerSlots, isBoostEligible, placementRuleForSlot, generateCandidates, passPlacementRule, gamblerPlacementRule, filterQuestions } from '../engine/algorithms'
+import { rankBattle, pickTransferField, haversineKm, checkWin, generateSlots, assignBoostSlots, assignJokerSlots, isBoostEligible, placementRuleForSlot, generateCandidates, passPlacementRule, gamblerPlacementRule, filterQuestions } from '../engine/algorithms'
 import { GameRng } from '../engine/rng'
 import {
   pickPlayerIntroLine,
@@ -110,6 +114,9 @@ export const useGameStore = defineStore('game', () => {
 
   /** The joker just handed out, for the award screen to show. */
   const jokerAwarded = ref<JokerType | null>(null)
+
+  /** The battle that closes the current round, or null between them. */
+  const battle = ref<BattleState | null>(null)
 
   /** Outcome of the last Gambler, for its resolve screen. */
   const gamblerWon = ref(false)
@@ -629,9 +636,141 @@ export const useGameStore = defineStore('game', () => {
   function _endTurn() {
     state.value = 'turn_end'
     // Advance to next player
+    const wasLast = currentPlayerIndex.value === players.value.length - 1
     currentPlayerIndex.value = (currentPlayerIndex.value + 1) % players.value.length
     if (currentPlayerIndex.value === 0) round.value++
+
+    // Everyone has played: the round closes with a battle before the next one.
+    if (wasLast && _startBattle()) return
     // Start next turn
+    state.value = 'turn_start'
+    _initTurn()
+  }
+
+  // ─── Battles ──────────────────────────────────────────────────
+
+  /**
+   * Open the battle that closes a round.
+   *
+   * Returns false when there is nothing to run — no battle questions left, or
+   * fewer than two players — so the caller can simply carry on to the next
+   * round rather than stranding play on a screen with no question.
+   */
+  function _startBattle(): boolean {
+    if (!rng.value || players.value.length < 2) return false
+    const corpus = useCorpusStore()
+    const candidates = filterQuestions(corpus.questions, {
+      language: settings.value.language,
+      excludeIds: usedQuestionIds.value,
+      battleOnly: true,
+    })
+    if (candidates.length === 0) return false
+
+    const question = rng.value.pick(candidates)
+    usedQuestionIds.value.add(question.id)
+
+    battle.value = {
+      question_id: question.id,
+      question_type: question.question_type as 'estimation' | 'battle_map',
+      order: players.value.map((p) => p.index),
+      answers: [],
+      transfer: null,
+      winner_index: null,
+      loser_index: null,
+    }
+    state.value = 'battle_intro'
+    return true
+  }
+
+  /** Whose turn it is to answer, or null once everyone has. */
+  const battlePlayerIndex = computed(() => {
+    const b = battle.value
+    if (!b) return null
+    return b.order[b.answers.length] ?? null
+  })
+
+  const battlePlayer = computed(() =>
+    battlePlayerIndex.value === null ? null : players.value[battlePlayerIndex.value] ?? null,
+  )
+
+  async function proceedFromBattleIntro() {
+    const b = battle.value
+    if (!b) return
+    const corpus = useCorpusStore()
+    const data = await corpus.fetchQuestionData(b.question_id, settings.value.language)
+    if (data) currentQuestion.value = data
+    state.value = 'battle_gate'
+  }
+
+  function proceedFromBattleGate() {
+    state.value = 'battle_answering'
+  }
+
+  /**
+   * Record one player's answer and move on — to the next player, or to the
+   * reveal once everybody has had the device.
+   */
+  function submitBattleAnswer(value: number | [number, number]) {
+    const b = battle.value
+    const playerIndex = battlePlayerIndex.value
+    const question = currentQuestion.value
+    if (!b || playerIndex === null || !question) return
+
+    let distance: number
+    if (b.question_type === 'estimation') {
+      const target = (question.answer_data as EstimationAnswerData).correct_value
+      distance = Math.abs((value as number) - target)
+    } else {
+      const target = (question.answer_data as BattleMapAnswerData).target
+      distance = haversineKm(value as [number, number], [target.lat, target.lng])
+    }
+
+    b.answers.push({ player_index: playerIndex, value, distance } as BattleAnswer)
+
+    if (b.answers.length < b.order.length) {
+      state.value = 'battle_gate'
+      return
+    }
+    _resolveBattle()
+  }
+
+  /** Rank, then move one peg from last place to first — same square. */
+  function _resolveBattle() {
+    const b = battle.value
+    if (!b || !rng.value) return
+
+    const outcome = rankBattle(b.answers.map((a) => ({
+      player_index: a.player_index,
+      distance: a.distance,
+    })))
+    b.winner_index = outcome.winnerIndex
+    b.loser_index = outcome.loserIndex
+
+    const winner = outcome.winnerIndex !== null ? players.value[outcome.winnerIndex] : null
+    const loser = outcome.loserIndex !== null ? players.value[outcome.loserIndex] : null
+
+    if (winner && loser && loser.board.peg_count > 0) {
+      const field = pickTransferField(rng.value, loser.board, winner.board)
+      if (field) {
+        const [row, col] = field
+        loser.board.fields[row]![col] = false
+        loser.board.peg_count--
+        winner.board.fields[row]![col] = true
+        winner.board.peg_count++
+        loser.stats.pegs_stolen_from++
+        b.transfer = { from: loser.index, to: winner.index, field }
+      }
+    }
+
+    // Deliberately no win check: a battle never ends the game (IDEA.md). A line
+    // completed by a transferred peg is honoured at the winner's next placement.
+    state.value = 'battle_reveal'
+  }
+
+  /** Leave the battle and open the next round. */
+  function proceedFromBattleReveal() {
+    battle.value = null
+    currentQuestion.value = null
     state.value = 'turn_start'
     _initTurn()
   }
@@ -865,6 +1004,9 @@ export const useGameStore = defineStore('game', () => {
     settings,
     currentQuestion,
     jokerAwarded,
+    battle,
+    battlePlayer,
+    battlePlayerIndex,
     gamblerWon,
     setupPhase,
     playerIntroLine,
@@ -901,6 +1043,10 @@ export const useGameStore = defineStore('game', () => {
     placePeg,
     placePegs,
     confirmEndTurn,
+    proceedFromBattleIntro,
+    proceedFromBattleGate,
+    submitBattleAnswer,
+    proceedFromBattleReveal,
     proceedFromPassGate,
     submitPassAnswer,
     proceedFromPassResolve,

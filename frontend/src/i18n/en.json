@@ -225,5 +225,22 @@
     "curse": "The chosen player's next question becomes hard, whichever slot they pick.",
     "snipe": "Removes one specific peg from an opponent's board.",
     "double_down": "Your next correct answer awards two pegs instead of one."
+  },
+  "battle": {
+    "title": "Battle",
+    "rules": "Everyone guesses. Closest wins — last place gives a peg to first, on the very same square. Nothing happens to anyone in between.",
+    "yourGuess": "{name}, your guess!",
+    "remaining": "{count} players to go",
+    "submit": "Submit guess",
+    "dropPin": "Tap the map",
+    "result": "Result",
+    "trueValue": "The answer was: {value}",
+    "kmAway": "{km} km off",
+    "transfer": "{from} loses {field} to {to}",
+    "noTransfer": "No peg changes hands.",
+    "format": {
+      "estimation": "Estimation",
+      "battle_map": "Map battle"
+    }
   }
 }

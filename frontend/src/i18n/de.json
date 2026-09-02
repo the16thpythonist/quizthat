@@ -225,5 +225,22 @@
     "curse": "Die nächste Frage des gewählten Spielers wird schwer, egal welchen Slot er wählt.",
     "snipe": "Entfernt einen bestimmten Stift vom Spielfeld eines Gegners.",
     "double_down": "Deine nächste richtige Antwort bringt zwei Stifte statt einem."
+  },
+  "battle": {
+    "title": "Duell",
+    "rules": "Alle raten. Wer am nächsten dran ist, gewinnt — der Letzte verliert einen Stift an den Ersten, auf dasselbe Feld. Dazwischen passiert nichts.",
+    "yourGuess": "{name}, dein Tipp!",
+    "remaining": "Noch {count} Spieler",
+    "submit": "Tipp abgeben",
+    "dropPin": "Tippe auf die Karte",
+    "result": "Auflösung",
+    "trueValue": "Richtig wäre: {value}",
+    "kmAway": "{km} km daneben",
+    "transfer": "{from} verliert {field} an {to}",
+    "noTransfer": "Kein Stift wechselt den Besitzer.",
+    "format": {
+      "estimation": "Schätzfrage",
+      "battle_map": "Kartenduell"
+    }
   }
 }

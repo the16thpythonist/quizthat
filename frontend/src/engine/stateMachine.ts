@@ -6,6 +6,10 @@ import type { GameState, JokerType } from '../types/session'
 const VALID_TRANSITIONS: Record<GameState, GameState[]> = {
   setup: ['turn_start'],
   turn_start: ['selection'],
+  battle_intro: ['battle_gate'],
+  battle_gate: ['battle_answering'],
+  battle_answering: ['battle_gate', 'battle_reveal'],
+  battle_reveal: ['turn_start'],
   selection: ['question_display', 'joker_award', 'selection', 'gambler_confirm'],
   joker_award: ['question_display'],
   gambler_confirm: ['gambler_question', 'selection'],

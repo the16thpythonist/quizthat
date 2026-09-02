@@ -4,6 +4,7 @@ import { useGameStore } from '../stores/game'
 import { useBoardSheet } from '../composables/useBoardSheet'
 import { useSettingsSheet } from '../composables/useSettingsSheet'
 import MiniBoard from './MiniBoard.vue'
+import RoundTrack from './RoundTrack.vue'
 
 /**
  * The chrome every in-game screen shares: the current player's own board as a
@@ -19,6 +20,7 @@ const player = computed(() => game.currentPlayer)
 
 <template>
   <div class="qt-topbar qt-doodles qt-doodles--deep">
+    <div class="qt-topbar-row">
     <MiniBoard
       v-if="player"
       :board="player.board"
@@ -33,10 +35,13 @@ const player = computed(() => game.currentPlayer)
       aria-label="Spielfelder"
       @click="sheet.toggle()"
     >
+      <!-- progress across the round, then the round number, then the handle -->
+      <RoundTrack />
       <span class="qt-badge-value">{{ game.round }}</span>
       <span class="qt-badge-chevron"></span>
     </button>
 
-    <button class="qt-icon-btn" aria-label="Einstellungen" @click="settingsSheet.open()">⚙</button>
+      <button class="qt-icon-btn" aria-label="Einstellungen" @click="settingsSheet.open()">⚙</button>
+    </div>
   </div>
 </template>
