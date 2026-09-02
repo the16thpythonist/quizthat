@@ -342,6 +342,37 @@ html, body {
     text-align: right;
   }
 
+  /* ---------- round track ---------- */
+  .qt-round-track {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 0 18px 10px;
+  }
+  .qt-pip {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: transparent;
+    transition: background 0.25s ease, transform 0.25s ease;
+  }
+  /* the player currently up: their own colour, not yet filled in */
+  .qt-pip.is-active { transform: scale(1.35); }
+  /* The battle that closes the round is a square, not another circle — it is a
+     different kind of event, not another turn. */
+  .qt-pip--battle {
+    width: 11px;
+    height: 11px;
+    border-radius: 3px;
+    border-color: rgba(255, 255, 255, 0.45);
+    margin-left: 4px;
+  }
+  .qt-pip--battle.is-next { border-color: var(--qt-gold); transform: scale(1.15); }
+  .qt-pip--battle.is-active { background: var(--qt-gold); border-color: var(--qt-gold); transform: scale(1.35); }
+
   /* ---------- question panel ---------- */
   .qt-panel {
     flex: 0 0 auto;
