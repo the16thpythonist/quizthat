@@ -239,6 +239,16 @@ html, body {
     overflow: visible;
   }
 
+  /* Holds the icons. Deliberately NOT positioned: the badge is absolute and
+     should keep centring on the bar itself, so it stays flush with the bar's
+     top edge rather than starting below its padding. */
+  .qt-topbar-row {
+    flex: 1 1 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
   .qt-icon-btn {
     width: 44px;
     height: 44px;
