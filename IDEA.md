@@ -94,6 +94,44 @@ This gives trailing players an active incentive to take risks and a tangible pat
 
 In case of a tie for fewest correct answers, all tied players receive the raised chance.
 
+## Battle Games
+
+After every **full round** — once every player has taken their turn — the game pauses for a **battle**: one shared question that everybody answers, which always produces a **ranking** rather than a right/wrong verdict.
+
+### How a battle is played
+
+Players share one device, so a battle is played by passing it around:
+
+1. A gate screen names the player whose turn it is to answer, so nobody sees anyone else's guess.
+2. That player answers and hands the device on.
+3. Once everyone has answered, a single **reveal** shows every answer, the true value, and the resulting ranking.
+
+### Battle formats
+
+Both formats rank by **how close** each player got, never by right or wrong:
+
+| Format | The question | Ranked by |
+|--------|--------------|-----------|
+| **Estimation** | "How tall is the Eiffel Tower?" — everyone enters a number | Absolute difference from the true value |
+| **Map placement** | "Where is Reykjavik?" — everyone drops a pin | Distance in km from the target |
+
+Absolute difference, deliberately: whoever is nearest in either direction wins. Overshooting is not punished more than undershooting, and the rule can be stated at the table in one sentence.
+
+### The stake — one peg, same square
+
+Only the extremes matter. **Last place gives one peg to first place**, and the players in between are untouched — a battle is a small, sharp swing, not a reshuffle of the board.
+
+The peg is chosen at random from the loser's board and moves to **the same square** on the winner's: lose your C3, and the winner gains a C3. That makes the transfer legible — both players can see exactly what changed and where.
+
+Rules for the awkward cases:
+
+- **Winner already occupies that square** — draw again among the loser's other pegs until one lands somewhere the winner has free. If every one of the loser's pegs clashes, no transfer happens.
+- **A tie for first or for last** — no transfer at all. A battle that ends level simply passes.
+- **The loser has no pegs** — nothing to take, so nothing happens.
+- **A battle never wins the game.** A transferred peg can complete a line, but the win is not declared for it; it is checked on the winner's next ordinary placement. Losing the game on somebody else's bad guess, during a phase you did not choose to enter, would feel arbitrary.
+
+Battle questions come from a **dedicated question type** in the corpus and are never offered as ordinary turn questions — a question whose answer is a number to be guessed makes no sense as multiple choice.
+
 ## Joker System
 
 ### Starting Jokers

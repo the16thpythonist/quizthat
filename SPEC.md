@@ -422,6 +422,51 @@ Shown after a correct answer. This is the peg placement moment.
 
 ---
 
+### 5.10 Battle Screens
+
+A battle runs after every full round (see IDEA.md, Battle Games). Four screens, in sequence:
+
+**Battle Intro** — announces that a battle is starting and which format it is. Tap to continue.
+
+**Battle Gate** — the same shape as the turn gate: the next player's colour fills the screen, their name is large, and a tap begins their answer. Its job is to stop the previous player's answer being on screen when the device changes hands.
+
+**Battle Answering** — the format's own input:
+- *Estimation*: the numeric keypad from the calculation question, with the unit shown.
+- *Map placement*: the Leaflet map from the map question, but with **no feedback** — no target marker, no distance line. Revealing where the answer was would hand it to everyone still to play.
+
+**Battle Reveal** — the true value, every player's answer, and the ranking. Then the peg transfer is shown on the two affected boards. Tap to continue into the next round.
+
+### Battle Ranking and Transfer
+
+| Rule | Behaviour |
+|------|-----------|
+| Ranking metric | Absolute difference from the true value (estimation) or great-circle distance in km (map placement) |
+| Who is affected | Only first and last place; everyone in between is untouched |
+| Transfer | One random peg of the loser's moves to **the same coordinates** on the winner's board |
+| Winner's square occupied | Draw again among the loser's remaining pegs; if all clash, no transfer |
+| Tie for first or last | No transfer |
+| Loser has no pegs | No transfer |
+| Win check | **Not** performed on a battle transfer — a battle can never end the game |
+
+### Battle Question Type
+
+Battle questions are a distinct `question_type` and are **excluded from ordinary turn generation**.
+
+```
+meta.json
+  question_type: "estimation" | "battle_map"
+  battle_only: true
+```
+
+`answer_data` for `estimation`:
+
+| Field | Type | Notes |
+|-------|------|-------|
+| correct_value | number | The true value |
+| unit | string | Shown next to the input, e.g. "m", "Jahre" |
+
+`answer_data` for `battle_map` reuses the `map_location` shape (`target.lat`, `target.lng`), minus the `scoring` radii — a battle ranks by distance rather than scoring bands.
+
 ## 6. Narrator / Voice System
 
 The game features a **narrator** that reads out key moments using pre-generated and dynamic voice lines.
@@ -496,6 +541,10 @@ GAMBLER_RESOLVE      — Award 3 pegs (correct) or remove staked peg (wrong)
 QUESTION_DISPLAY     — Selected question shown, narrator reads it
 ANSWER_CORRECT       — Correct answer celebration, determine peg count
 ANSWER_WRONG         — Show "Incorrect!", check if pass is applicable
+BATTLE_INTRO         — Announces the battle at the end of a round, names the format
+BATTLE_GATE          — Mini turn gate naming the player who answers next
+BATTLE_ANSWERING     — That player enters their guess or drops their pin
+BATTLE_REVEAL        — All answers, the true value, the ranking and the peg transfer
 PASS_GATE            — Mini turn gate for the previous-round player
 PASS_ANSWERING       — Previous-round player sees scrambled question
 PASS_RESOLVE         — Reveal correct answer, award peg if applicable
@@ -594,6 +643,12 @@ SELECTION ◄──────────────────────�
 
 | Event | Condition | Next State | Side Effects |
 |-------|-----------|------------|--------------|
+| Round complete (last player's turn ends) | Nobody has won | BATTLE_INTRO | Pick a battle question not yet used; reset battle answers |
+| Tap | — | BATTLE_GATE | Name the first player who has not answered |
+| Tap | — | BATTLE_ANSWERING | Show that format's input |
+| Answer submitted | More players to go | BATTLE_GATE | Store the answer, name the next player |
+| Answer submitted | Everyone has answered | BATTLE_REVEAL | Rank by closeness, resolve the peg transfer |
+| Tap | — | TURN_START | Begin the next round |
 | Turn begins | — | SELECTION | 1. If player is cursed: force Slots 1–3 to Hard difficulty (Slot 4 keeps normal 50/50 Hard/Very Hard), consume curse. 2. Mark each slot with a 2x badge at ~8% chance (raised to ~35% per slot if round ≥ 3 and the player has the fewest correct answers). Mark Slot 4 as awarding a joker always, and Slots 2/3 at ~35% each; Slot 1 never. 3. Generate 4 slot options (expertise question for Slot 1, random for 2/3, hard/very hard for 4). 4. Generate board constraints for Slots 2/3. |
 
 #### SELECTION
