@@ -136,6 +136,67 @@ export function createSession(): GameSession {
   }
 }
 
+/**
+ * The wire contract: every player action, with its argument types.
+ *
+ * Stated once here and enforced against the real handlers — the store assigns
+ * an object literal to this type, so a missing action is a missing-property
+ * error and an extra one an excess-property error. Adding an action to the game
+ * without deciding whether it belongs on the wire will not compile.
+ *
+ * Every argument is a primitive, a string enum, a number tuple or a plain JSON
+ * object. Nothing here takes a callback, a ref or a class instance, which is
+ * what makes the whole vocabulary serializable.
+ */
+export interface GameIntentMap {
+  addPlayer: (name: string, color: PlayerColor, expertise: Expertise) => void
+  updatePlayerExpertise: (index: number, expertise: Expertise) => void
+  removePlayer: (index: number) => void
+  updateSettings: (settings: Partial<GameSettings>) => void
+  startGame: (seed?: number) => void
+  proceedFromTurnGate: () => void
+  selectSlot: (slotIndex: number) => Promise<void>
+  proceedFromJokerAward: () => void
+  submitAnswer: (response: AnswerResponse) => void
+  proceedToPlacement: () => void
+  proceedFromWrongAnswer: () => void
+  placePeg: (row: number, col: number) => void
+  placePegs: (fields: [number, number][]) => void
+  confirmEndTurn: () => void
+  proceedFromBattleIntro: () => Promise<void>
+  proceedFromBattleGate: () => void
+  submitBattleAnswer: (value: number | [number, number]) => void
+  proceedFromBattleReveal: () => void
+  proceedFromPassGate: () => void
+  submitPassAnswer: (response: AnswerResponse | 'declined') => void
+  proceedFromPassResolve: () => void
+  reshuffleSelection: () => Promise<void>
+  reshuffleQuestion: () => Promise<void>
+  applyCurse: (targetIndex: number) => void
+  snipePeg: (targetIndex: number, row: number, col: number) => void
+  startDuel: (targetIndex: number) => void
+  startGambler: () => void
+  cancelGambler: () => void
+  confirmGambler: () => Promise<void>
+  resolveGambler: (response: AnswerResponse) => void
+  proceedFromGamblerResolve: () => void
+  revealHint: () => void
+  activateDoubleDown: () => void
+}
+
+/**
+ * One player action, ready to be applied locally or sent over the wire.
+ *
+ * Derived from the map rather than listed again, so the payload of an intent is
+ * exactly the arguments of the action it names.
+ */
+export type GameIntent = {
+  [K in keyof GameIntentMap]: {
+    type: K
+    args: Parameters<GameIntentMap[K]>
+  }
+}[keyof GameIntentMap]
+
 export const useGameStore = defineStore('game', () => {
   /**
    * The single source of truth for a game (SPEC §9).
@@ -532,17 +593,14 @@ export const useGameStore = defineStore('game', () => {
   async function selectSlot(slotIndex: number) {
     const t = session.value.turn
     if (!t) return
-    t.selected_slot_index = slotIndex
     const slot = t.offered_slots[slotIndex]
     if (!slot) return
-    t.selected_question_id = slot.question_id
 
-    // The joker is the bait: it lands before the question is even shown, so
-    // picking a risky card is guaranteed to pay something even if the answer
-    // is wrong. Only the peg is at stake.
-    const awarded = slot.awards_joker ? _awardRandomJoker() : null
-
-    // Fetch question data from corpus
+    // Fetch before touching the turn. The mutations used to run first and the
+    // early return on a failed load left the turn pointing at a question that
+    // never arrived — and, if the slot carried a chip, having already spent the
+    // joker draw on it. Nothing observes the turn between here and the
+    // assignments below, so this half of the action is now all-or-nothing.
     const corpus = useCorpusStore()
     const lang = session.value.settings.language
     const questionData = await corpus.fetchQuestionData(slot.question_id, lang)
@@ -550,6 +608,15 @@ export const useGameStore = defineStore('game', () => {
       console.error(`Failed to load question ${slot.question_id} (lang=${lang})`)
       return
     }
+
+    t.selected_slot_index = slotIndex
+    t.selected_question_id = slot.question_id
+
+    // The joker is the bait: it lands before the question is even shown, so
+    // picking a risky card is guaranteed to pay something even if the answer
+    // is wrong. Only the peg is at stake.
+    const awarded = slot.awards_joker ? _awardRandomJoker() : null
+
     currentQuestion.value = questionData
     _scrambleAnswers()
 
@@ -1313,9 +1380,72 @@ export const useGameStore = defineStore('game', () => {
     })
   }
 
+  /**
+   * Every action a player can take, as a name-to-handler map.
+   *
+   * This map *is* the intent vocabulary — `GameIntent` is derived from it below
+   * rather than written out a second time, so a new action cannot be added to
+   * the game and forgotten on the wire, and its argument types can never drift
+   * from the handler's.
+   *
+   * Only player decisions belong here. Setup navigation, the resume prompt and
+   * `resetGame` are device-local: they move one screen around, not the game.
+   */
+  const INTENT_HANDLERS: GameIntentMap = {
+    addPlayer,
+    updatePlayerExpertise,
+    removePlayer,
+    updateSettings,
+    startGame,
+    proceedFromTurnGate,
+    selectSlot,
+    proceedFromJokerAward,
+    submitAnswer,
+    proceedToPlacement,
+    proceedFromWrongAnswer,
+    placePeg,
+    placePegs,
+    confirmEndTurn,
+    proceedFromBattleIntro,
+    proceedFromBattleGate,
+    submitBattleAnswer,
+    proceedFromBattleReveal,
+    proceedFromPassGate,
+    submitPassAnswer,
+    proceedFromPassResolve,
+    reshuffleSelection,
+    reshuffleQuestion,
+    applyCurse,
+    snipePeg,
+    startDuel,
+    startGambler,
+    cancelGambler,
+    confirmGambler,
+    resolveGambler,
+    proceedFromGamblerResolve,
+    revealHint,
+    activateDoubleDown,
+  } as const
+
+  /**
+   * Apply one intent.
+   *
+   * Offline this is just a function call, which is the point: the same code
+   * path serves a tap on this device and, later, an intent relayed from
+   * another one. Anything illegal for the current state is refused by
+   * `_setState` rather than by the caller.
+   */
+  function dispatch(intent: GameIntent): unknown {
+    const handler = INTENT_HANDLERS[intent.type] as (...args: unknown[]) => unknown
+    return handler(...(intent.args as unknown[]))
+  }
+
   return {
     // The whole session — the save format and, later, the sync unit.
     session,
+
+    // The intent vocabulary
+    dispatch,
 
     // State (read-only views onto the session)
     state,

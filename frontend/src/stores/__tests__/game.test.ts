@@ -13,6 +13,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useGameStore, createSession } from '../game'
+import type { GameIntent } from '../game'
 import { serializeSession, deserializeSession, snapshotSession } from '../persistence'
 import { useCorpusStore } from '../corpus'
 import type { QuestionMeta, Expertise, AnswerResponse, GameState } from '../../types/session'
@@ -891,6 +892,69 @@ describe('game store', () => {
       // A fresh scramble is drawn; it is a permutation of the same indices.
       expect([...game.turn!.answer_order].sort()).toEqual([...first].sort())
       expect(game.state).toBe('pass_answering')
+    })
+  })
+
+  describe('the intent layer', () => {
+    /**
+     * A whole game driven only through dispatch, with no named action called
+     * directly — the shape a relayed turn will take. Intents are round-tripped
+     * through JSON first, so anything not serializable fails here rather than
+     * on the wire.
+     */
+    it('plays a full turn from serialized intents alone', async () => {
+      const game = useGameStore()
+      const corpus = useCorpusStore()
+      corpus.questions = CORPUS
+      corpus.loaded = true
+
+      const send = async (intent: GameIntent) => {
+        const overWire = JSON.parse(JSON.stringify(intent)) as GameIntent
+        expect(overWire).toEqual(intent)
+        await game.dispatch(overWire)
+      }
+
+      await send({ type: 'addPlayer', args: ['Alice', 'red', EXPERTISE] })
+      await send({ type: 'addPlayer', args: ['Bob', 'blue', EXPERTISE] })
+      await send({ type: 'startGame', args: [4242] })
+      expect(game.state).toBe('turn_start')
+
+      await send({ type: 'proceedFromTurnGate', args: [] })
+      await flush()
+      expect(game.turn!.offered_slots).toHaveLength(4)
+
+      await send({ type: 'selectSlot', args: [0] })
+      if (game.state === 'joker_award') {
+        await send({ type: 'proceedFromJokerAward', args: [] })
+      }
+      expect(game.state).toBe('question_display')
+
+      await send({ type: 'submitAnswer', args: [RIGHT] })
+      expect(game.state).toBe('answer_correct')
+
+      await send({ type: 'proceedToPlacement', args: [] })
+      const [row, col] = game.turn!.candidate_fields[0]!
+      await send({ type: 'placePeg', args: [row, col] })
+      expect(game.players[0]!.board.peg_count).toBe(1)
+
+      await send({ type: 'confirmEndTurn', args: [] })
+      expect(game.currentPlayerIndex).toBe(1)
+    })
+
+    it('grades a wrong answer sent as an intent as wrong', async () => {
+      const game = startedGame()
+      await toQuestion(game)
+      await game.dispatch({ type: 'submitAnswer', args: [WRONG] })
+      expect(game.state).toBe('answer_wrong')
+    })
+
+    it('refuses an intent that is illegal for the current state', () => {
+      const game = startedGame()
+      // turn_start has no verdict to reach — the same guard that protects a
+      // local call protects a relayed one, because it is the same call.
+      expect(() => game.dispatch({ type: 'submitAnswer', args: [RIGHT] })).toThrow(
+        /Illegal state transition/,
+      )
     })
   })
 
