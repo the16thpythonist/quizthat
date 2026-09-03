@@ -53,7 +53,17 @@ The project has two independent systems that share a single data format (the que
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**No runtime server.** The game app is a pure client-side SPA. The corpus is served as static files (Nginx in production, separate container in dev). The pipeline is an offline CLI tool that produces the corpus.
+**No runtime server — for now.** The game app is a pure client-side SPA. The
+corpus is served as static files (Nginx in production, separate container in
+dev). The pipeline is an offline CLI tool that produces the corpus.
+
+A Django + DRF backend is planned, to add multi-device lobbies (everyone on
+their own phone, plus an optional TV joined as a spectator). It will be a **thin
+relay**: it stores an opaque session blob and fans it out, while one client
+remains authoritative and runs the engine below. The single `GameSession` object,
+the `gradeAnswer` move into the engine, the enforced state machine and the intent
+layer are all groundwork for that — see `stores/game.ts`. Offline shared-tablet
+play stays, on the same code path.
 
 **No Vue Router.** The Pinia game store holds the current `GameState` enum value. `App.vue` maps states to screen components via `screenForState()`. Navigating means changing the state — there are no URLs, no back button, no route guards.
 
@@ -74,19 +84,23 @@ User taps "New Game"
               → user taps slot → store.selectSlot(i)
                 → state = 'question_display'
                   → QuestionScreen shows question
-                    → user submits → store.submitAnswer()
-                      → state = 'answer_correct' or 'answer_wrong'
-                        → correct path → PegPlacementScreen → WIN_CHECK → next turn or VICTORY
+                    → user submits → store.submitAnswer(response)
+                      → engine grades it → 'answer_correct' or 'answer_wrong'
+                        → correct path → PegPlacementScreen → next turn or VICTORY
                         → wrong path → PassGateScreen (round ≥ 2) or TURN_END
 ```
 
-Every user action calls a store method. The store method validates the transition, mutates state, and the reactive `screenForState()` computed property causes `App.vue` to swap the rendered component.
+Every user action calls a store action, which is also an entry in the intent map.
+The action validates the transition through `_setState`, mutates the session, and
+the reactive `screenForState()` computed causes `App.vue` to swap the rendered
+component. Screens submit *what the player did*; the engine decides what it was
+worth.
 
 ### Auto-Save
 
 ```
-store mutation → structuredClone(session) → debounce 500ms → IndexedDB write
-                                          → immediate flush on visibilitychange/pagehide
+store mutation → deep watcher on session → snapshotSession() → debounce 500ms → IndexedDB write
+                                                             → immediate flush on visibilitychange/pagehide
 ```
 
 ### Corpus Loading
@@ -153,12 +167,18 @@ All core game logic. 583 lines. Key exports:
 
 ### `frontend/src/engine/stateMachine.ts`
 
-Transition validation. Two lookup tables:
+Transition validation, **enforced**: the store routes every state change through
+`_setState`, which throws on a move `VALID_TRANSITIONS` does not allow. This is
+the layer that will refuse a malformed or out-of-turn intent from another device.
 
 - `VALID_TRANSITIONS` — maps each GameState to its valid next states
 - `isValidTransition(from, to)` — boolean check
 - `isJokerLegalInState(state, jokerType)` — jokers are only legal in `selection` and `question_display`
 - `getLegalJokers(state)` — returns list of legal joker types for a state
+
+`win_check` is in the enum and the table but is never entered: the win is
+detected inline as each peg lands, so `peg_placement` goes straight to `victory`.
+It is kept so the state list still matches SPEC §8.
 
 ### `frontend/src/engine/screenMap.ts`
 
@@ -209,45 +229,48 @@ All TypeScript type definitions for the game. 259 lines. Key types:
 
 ### `frontend/src/stores/game.ts`
 
-The central Pinia store. 403 lines. All game state lives here. Screens read from it and dispatch actions — never mutate state directly.
+The central Pinia store. All game state lives here. Screens read from it and call
+actions — they never mutate state directly, and they never decide an outcome.
 
-**State:**
-- `state`, `sessionId`, `status`, `players`, `currentPlayerIndex`, `round`, `turn`, `settings`, `currentQuestion`, `setupPhase`, `winnerPlayerIndex`, `winningLine`, `usedQuestionIds`
+**One session object.** The store holds a single `session: Ref<GameSession>`,
+which is the save format defined in SPEC §9. The familiar names — `players`,
+`round`, `turn`, `state`, `settings`, `battle`, `winningLines`, `usedQuestionIds`
+— are **read-only computed views onto it**, so screens read the store as they
+always have while there is exactly one object to serialize.
 
-**Computed:**
-- `currentPlayer` — active player object
-- `isCorrect` — whether current state is `answer_correct`
+The session carries everything that must survive a reload: the `rng_seed` *and*
+`rng_state` (reseeding alone rewinds the generator), the in-flight `battle`, and
+the narrator's chosen voice-line keys under `narration`. Deliberately outside it:
+`setupPhase` (pre-game navigation), `currentQuestion` (corpus payload, refetchable
+from `turn.selected_question_id`), and the live `GameRng` instance.
 
-**Setup Actions:**
-- `goToPlayerSetup()` / `goToStart()` — toggle setup phase
-- `addPlayer(name, color)` / `removePlayer(index)` — manage player list
-- `updateSettings(partial)` — update board size, placement candidates, starting pegs
-- `getAvailableColors()` — colors not yet assigned to players
+**Every state change goes through `_setState`**, which checks
+`VALID_TRANSITIONS` and throws on an illegal move.
 
-**Game Flow Actions:**
-- `startGame()` — initialize session, boards, state → `turn_start`
-- `proceedFromTurnGate()` — state → `selection`
-- `setOfferedSlots(slots)` — populate the 4 question cards
-- `selectSlot(index)` — pick a slot, state → `question_display`
-- `setQuestionData(data)` — load question content for display
-- `submitAnswer(answerIndex)` — evaluate answer, state → `answer_correct` or `answer_wrong`
-- `proceedToPlacement()` — state → `peg_placement`, calculate pegs_remaining
-- `proceedFromWrongAnswer()` — state → `pass_gate` (round ≥ 2) or `turn_end`
-- `placePeg(row, col)` — place peg, check win, handle multi-peg sequences
-- `resetGame()` — back to setup
+**Intents.** `GameIntentMap` states every player action and its argument types;
+`INTENT_HANDLERS` is assigned to that type, so the compiler rejects an action
+that is missing, extra, or whose signature has drifted. `GameIntent` is derived
+from the map, and `dispatch(intent)` applies one. Offline that is just a function
+call — the point is that the same path will serve an intent relayed from another
+device. Setup navigation, the resume prompt and `resetGame` are deliberately not
+intents: they move a screen, not the game.
 
-**Pass Actions:**
-- `proceedFromPassGate()` — state → `pass_answering`
-- `submitPassAnswer(answerIndex)` — evaluate pass answer
-- `proceedFromPassResolve()` — award peg or advance to turn_end
+**Grading is not here.** `submitAnswer`, `submitPassAnswer` and `resolveGambler`
+take an `AnswerResponse` — what the player actually did — and ask
+`gradeAnswer()` in the engine for the verdict.
 
-**Joker Actions:**
-- `useJoker(type)` — consume joker, add to jokers_used_this_turn set
-- `revealHint()` — set hint_revealed flag
-- `activateDoubleDown()` — set double_down_active flag
-- `applyCurse(index)` — mark an opponent; spent when their turn begins
-- `snipePeg(index, row, col)` — remove one chosen peg
-- `startDuel(index)` — challenge one opponent (see Battles below)
+**Jokers.** `useJoker(type)` returns whether it actually spent one, and every
+caller honours it; the effect must not land when the joker cannot be paid for.
+
+**Session lifecycle:**
+- `startGame(seed?)` — the seed is injectable for replay, and always stored
+- `loadSessionState(session)` — adopt a whole session, rebuilding the RNG at its
+  saved position. This is also the hook a host snapshot will use.
+- `checkForResumableGame()` / `resumeGame()` / `discardResumableGame()` — the
+  SPEC §9 resume offer on the title screen
+- `resetGame()` — back to setup, dropping the save
+
+A deep watcher on `session` calls `scheduleAutoSave` after every transition.
 
 **Battles and Duels:**
 
@@ -269,16 +292,24 @@ is why the Duel joker needed almost no new machinery.
 
 ### `frontend/src/stores/persistence.ts`
 
-IndexedDB persistence layer using the `idb` npm package. 183 lines.
+IndexedDB persistence layer using the `idb` npm package.
 
-**Database:** `quizthat-db` with two object stores: `sessions`, `seen_questions`
+**Database:** `quizthat` with two object stores: `sessions`, `seen_questions`
 
 **Session Persistence:**
-- `saveSession(session)` — serialize (Sets → Arrays) and write to IndexedDB
-- `loadSession()` — read and deserialize (Arrays → Sets)
-- `deleteSession()` — remove saved session
+- `serializeSession` / `deserializeSession` — the codec. Exported because this is
+  the session's **wire format**, not just its disk format: the two `Set`s it
+  converts (`used_question_ids`, `turn.jokers_used_this_turn`) are the only parts
+  of a session that do not survive JSON.
+- `snapshotSession(session)` — a synchronous plain-data copy. The JSON round-trip
+  is load-bearing: the session handed in is a Vue reactive Proxy, and
+  `structuredClone` refuses those with a `DataCloneError`.
+- `saveSession` / `loadSession` / `deleteSession`
 - `scheduleAutoSave(session)` — debounced 500ms trailing write
 - `flushAutoSave()` — immediate write (called on visibilitychange/pagehide)
+- `isPersistenceAvailable()` — IndexedDB is absent under jsdom and in some
+  private-browsing modes; every entry point degrades to a no-op rather than
+  throwing on each transition.
 
 **Cross-Session Question Tracking:**
 - `recordSeenQuestion(questionId)` — track question seen with timestamp
@@ -614,16 +645,25 @@ Ignores: node_modules, dist, .venv, IDE files, .env files, `questions/corpus-ind
 
 **Config:** `frontend/vitest.config.ts` — globals enabled, jsdom environment.
 
-**Tests:** `frontend/src/engine/__tests__/algorithms.test.ts` — 42 unit tests covering:
-- Win detection (rows, columns, diagonals, no win)
-- Empty field enumeration
-- Peg count calculation
-- Boost eligibility
-- Starting peg generation constraints
-- Difficulty distribution
-- Board utilities
+**Tests:** three suites, run with `cd frontend && npm test`.
 
-Run: `cd frontend && npm test`
+`engine/__tests__/algorithms.test.ts` — the pure algorithms: win detection, empty
+field enumeration, peg counts, boost eligibility, starting pegs, difficulty
+distribution, battle ranking and transfer, and `gradeAnswer` for all four
+question types.
+
+`engine/__tests__/rng.test.ts` — seeded determinism, and that a saved generator
+state resumes mid-sequence rather than rewinding.
+
+`stores/__tests__/game.test.ts` — the orchestration the engine tests do not
+reach: setup, selection, answering, jokers, the Gambler, battles and duels, the
+pass, victory, the session as a save format, and a full turn driven through
+`dispatch` alone. The corpus is stubbed at the `fetch` boundary rather than by
+mocking the corpus store, so the store's real fetch-and-await paths run.
+
+These began as characterization tests written against the old loose-refs store so
+the GameSession refactor could be shown to preserve behaviour — which is why they
+assert observable outcomes rather than internals. Keep them that way.
 
 ### Pipeline
 

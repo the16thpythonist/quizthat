@@ -60,6 +60,8 @@ This document defines the technology choices for building QuizThat!. It covers t
 ### Offline-First Design
 
 The game is a **frontend-only application** with no server dependency at runtime.
+That remains true for shared-tablet play; the multi-device mode described under
+"Future Server Extension" below adds an optional backend rather than replacing it.
 
 - **Game state**: Stored in the browser via IndexedDB (using `idb`). Pinia stores are the runtime representation; IndexedDB is the persistence layer for auto-save/resume. Auto-save uses a **debounced write strategy**: every state transition triggers a synchronous in-memory snapshot (`structuredClone`), but the actual IndexedDB write is debounced (500ms trailing). An immediate flush is triggered on `visibilitychange` / `pagehide` to catch app backgrounding. This avoids I/O thrashing during rapid transitions (e.g., multi-peg placement) while preserving the "never lose more than one transition" guarantee.
 - **Question corpus**: Served as **static files separate from the Vite build**. The corpus is never part of the `dist/` bundle. Instead, it is served alongside the app from a dedicated path. A build script generates `corpus-index.json` by scanning all `meta.json` files. The game loads the index at startup and lazy-loads individual question JSON and audio files on demand via HTTP fetch. See "Corpus Serving Strategy" below for per-target details.
@@ -72,7 +74,13 @@ The architecture explicitly allows for a future server connection without restru
 - Pinia stores are the single source of truth for game state. A future sync layer would subscribe to store mutations and push them to a server.
 - Match history and statistics are already tracked in the session data model (`TurnHistory`, `PlayerStats`). A server sync would upload completed `GameSession` objects after a game ends.
 - The corpus could be updated over the network (download new question packs) without changing the runtime loading logic — the index format and lazy-loading remain the same.
-- **No server work is done for V1.** The app is purely client-side.
+- **Now being built.** The multi-device work has started, and the shape chosen is
+  narrower than "sync": a **thin relay**. Django + DRF owns lobbies, an intent inbox
+  and SSE fan-out; it stores the serialized `GameSession` as an opaque blob and
+  never parses it. One client stays authoritative and runs the engine, so the game
+  rules exist once, in TypeScript. What this section did not anticipate is the
+  *realtime, device-to-device* part — it framed the server as upload-after-the-fact.
+- Offline shared-tablet play is unaffected and requires no server.
 
 ### Deployment Targets
 

@@ -294,7 +294,10 @@ The `answer_data` field is polymorphic by question type:
 
 - The app must be **natively playable on tablets and smartphones**.
 - Layout is **tablet-first**: optimized for tablet landscape (primary use case). Phone portrait uses the same layout scaled down — no separate phone-specific UI adaptations for V1.
-- The app runs as a **single shared-device experience** — all players interact with the same screen.
+- The app runs as a **single shared-device experience** by default — all players
+  interact with the same screen. A multi-device mode is being added alongside it
+  (each player on their own phone, plus an optional TV as a read-only spectator);
+  shared-device play remains, as a setting, and both run the same game logic.
 
 ### Accessibility
 
@@ -906,11 +909,15 @@ The top-level container for a single game.
 | state | enum | Current game state (from Section 8 state enum) |
 | turn | TurnState \| null | Transient state for the active turn (null between turns) |
 | winner_player_index | int \| null | Index of the winning player (null until game ends) |
+| battle | BattleState \| null | The battle closing the round, or a duel; null between them |
 | used_question_ids | Set\<UUID\> | All question IDs shown this session (prevents repeats) |
 | history | TurnHistory[] | Log of completed turns |
+| narration | SessionNarration | Narrator voice-line keys drawn off the session RNG |
 | created_at | datetime | When the session was created |
 | updated_at | datetime | Last state change (for auto-save) |
 | rng_seed | int | Seed for the session's PRNG (enables deterministic replay) |
+| rng_state | object \| null | The generator's position. Reseeding alone rewinds it, so a resumed game would re-draw what it had already spent. |
+| winning_lines | [int,int][][] \| null | Every line the winner completed (`lines_to_win` may require more than one, and one placement can complete two) |
 
 ### GameSettings
 

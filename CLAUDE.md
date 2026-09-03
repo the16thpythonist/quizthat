@@ -18,7 +18,7 @@ architecture, screens, or the corpus format, update it in the same change.
 
 ```bash
 npm run dev          # Vite dev server on :5173
-npm test             # vitest run  (42 tests, engine only)
+npm test             # vitest run  (engine, rng, and game store)
 npm run test:watch
 npm run build        # vue-tsc -b && vite build
 ```
@@ -58,20 +58,47 @@ Vite proxies `/corpus/*` to `CORPUS_PROXY_TARGET` (default `http://localhost:808
 
 Two independent systems sharing one data format (the `questions/` corpus).
 
-**There is no runtime server.** The game is a pure client-side SPA; the corpus is
-static files; the pipeline is an offline authoring tool. Don't add a backend.
+**There is no runtime server _yet_.** The game is a pure client-side SPA; the corpus
+is static files; the pipeline is an offline authoring tool.
+
+A Django + DRF backend is being added for **multi-device lobbies** — everyone on
+their own phone, plus an optional TV joined as a read-only spectator. Shared-tablet
+play stays, as a setting, on the same code path. The shape is fixed:
+
+- **Thin relay.** The server stores an opaque session blob and fans it out. It never
+  parses the game state and never knows the rules. One client is authoritative and
+  runs the TypeScript engine; the server is lobby + intent inbox + SSE fan-out.
+- **`GameSession` is the unit.** It is already the save format (SPEC §9); it becomes
+  the sync unit unchanged. `serializeSession` is therefore the wire format, not just
+  the disk format.
+- **Intents, not verdicts.** Screens send an `AnswerResponse` — what the player did
+  — and `gradeAnswer()` in the engine decides. A client must never assert its own
+  correctness. `GameIntentMap` in `stores/game.ts` is the compiler-enforced
+  vocabulary; `dispatch()` applies one, locally or relayed.
+- **`VALID_TRANSITIONS` is enforced**, via `_setState`. That is what refuses a
+  malformed or out-of-turn intent.
+
+Don't undo that groundwork as "unused indirection" — it is what the backend attaches
+to. Don't move the rules back into components.
 
 ### Frontend conventions
 
 - **No Vue Router.** The Pinia store holds a `GameState` enum; `App.vue` renders
   `screenForState(state)`. Navigation means changing state — no URLs, no back button.
 - **Never use `Math.random()`.** Every random decision goes through the seeded PRNG in
-  `engine/rng.ts`, because `GameSession.rng_seed` must give deterministic replay.
-- **`engine/` is pure logic** — no Vue imports, no DOM. That is why it is the only
-  part under test. Keep new game logic there rather than in components.
-- State transitions are validated against `VALID_TRANSITIONS` in `engine/stateMachine.ts`.
-- Persistence is debounced 500 ms into IndexedDB, with an immediate flush on
-  `visibilitychange`/`pagehide`.
+  `engine/rng.ts`. `GameSession` stores both `rng_seed` and `rng_state` — reseeding
+  alone rewinds the generator, so a resumed or relayed game would re-draw what it had
+  already spent. Confetti and the dev animation harness are the only exemptions.
+- **`engine/` is pure logic** — no Vue imports, no DOM. Keep new game logic there
+  rather than in components. In particular **components never decide an outcome**:
+  `gradeAnswer()` is the only authority on whether an answer is right, and
+  `calculatePegCount()` on what it is worth.
+- State transitions go through `_setState`, which throws on anything
+  `VALID_TRANSITIONS` in `engine/stateMachine.ts` does not allow.
+- The store holds one `session: Ref<GameSession>`; `players`, `turn`, `round` … are
+  read-only computed views onto it. Persistence is debounced 500 ms into IndexedDB,
+  with an immediate flush on `visibilitychange`/`pagehide`. Note `structuredClone`
+  throws on Vue's reactive proxies — snapshot through `snapshotSession()`.
 
 ### Corpus format
 
