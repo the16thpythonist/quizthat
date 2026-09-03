@@ -71,6 +71,8 @@ export const VOICE = {
   VICTORY: '/voice/{key}.{lang}.mp3',
   /** Turn / pass transition; `{key}` is `turn_<colour>_<n>` or `pass_<colour>`. */
   TRANSITION: '/voice/{key}.{lang}.mp3',
+  /** Round-closing battle; `{key}` is `battle_intro_<n>` / `battle_format_<fmt>` / `battle_reveal_<n>`. */
+  BATTLE: '/voice/{key}.{lang}.mp3',
 } as const
 
 /**

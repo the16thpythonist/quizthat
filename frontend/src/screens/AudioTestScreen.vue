@@ -13,6 +13,7 @@
 import { ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { audioManager } from '../audio/audioManager'
+import { useCorpusStore } from '../stores/corpus'
 import {
   SFX,
   MUSIC,
@@ -33,9 +34,43 @@ import {
   VERDICT_CORRECT_KEYS,
   VERDICT_WRONG_KEYS,
   VICTORY_REMARK_KEYS,
+  BATTLE_INTRO_KEYS,
+  BATTLE_REVEAL_KEYS,
 } from '../engine/algorithms'
 
 const { locale } = useI18n()
+const corpus = useCorpusStore()
+
+/**
+ * Question readings straight from the corpus. Discovered at runtime rather than
+ * hardcoded, so this stays honest as more are generated — and it separates
+ * "the wiring is broken" from "this question simply has no audio yet".
+ */
+const questionRows = ref<Row[]>([])
+
+async function loadQuestionAudio() {
+  try {
+    const res = await fetch(`${corpus.corpusBaseUrl}corpus-index.json`)
+    if (!res.ok) return
+    const index = await res.json()
+    const entries: { id: string; category?: string }[] = index.questions ?? index ?? []
+    const rows: Row[] = []
+    for (const q of entries) {
+      const src = audioManager.questionAudioPath(q.id, 'question', locale.value, corpus.corpusBaseUrl)
+      let ok = false
+      try {
+        const head = await fetch(src, { method: 'HEAD' })
+        const len = Number(head.headers.get('content-length') ?? '0')
+        ok = head.ok && (head.headers.get('content-type') ?? '').startsWith('audio/') && len > 0
+      } catch { ok = false }
+      rows.push({ label: q.id, src, note: q.category ?? '' })
+      status.value[src] = ok ? 'ok' : 'missing'
+    }
+    questionRows.value = rows
+  } catch {
+    /* corpus not served — rows stay empty */
+  }
+}
 
 type Row = { label: string; src: string; note?: string }
 
@@ -104,6 +139,21 @@ const voiceRows: Row[] = [
     src: voiceLine(VOICE.TRANSITION, locale.value, { key: `pass_${c}` }),
     note: 'pass gate',
   })),
+  ...BATTLE_INTRO_KEYS.map((key) => ({
+    label: key,
+    src: voiceLine(VOICE.BATTLE, locale.value, { key }),
+    note: 'battle announcement',
+  })),
+  ...['estimation', 'battle_map'].map((f) => ({
+    label: `battle_format_${f}`,
+    src: voiceLine(VOICE.BATTLE, locale.value, { key: `battle_format_${f}` }),
+    note: 'follows the announcement',
+  })),
+  ...BATTLE_REVEAL_KEYS.map((key) => ({
+    label: key,
+    src: voiceLine(VOICE.BATTLE, locale.value, { key }),
+    note: 'battle reveal',
+  })),
 ]
 
 const allRows = [...sfxRows, ...musicRows, ...voiceRows]
@@ -113,6 +163,7 @@ const status = ref<Record<string, string>>({})
 
 onMounted(async () => {
   for (const row of allRows) status.value[row.src] = 'checking'
+  void loadQuestionAudio()
   await Promise.all(
     allRows.map(async (row) => {
       try {
@@ -140,7 +191,10 @@ function say(message: string) {
 }
 
 function playOne(row: Row) {
-  if (voiceRows.includes(row)) {
+  if (questionRows.value.includes(row)) {
+    audioManager.playVoiceNow(row.src)
+    say(`question: ${row.label}`)
+  } else if (voiceRows.includes(row)) {
     audioManager.playVoiceNow(row.src)
     say(`voice: ${row.label}`)
   } else if (musicRows.includes(row)) {
@@ -217,6 +271,17 @@ function testVictory() {
 }
 let victoryCycle = 0
 
+/** Announcement then format callout, as BattleIntroScreen plays them. */
+function testBattle() {
+  const intro = BATTLE_INTRO_KEYS[battleCycle % BATTLE_INTRO_KEYS.length] as string
+  const fmt = ['estimation', 'battle_map'][battleCycle % 2] as string
+  battleCycle++
+  say(`battle: ${intro} -> battle_format_${fmt}`)
+  audioManager.playVoiceNow(voiceLine(VOICE.BATTLE, locale.value, { key: intro }))
+  audioManager.enqueueVoice(voiceLine(VOICE.BATTLE, locale.value, { key: `battle_format_${fmt}` }))
+}
+let battleCycle = 0
+
 function testJitter() {
   say(`10 rapid clicks at ±${Math.round(CLICK_PITCH_JITTER * 100)}% pitch`)
   for (let i = 0; i < 10; i++) {
@@ -265,6 +330,7 @@ function stopAll() {
         <button @click="testVerdict(true)">Verdict: correct (sting + remark)</button>
         <button @click="testVerdict(false)">Verdict: wrong (sting + remark)</button>
         <button @click="testVictory">Victory (cheer + applause + callout)</button>
+        <button @click="testBattle">Battle intro (announce + format)</button>
         <button @click="testJitter">10 clicks — jitter on</button>
         <button @click="testJitterOff">10 clicks — jitter off</button>
         <button class="at-stop" @click="stopAll">Stop all</button>
@@ -275,6 +341,7 @@ function stopAll() {
       { title: 'Sound effects', rows: sfxRows },
       { title: 'Music', rows: musicRows },
       { title: 'Voice lines', rows: voiceRows },
+      { title: 'Question readings (corpus)', rows: questionRows },
     ]" :key="group.title">
       <h2>{{ group.title }}</h2>
       <div class="at-row" v-for="row in group.rows" :key="row.src">

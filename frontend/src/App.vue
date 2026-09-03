@@ -54,8 +54,17 @@ async function playIntro(): Promise<void> {
   audioManager.enqueueVoice(voiceLine(VOICE.WELCOME, locale.value))
 }
 
-/** States that show a question — QuestionScreen backs all three. */
-const QUESTION_STATES = ['question_display', 'gambler_question', 'pass_answering']
+/**
+ * States where a player is working out an answer, and the ticking suspense bed
+ * plays. Includes `battle_answering`: each player entering their guess is the
+ * same beat as answering a question, so it gets the same bed.
+ */
+const QUESTION_STATES = [
+  'question_display',
+  'gambler_question',
+  'pass_answering',
+  'battle_answering',
+]
 /** States showing an answer verdict. */
 const VERDICT_STATES = ['answer_correct', 'answer_wrong', 'pass_resolve', 'gambler_resolve']
 /** States where the gameplay loop plays in full. */
