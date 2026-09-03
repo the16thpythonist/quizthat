@@ -7,6 +7,7 @@ import { SFX, VOICE, voiceLine } from '../audio/sfx'
 import BoardGrid from '../components/BoardGrid.vue'
 import BattleResultMap from '../components/BattleResultMap.vue'
 import { COLOR_HEX } from '../types/session'
+import { rankBattle } from '../engine/algorithms'
 import type { EstimationAnswerData, BattleMapAnswerData } from '../types/session'
 
 /**
@@ -41,13 +42,23 @@ function formatNumber(value: number): string {
   return new Intl.NumberFormat('de-DE', { maximumFractionDigits: 2 }).format(value)
 }
 
-/** Nearest first — the order the ranking is shown in. */
+/**
+ * Nearest first — the order the ranking is shown in.
+ *
+ * Ordered by the same `rankBattle` that decided the winner, rather than by a
+ * second sort written here: a local sort makes no promise about ties, and the
+ * screen could list someone above the player the store had already named the
+ * winner.
+ */
 const ranked = computed(() => {
   const b = battle.value
   if (!b) return []
-  return [...b.answers]
-    .sort((a, c) => a.distance - c.distance)
-    .map((answer, position) => {
+  const { ranking } = rankBattle(
+    b.answers.map((a) => ({ player_index: a.player_index, distance: a.distance })),
+  )
+  return ranking
+    .map((entry, position) => {
+      const answer = b.answers.find((a) => a.player_index === entry.player_index)!
       const player = game.players[answer.player_index]
       return {
         position: position + 1,

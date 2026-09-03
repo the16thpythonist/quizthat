@@ -364,6 +364,20 @@ export interface QuestionData {
   question_type: QuestionType
 }
 
+/**
+ * What a player actually did, as opposed to whether it was right.
+ *
+ * Screens send one of these; `gradeAnswer` in the engine decides the verdict.
+ * Keeping the raw response on the wire is what lets the rules live in one place
+ * — a screen that reported a bare boolean would be asserting its own correctness,
+ * which a remote client must never be trusted to do.
+ */
+export type AnswerResponse =
+  | { type: 'multiple_choice'; index: number }
+  | { type: 'sorting'; order: number[] }
+  | { type: 'calculation'; value: number }
+  | { type: 'map_location'; point: [number, number] }
+
 /** meta.json from a question folder in the corpus */
 export interface QuestionMeta {
   id: string

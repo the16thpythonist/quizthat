@@ -9,7 +9,7 @@ import { COLOR_HEX } from '../types/session'
 const { t, locale } = useI18n()
 const game = useGameStore()
 
-const isCorrect = computed(() => game.state === 'answer_correct')
+const isCorrect = computed(() => game.isCorrect)
 const player = computed(() => game.currentPlayer)
 
 /**
@@ -49,14 +49,7 @@ const nextUp = computed(() => {
 })
 
 /** Pegs this answer is worth, so "+2 Stifte" is honest about the boost. */
-const pegsEarned = computed(() => {
-  let pegs = 1
-  const idx = game.turn?.selected_slot_index
-  const slot = idx !== null && idx !== undefined ? game.turn?.offered_slots[idx] : null
-  if (slot?.has_2x_boost) pegs++
-  if (game.turn?.double_down_active) pegs++
-  return pegs
-})
+const pegsEarned = computed(() => game.pegsEarned)
 
 const groundStyle = computed(() =>
   isCorrect.value

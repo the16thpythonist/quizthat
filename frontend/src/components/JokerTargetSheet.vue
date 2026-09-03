@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import { COLOR_HEX } from '../types/session'
@@ -59,15 +59,22 @@ function snipe(row: number, col: number) {
   emit('close')
 }
 
-// a single eligible opponent and a Curse needs no interaction at all — a Duel
-// still asks, because it is worth seeing who you are about to take on
-if (props.joker === 'curse' && eligible.value.length === 1) {
+/**
+ * A single eligible opponent and a Curse needs no interaction at all — a Duel
+ * still asks, because it is worth seeing who you are about to take on.
+ *
+ * In onMounted rather than in setup: a mutating store call during setup fires
+ * on every render pass that constructs the component, not on a player's
+ * decision. `applyCurse` now refuses when the joker is already spent, so a
+ * repeat is harmless, but the effect still belongs to a lifecycle event.
+ */
+onMounted(() => {
+  if (props.joker !== 'curse' || eligible.value.length !== 1) return
   const only = eligible.value[0]
-  if (only) {
-    game.applyCurse(only.index)
-    emit('close')
-  }
-}
+  if (!only) return
+  game.applyCurse(only.index)
+  emit('close')
+})
 </script>
 
 <template>

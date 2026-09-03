@@ -11,6 +11,7 @@ import GameBar from '../components/GameBar.vue'
 import PlayerStrip from '../components/PlayerStrip.vue'
 import type {
   JokerType,
+  AnswerResponse,
   MultipleChoiceAnswerData,
   SortingAnswerData,
   CalculationAnswerData,
@@ -68,7 +69,7 @@ const doubleDownActive = computed(() => game.turn?.double_down_active ?? false)
  * handed the question on again, and again — an endless chain of second chances.
  * It also credited the attempt to the wrong player's stats.
  */
-function submitCurrentAnswer(correct: boolean) {
+function submitCurrentAnswer(response: AnswerResponse) {
   // A player who already knows the answer should never be made to wait for the
   // narrator (SPEC §6: lines are skippable, 200ms fade).
   stopNarration()
@@ -76,13 +77,13 @@ function submitCurrentAnswer(correct: boolean) {
   // taken. Routing it through the ordinary verdict left the turn with no
   // placement rule and stranded the player on an empty placement board.
   if (game.state === 'gambler_question') {
-    game.resolveGambler(correct)
+    game.resolveGambler(response)
     return
   }
   if (isPassPhase.value) {
-    game.submitPassAnswer(correct ? 'correct' : 'wrong')
+    game.submitPassAnswer(response)
   } else {
-    game.submitAnswer(correct)
+    game.submitAnswer(response)
   }
 }
 
@@ -137,10 +138,7 @@ const bgStyle = computed(() => {
 
 // --- Multiple Choice ---
 function handleMultipleChoiceAnswer(index: number) {
-  if (!question.value || question.value.question_type !== 'multiple_choice') return
-  const data = question.value.answer_data as MultipleChoiceAnswerData
-  const correct = index === data.correct_index
-  submitCurrentAnswer(correct)
+  submitCurrentAnswer({ type: 'multiple_choice', index })
 }
 
 // --- Sorting (drag & drop) ---
@@ -148,16 +146,22 @@ const sortItems = ref<{ text: string; originalIndex: number }[]>([])
 const dragIndex = ref<number | null>(null)
 const dragOverIndex = ref<number | null>(null)
 
+/**
+ * Lay the items out in the order the store drew.
+ *
+ * The shuffle itself belongs to the store: it used to happen here with
+ * Math.random(), so no seed could reproduce it and a reload re-shuffled the
+ * list out from under the player mid-question.
+ */
 function initSorting() {
   if (!question.value || question.value.question_type !== 'sorting') return
   const data = question.value.answer_data as SortingAnswerData
-  sortItems.value = data.items.map((text, i) => ({ text, originalIndex: i }))
-  for (let i = sortItems.value.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1))
-    const tmp = sortItems.value[i]!
-    sortItems.value[i] = sortItems.value[j]!
-    sortItems.value[j] = tmp
-  }
+  const order = game.turn?.answer_order ?? []
+  const display = order.length === data.items.length ? order : data.items.map((_, i) => i)
+  sortItems.value = display.map((originalIndex) => ({
+    text: data.items[originalIndex]!,
+    originalIndex,
+  }))
 }
 
 function onDragStart(idx: number, e: DragEvent) {
@@ -244,11 +248,10 @@ function onTouchEnd() {
 }
 
 function submitSortAnswer() {
-  if (!question.value || question.value.question_type !== 'sorting') return
-  const data = question.value.answer_data as SortingAnswerData
-  const userOrder = sortItems.value.map((item) => item.originalIndex)
-  const correct = userOrder.every((val, idx) => val === data.correct_order[idx])
-  submitCurrentAnswer(correct)
+  submitCurrentAnswer({
+    type: 'sorting',
+    order: sortItems.value.map((item) => item.originalIndex),
+  })
 }
 
 // --- Calculation ---
@@ -265,14 +268,13 @@ function handleCalcKey(key: string) {
 }
 
 function submitCalcAnswer() {
-  if (!question.value || question.value.question_type !== 'calculation') return
-  const data = question.value.answer_data as CalculationAnswerData
-  const userValue = parseFloat(calcInput.value.replace(/,/g, ''))
-  if (isNaN(userValue)) return
-  const diff = Math.abs(userValue - data.correct_value)
-  const threshold = Math.abs(data.correct_value * data.tolerance)
-  const correct = diff <= threshold
-  submitCurrentAnswer(correct)
+  // The comma is a decimal separator in German, so it becomes a point rather
+  // than being stripped — "3,5" is three and a half, not thirty-five.
+  const value = parseFloat(calcInput.value.replace(',', '.'))
+  // An empty or unparseable box is a slip, not an answer: nothing is submitted
+  // and the player can carry on typing.
+  if (Number.isNaN(value)) return
+  submitCurrentAnswer({ type: 'calculation', value })
 }
 
 // --- Joker handlers ---
@@ -413,7 +415,7 @@ const HINT_ICON = JOKER_ICONS.reveal_hint
           <MapQuestion
             :answer-data="(question.answer_data as MapLocationAnswerData)"
             :reveal-on-wrong="revealOnWrong"
-            @answer="submitCurrentAnswer"
+            @answer="(point) => submitCurrentAnswer({ type: 'map_location', point })"
           />
         </div>
       </div>

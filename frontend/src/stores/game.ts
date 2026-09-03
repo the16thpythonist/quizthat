@@ -3,6 +3,7 @@ import { ref, computed, shallowRef, watch } from 'vue'
 import type {
   GameSettings,
   GameSession,
+  GameState,
   Player,
   PlayerColor,
   Board,
@@ -13,6 +14,8 @@ import type {
   QuestionData,
   QuestionMeta,
   MultipleChoiceAnswerData,
+  SortingAnswerData,
+  AnswerResponse,
   BattleAnswer,
   EstimationAnswerData,
   BattleMapAnswerData,
@@ -21,7 +24,8 @@ import type {
   SpecialJokerType,
 } from '../types/session'
 import { PLAYER_COLORS, BOARD_SIZE } from '../types/session'
-import { rankBattle, pickTransferField, haversineKm, checkWin, generateSlots, assignBoostSlots, assignJokerSlots, isBoostEligible, placementRuleForSlot, generateCandidates, passPlacementRule, gamblerPlacementRule, filterQuestions } from '../engine/algorithms'
+import { isValidTransition } from '../engine/stateMachine'
+import { rankBattle, pickTransferField, haversineKm, checkWin, gradeAnswer, calculatePegCount, generateSlots, assignBoostSlots, assignJokerSlots, isBoostEligible, placementRuleForSlot, generateCandidates, passPlacementRule, gamblerPlacementRule, filterQuestions } from '../engine/algorithms'
 import { GameRng } from '../engine/rng'
 import {
   pickBattleIntro,
@@ -205,6 +209,21 @@ export const useGameStore = defineStore('game', () => {
   const isCorrect = computed(() => session.value.state === 'answer_correct')
 
   /**
+   * What the current answer is worth.
+   *
+   * Exposed rather than recomputed on the verdict screen: the screen and
+   * `proceedToPlacement` were each carrying their own copy of the arithmetic,
+   * on top of `calculatePegCount` in the engine, which nothing called at all.
+   */
+  const pegsEarned = computed(() => {
+    const t = session.value.turn
+    if (!t) return 1
+    const idx = t.selected_slot_index
+    const slot = idx !== null ? t.offered_slots[idx] : null
+    return calculatePegCount(slot?.has_2x_boost ?? false, t.double_down_active)
+  })
+
+  /**
    * Records the generator's position and the edit time.
    *
    * Called after anything that draws from the RNG, so a save or a snapshot can
@@ -213,6 +232,25 @@ export const useGameStore = defineStore('game', () => {
   function _touch() {
     if (rng.value) session.value.rng_state = rng.value.saveState()
     session.value.updated_at = new Date().toISOString()
+  }
+
+  /**
+   * The only way the game state changes.
+   *
+   * Every transition is checked against VALID_TRANSITIONS. Until now that table
+   * was exported and never called, so nothing would have caught an illegal
+   * move; once intents can arrive from another device, this is the layer that
+   * refuses them. Throwing rather than warning is deliberate — an illegal
+   * transition means the caller has a bug, and continuing from it would corrupt
+   * the session that is about to be saved and broadcast.
+   */
+  function _setState(next: GameState) {
+    const from = session.value.state
+    if (from === next) return
+    if (!isValidTransition(from, next)) {
+      throw new Error(`Illegal state transition: ${from} -> ${next}`)
+    }
+    session.value.state = next
   }
 
   // --- Setup actions ---
@@ -295,7 +333,7 @@ export const useGameStore = defineStore('game', () => {
     session.value.status = 'in_progress'
     session.value.current_player_index = 0
     session.value.round = 1
-    session.value.state = 'turn_start'
+    _setState('turn_start')
     session.value.created_at = now
     session.value.updated_at = now
     // The engine will handle TURN_START -> SELECTION transition
@@ -350,7 +388,7 @@ export const useGameStore = defineStore('game', () => {
 
   // Transition: Player taps "continue" on TurnGateScreen
   function proceedFromTurnGate() {
-    session.value.state = 'selection'
+    _setState('selection')
     if (session.value.turn) {
       session.value.turn.phase = 'selection'
     }
@@ -422,7 +460,7 @@ export const useGameStore = defineStore('game', () => {
     const exclude = new Set(session.value.used_question_ids)
     for (const slot of previous) exclude.add(slot.question_id)
 
-    useJoker('reshuffle_selection')
+    if (!useJoker('reshuffle_selection')) return
 
     const slots = generateSlots(
       rng.value,
@@ -472,8 +510,8 @@ export const useGameStore = defineStore('game', () => {
     const replacement = rng.value.pick(candidates)
     const data = await corpus.fetchQuestionData(replacement.id, session.value.settings.language)
     if (!data) return
+    if (!useJoker('reshuffle_question')) return
 
-    useJoker('reshuffle_question')
     slot.question_id = replacement.id
     slot.difficulty = replacement.difficulty
     t.selected_question_id = replacement.id
@@ -521,13 +559,13 @@ export const useGameStore = defineStore('game', () => {
     // "Weiter" goes straight to it.
     if (awarded) {
       t.joker_awarded = awarded
-      session.value.state = 'joker_award'
+      _setState('joker_award')
       t.phase = 'joker_award'
       _touch()
       return
     }
 
-    session.value.state = 'question_display'
+    _setState('question_display')
     t.phase = 'question_display'
     _touch()
   }
@@ -547,19 +585,34 @@ export const useGameStore = defineStore('game', () => {
     const t = session.value.turn
     if (!t || !rng.value) return
     const q = currentQuestion.value
-    if (!q || q.question_type !== 'multiple_choice') {
+    // Sorting items are shuffled for the same reason and by the same rule: the
+    // corpus lists them already sorted, so presenting them in file order would
+    // hand over the answer. Previously the sorting screen shuffled them itself
+    // with Math.random(), which no seed could reproduce.
+    const count =
+      q?.question_type === 'multiple_choice'
+        ? (q.answer_data as MultipleChoiceAnswerData).options.length
+        : q?.question_type === 'sorting'
+          ? (q.answer_data as SortingAnswerData).items.length
+          : 0
+    if (count === 0) {
       t.answer_order = []
       return
     }
-    const count = (q.answer_data as MultipleChoiceAnswerData).options.length
     t.answer_order = rng.value.shuffle(Array.from({ length: count }, (_, i) => i))
+  }
+
+  /** Verdict on the question currently loaded. No question means no credit. */
+  function _grade(response: AnswerResponse): boolean {
+    const q = currentQuestion.value
+    return q ? gradeAnswer(q, response) : false
   }
 
   /** Leaves the award screen for the question that was already loaded. */
   function proceedFromJokerAward() {
     const t = session.value.turn
     if (!t) return
-    session.value.state = 'question_display'
+    _setState('question_display')
     t.phase = 'question_display'
   }
 
@@ -585,12 +638,19 @@ export const useGameStore = defineStore('game', () => {
     currentQuestion.value = q
   }
 
-  // Transition: Player submits answer
-  function submitAnswer(correct: boolean) {
+  /**
+   * Grade what the player did and set the verdict.
+   *
+   * Takes the raw response, not a boolean: the screens used to decide
+   * correctness themselves and the store believed them, which is untenable once
+   * the answer can arrive from another device.
+   */
+  function submitAnswer(response: AnswerResponse) {
     const t = session.value.turn
     if (!t) return
     const player = session.value.players[session.value.current_player_index]
     if (!player) return
+    const correct = _grade(response)
     player.stats.questions_attempted++
     // Narrator's remark for this verdict, picked here so it is seeded off the
     // session RNG and fixed before the screen renders.
@@ -599,10 +659,10 @@ export const useGameStore = defineStore('game', () => {
     }
     if (correct) {
       player.stats.questions_correct++
-      session.value.state = 'answer_correct'
+      _setState('answer_correct')
       t.phase = 'answer_correct'
     } else {
-      session.value.state = 'answer_wrong'
+      _setState('answer_wrong')
       t.phase = 'answer_wrong'
     }
     _touch()
@@ -612,13 +672,9 @@ export const useGameStore = defineStore('game', () => {
   function proceedToPlacement() {
     const t = session.value.turn
     if (!t || !rng.value) return
-    // Calculate pegs
-    let pegs = 1
     const slotIdx = t.selected_slot_index
     const slot = slotIdx !== null ? t.offered_slots[slotIdx] : null
-    if (slot?.has_2x_boost) pegs++
-    if (t.double_down_active) pegs++
-    t.pegs_remaining = pegs
+    t.pegs_remaining = pegsEarned.value
     t.placing_player_index = session.value.current_player_index
 
     // Generate placement rule and candidate fields.
@@ -635,7 +691,7 @@ export const useGameStore = defineStore('game', () => {
       t.candidate_fields = generateCandidates(rng.value, player.board, rule)
     }
 
-    session.value.state = 'peg_placement'
+    _setState('peg_placement')
     t.phase = 'peg_placement'
     _touch()
   }
@@ -646,7 +702,7 @@ export const useGameStore = defineStore('game', () => {
     if (!t) return
     const prevPlayer = t.previous_round_player_index
     if (session.value.round >= 2 && prevPlayer !== null) {
-      session.value.state = 'pass_gate'
+      _setState('pass_gate')
       t.phase = 'pass_gate'
       t.pass = {
         pass_player_index: prevPlayer,
@@ -682,7 +738,7 @@ export const useGameStore = defineStore('game', () => {
       if (rng.value && t.placement_rule) {
         t.candidate_fields = generateCandidates(rng.value, placingPlayer.board, t.placement_rule)
       }
-      session.value.state = 'peg_placement'
+      _setState('peg_placement')
     }
     // When pegs_remaining === 0, stay in peg_placement state.
     // The screen will call confirmEndTurn() when the player taps to continue.
@@ -734,7 +790,7 @@ export const useGameStore = defineStore('game', () => {
     session.value.winning_lines = lines
     // Follow-up line after the winner is named, seeded off the session RNG.
     if (rng.value) session.value.narration.victory_remark = pickVictoryRemark(rng.value)
-    session.value.state = 'victory'
+    _setState('victory')
     session.value.status = 'finished'
     if (session.value.turn) session.value.turn.phase = 'victory'
     _touch()
@@ -745,7 +801,7 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function _endTurn() {
-    session.value.state = 'turn_end'
+    _setState('turn_end')
     // Advance to next player
     const wasLast = session.value.current_player_index === session.value.players.length - 1
     session.value.current_player_index =
@@ -755,7 +811,7 @@ export const useGameStore = defineStore('game', () => {
     // Everyone has played: the round closes with a battle before the next one.
     if (wasLast && _startBattle()) return
     // Start next turn
-    session.value.state = 'turn_start'
+    _setState('turn_start')
     _initTurn()
   }
 
@@ -800,7 +856,7 @@ export const useGameStore = defineStore('game', () => {
     // Narrator phrasings for this battle, seeded so a replay says the same.
     session.value.narration.battle_intro = pickBattleIntro(rng.value)
     session.value.narration.battle_reveal = pickBattleReveal(rng.value)
-    session.value.state = 'battle_intro'
+    _setState('battle_intro')
     _touch()
     return true
   }
@@ -824,11 +880,11 @@ export const useGameStore = defineStore('game', () => {
     const corpus = useCorpusStore()
     const data = await corpus.fetchQuestionData(b.question_id, session.value.settings.language)
     if (data) currentQuestion.value = data
-    session.value.state = 'battle_gate'
+    _setState('battle_gate')
   }
 
   function proceedFromBattleGate() {
-    session.value.state = 'battle_answering'
+    _setState('battle_answering')
   }
 
   /**
@@ -853,7 +909,7 @@ export const useGameStore = defineStore('game', () => {
     b.answers.push({ player_index: playerIndex, value, distance } as BattleAnswer)
 
     if (b.answers.length < b.order.length) {
-      session.value.state = 'battle_gate'
+      _setState('battle_gate')
       return
     }
     _resolveBattle()
@@ -895,7 +951,7 @@ export const useGameStore = defineStore('game', () => {
 
     // Deliberately no win check: a battle never ends the game (IDEA.md). A line
     // completed by a transferred peg is honoured at the winner's next placement.
-    session.value.state = 'battle_reveal'
+    _setState('battle_reveal')
     _touch()
   }
 
@@ -911,11 +967,11 @@ export const useGameStore = defineStore('game', () => {
     session.value.battle = null
     currentQuestion.value = null
     if (wasDuel) {
-      session.value.state = 'selection'
+      _setState('selection')
       if (session.value.turn) session.value.turn.phase = 'selection'
       return
     }
-    session.value.state = 'turn_start'
+    _setState('turn_start')
     _initTurn()
   }
 
@@ -926,15 +982,23 @@ export const useGameStore = defineStore('game', () => {
     // Re-scrambled for the inheriting player: they watched the first attempt,
     // so the options must not be in the same places.
     _scrambleAnswers()
-    session.value.state = 'pass_answering'
+    _setState('pass_answering')
     t.phase = 'pass_answering'
     _touch()
   }
 
-  // Transition: Pass answer submitted
-  function submitPassAnswer(result: 'correct' | 'wrong' | 'declined') {
+  /**
+   * The inheriting player's attempt, or their refusal to take it.
+   *
+   * 'declined' is a genuine choice rather than a graded response, so it stays a
+   * distinct value instead of being folded into a wrong answer — the stats and
+   * the resolve screen both distinguish them.
+   */
+  function submitPassAnswer(response: AnswerResponse | 'declined') {
     const t = session.value.turn
     if (!t?.pass) return
+    const result =
+      response === 'declined' ? 'declined' : _grade(response) ? 'correct' : 'wrong'
     t.pass.result = result
     if (result === 'correct') {
       const passPlayer = session.value.players[t.pass.pass_player_index]
@@ -948,10 +1012,10 @@ export const useGameStore = defineStore('game', () => {
       t.placement_rule = rule
       t.candidate_fields = generateCandidates(rng.value, passPlayer.board, rule)
 
-      session.value.state = 'peg_placement'
+      _setState('peg_placement')
       t.phase = 'peg_placement'
     } else {
-      session.value.state = 'pass_resolve'
+      _setState('pass_resolve')
       t.phase = 'pass_resolve'
     }
     _touch()
@@ -962,17 +1026,26 @@ export const useGameStore = defineStore('game', () => {
     _endTurn()
   }
 
-  // Joker actions
-  function useJoker(type: JokerType) {
+  /**
+   * Spend one joker, if the player has it and has not already played that type
+   * this turn.
+   *
+   * Returns whether it was actually spent, and every caller must honour that.
+   * They used to ignore it and apply the effect regardless, so a second Reveal
+   * Hint in one turn still revealed the hint and a re-entered Curse still
+   * cursed — the inventory was guarded but the effect was free.
+   */
+  function useJoker(type: JokerType): boolean {
     const t = session.value.turn
-    if (!t) return
+    if (!t) return false
     const player = session.value.players[session.value.current_player_index]
-    if (!player) return
-    if (player.jokers[type] <= 0) return
-    if (t.jokers_used_this_turn.has(type)) return
+    if (!player) return false
+    if (player.jokers[type] <= 0) return false
+    if (t.jokers_used_this_turn.has(type)) return false
     player.jokers[type]--
     t.jokers_used_this_turn.add(type)
     player.stats.jokers_used++
+    return true
   }
 
   /**
@@ -982,7 +1055,7 @@ export const useGameStore = defineStore('game', () => {
   function applyCurse(targetIndex: number) {
     const target = session.value.players[targetIndex]
     if (!target || targetIndex === session.value.current_player_index) return
-    useJoker('curse')
+    if (!useJoker('curse')) return
     target.is_cursed = true
   }
 
@@ -992,7 +1065,7 @@ export const useGameStore = defineStore('game', () => {
     if (!target || targetIndex === session.value.current_player_index) return
     const boardRow = target.board.fields[row]
     if (!boardRow?.[col]) return
-    useJoker('snipe')
+    if (!useJoker('snipe')) return
     boardRow[col] = false
     target.board.peg_count--
   }
@@ -1008,10 +1081,12 @@ export const useGameStore = defineStore('game', () => {
     if (!session.value.turn || !rng.value) return
     const target = session.value.players[targetIndex]
     if (!target || targetIndex === session.value.current_player_index) return
+    // Drawn before the joker is spent so a corpus with no battle questions
+    // left costs the player nothing.
     const question = _pickBattleQuestion()
     if (!question) return
+    if (!useJoker('duel')) return
 
-    useJoker('duel')
     session.value.battle = {
       question_id: question.id,
       challenger_index: session.value.current_player_index,
@@ -1024,7 +1099,7 @@ export const useGameStore = defineStore('game', () => {
     }
     session.value.narration.battle_intro = pickBattleIntro(rng.value)
     session.value.narration.battle_reveal = pickBattleReveal(rng.value)
-    session.value.state = 'battle_intro'
+    _setState('battle_intro')
     _touch()
   }
 
@@ -1051,7 +1126,7 @@ export const useGameStore = defineStore('game', () => {
     if (owned.length === 0) return
 
     t.gambler_staked_field = rng.value.pick(owned)
-    session.value.state = 'gambler_confirm'
+    _setState('gambler_confirm')
     t.phase = 'gambler_confirm'
     _touch()
   }
@@ -1060,7 +1135,7 @@ export const useGameStore = defineStore('game', () => {
     const t = session.value.turn
     if (!t) return
     t.gambler_staked_field = null
-    session.value.state = 'selection'
+    _setState('selection')
     t.phase = 'selection'
   }
 
@@ -1078,11 +1153,11 @@ export const useGameStore = defineStore('game', () => {
     const question = rng.value.pick(candidates)
     const data = await corpus.fetchQuestionData(question.id, session.value.settings.language)
     if (!data) return
+    if (!useJoker('the_gambler')) return
 
-    useJoker('the_gambler')
     t.selected_question_id = question.id
     currentQuestion.value = data
-    session.value.state = 'gambler_question'
+    _setState('gambler_question')
     t.phase = 'gambler_question'
     _scrambleAnswers()
     _touch()
@@ -1092,12 +1167,13 @@ export const useGameStore = defineStore('game', () => {
    * Right: the win is announced, and the three pegs are then placed through the
    * ordinary placement screen. Wrong: the staked peg is taken.
    */
-  function resolveGambler(correct: boolean) {
+  function resolveGambler(response: AnswerResponse) {
     const t = session.value.turn
     if (!t) return
     const player = session.value.players[session.value.current_player_index]
     if (!player) return
 
+    const correct = _grade(response)
     player.stats.questions_attempted++
     if (correct) {
       player.stats.questions_correct++
@@ -1111,7 +1187,7 @@ export const useGameStore = defineStore('game', () => {
     }
 
     t.gambler_won = correct
-    session.value.state = 'gambler_resolve'
+    _setState('gambler_resolve')
     t.phase = 'gambler_resolve'
     _touch()
   }
@@ -1141,7 +1217,7 @@ export const useGameStore = defineStore('game', () => {
     t.placing_player_index = session.value.current_player_index
     t.placement_rule = rule
     t.candidate_fields = generateCandidates(rng.value, player.board, rule)
-    session.value.state = 'peg_placement'
+    _setState('peg_placement')
     t.phase = 'peg_placement'
     _touch()
   }
@@ -1149,14 +1225,14 @@ export const useGameStore = defineStore('game', () => {
   function revealHint() {
     const t = session.value.turn
     if (!t) return
-    useJoker('reveal_hint')
+    if (!useJoker('reveal_hint')) return
     t.hint_revealed = true
   }
 
   function activateDoubleDown() {
     const t = session.value.turn
     if (!t) return
-    useJoker('double_down')
+    if (!useJoker('double_down')) return
     t.double_down_active = true
   }
 
@@ -1270,6 +1346,7 @@ export const useGameStore = defineStore('game', () => {
     // Computed
     currentPlayer,
     isCorrect,
+    pegsEarned,
 
     // Setup actions
     goToPlayerSetup,

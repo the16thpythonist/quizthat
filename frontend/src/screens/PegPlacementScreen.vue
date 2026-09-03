@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import { audioManager } from '../audio/audioManager'
 import { SFX, RATTLE_PITCH_JITTER } from '../audio/sfx'
+import { GameRng } from '../engine/rng'
 import BoardGrid from '../components/BoardGrid.vue'
 import GameBar from '../components/GameBar.vue'
 import PlayerStrip from '../components/PlayerStrip.vue'
@@ -34,21 +35,15 @@ const isFree = computed(() => {
  */
 const isAuto = computed(() => game.turn?.placement_rule?.mode === 'auto')
 
-// For free placement, all empty fields are candidates
-const effectiveCandidates = computed(() => {
-  if (isFree.value && board.value) {
-    const fields: [number, number][] = []
-    for (let r = 0; r < board.value.size; r++) {
-      for (let c = 0; c < board.value.size; c++) {
-        if (!board.value.fields[r]?.[c]) {
-          fields.push([r, c])
-        }
-      }
-    }
-    return fields
-  }
-  return candidates.value
-})
+/**
+ * The fields on offer, straight from the store.
+ *
+ * This used to rebuild the list itself for free placement, which was pure
+ * duplication — generateCandidates already returns every empty field for a
+ * 'free' rule — and it meant the screen could disagree with the authority
+ * about what was on offer.
+ */
+const effectiveCandidates = computed(() => candidates.value)
 
 // --- Gambling reveal animation ---
 const isRevealing = ref(false)
@@ -56,6 +51,17 @@ const revealingFields = ref<[number, number][]>([])
 const revealedCandidates = ref<[number, number][]>([])
 const revealTimers = ref<ReturnType<typeof setTimeout>[]>([])
 const canInteract = ref(false)
+
+/**
+ * Generator for the rattle only.
+ *
+ * The flicker is animation, not game state — nothing it produces reaches the
+ * board. It still avoids Math.random(), which the project bans outright, so a
+ * replay of the same seed looks identical as well as playing identically. Kept
+ * out of the session because animation noise has no business being persisted
+ * or sent to another device.
+ */
+let revealRng = new GameRng(0)
 
 // Get all eligible fields for cycling (constraint-aware)
 function getEligibleFields(): [number, number][] {
@@ -93,6 +99,10 @@ function startReveal(finalCandidates: [number, number][]) {
     return
   }
 
+  revealRng = new GameRng(
+    `${game.session.rng_seed}:${game.round}:${pegsRemaining.value}:${board.value?.peg_count ?? 0}`,
+  )
+
   // Swell under the whole reveal; the rattle ticks ride on top of it, one per
   // visual step, so the audio decelerates exactly as the animation does.
   audioManager.playSfx(SFX.PEG_RISER)
@@ -109,8 +119,7 @@ function startReveal(finalCandidates: [number, number][]) {
     }
 
     // Pick random subset of eligible fields
-    const shuffled = [...eligible].sort(() => Math.random() - 0.5)
-    revealingFields.value = shuffled.slice(0, candidateCount)
+    revealingFields.value = revealRng.sample(eligible, candidateCount)
     audioManager.playSfx(SFX.ROULETTE_TICK, { pitchJitter: RATTLE_PITCH_JITTER })
 
     elapsed += interval
@@ -130,6 +139,25 @@ function finishReveal(finalCandidates: [number, number][]) {
   revealingFields.value = []
   revealedCandidates.value = finalCandidates
   isRevealing.value = false
+
+  // 'auto' means the player has no say: the fields that settled are simply
+  // taken. Until now nothing acted on it, so the Gambler's three pegs and a
+  // placement setting of 1 still demanded a tap on the one field on offer.
+  if (isAuto.value) {
+    canInteract.value = false
+    audioManager.playSfx(SFX.PEG_DROP)
+    lastPlacedField.value = finalCandidates[finalCandidates.length - 1] ?? null
+    game.placePegs(finalCandidates)
+    // More pegs to come regenerates the candidates and re-runs the reveal; this
+    // was the last one, so hand the turn back to the player.
+    if (game.turn?.pegs_remaining === 0) {
+      setTimeout(() => {
+        awaitingContinueTap.value = true
+      }, 0)
+    }
+    return
+  }
+
   canInteract.value = true
 }
 
@@ -164,6 +192,7 @@ const awaitingContinueTap = ref(false)
 const donePlacing = computed(() => !isRevealing.value && pegsRemaining.value === 0)
 
 function handleFieldClick(row: number, col: number) {
+  if (isAuto.value) return
   audioManager.playSfx(SFX.PEG_DROP)
   lastPlacedField.value = [row, col]
   canInteract.value = false

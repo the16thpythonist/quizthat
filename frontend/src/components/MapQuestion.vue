@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import L from 'leaflet'
-import type { MapLocationAnswerData } from '../types/session'
+import type { MapLocationAnswerData, QuestionData } from '../types/session'
+import { gradeAnswer } from '../engine/algorithms'
 
 const props = withDefaults(defineProps<{
   answerData: MapLocationAnswerData
@@ -14,8 +15,13 @@ const props = withDefaults(defineProps<{
   revealOnWrong: true,
 })
 
+/**
+ * The pin the player dropped. The parent decides what it is worth — this
+ * component only needs the verdict to colour the marker and to know whether it
+ * may reveal the target.
+ */
 const emit = defineEmits<{
-  answer: [correct: boolean]
+  answer: [point: [number, number]]
 }>()
 
 const mapContainer = ref<HTMLDivElement | null>(null)
@@ -23,14 +29,23 @@ let map: L.Map | null = null
 let answered = false
 let resizeObserver: ResizeObserver | null = null
 
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const R = 6371
-  const dLat = (lat2 - lat1) * Math.PI / 180
-  const dLng = (lng2 - lng1) * Math.PI / 180
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-    Math.sin(dLng / 2) ** 2
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+/**
+ * Ask the engine, rather than deciding here.
+ *
+ * This is display only — it picks the marker colour and gates the reveal. The
+ * store grades the same pin again for the actual verdict, so the two can never
+ * disagree: there is one implementation. This component used to carry its own
+ * copy of haversineKm and its own pass mark.
+ */
+function isHit(lat: number, lng: number): boolean {
+  const question = {
+    question_type: 'map_location',
+    answer_data: props.answerData,
+    teaser_title: '',
+    question_text: '',
+    hint: null,
+  } satisfies QuestionData
+  return gradeAnswer(question, { type: 'map_location', point: [lat, lng] })
 }
 
 onMounted(() => {
@@ -60,9 +75,7 @@ onMounted(() => {
 
     const { lat, lng } = e.latlng
     const target = props.answerData.target
-    const maxRadius = Math.max(...props.answerData.scoring.map(s => s.radius_km))
-    const distance = haversineKm(lat, lng, target.lat, target.lng)
-    const correct = distance <= maxRadius
+    const correct = isHit(lat, lng)
 
     // Show user's click
     L.circleMarker([lat, lng], {
@@ -76,7 +89,7 @@ onMounted(() => {
     // A wrong guess that is about to be passed on must not give the answer
     // away; show only where they tapped, then hand over.
     if (!correct && !props.revealOnWrong) {
-      setTimeout(() => emit('answer', correct), 900)
+      setTimeout(() => emit('answer', [lat, lng]), 900)
       return
     }
 
@@ -105,7 +118,7 @@ onMounted(() => {
       map.fitBounds(bounds, { padding: [60, 60], maxZoom: 8 })
 
       setTimeout(() => {
-        emit('answer', correct)
+        emit('answer', [lat, lng])
       }, 1200)
     }, 800)
   })

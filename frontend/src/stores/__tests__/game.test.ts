@@ -15,7 +15,7 @@ import { setActivePinia, createPinia } from 'pinia'
 import { useGameStore, createSession } from '../game'
 import { serializeSession, deserializeSession, snapshotSession } from '../persistence'
 import { useCorpusStore } from '../corpus'
-import type { QuestionMeta, Expertise } from '../../types/session'
+import type { QuestionMeta, Expertise, AnswerResponse, GameState } from '../../types/session'
 
 // ─── Synthetic corpus ────────────────────────────────────────────
 
@@ -103,6 +103,14 @@ async function flush() {
 
 const EXPERTISE: Expertise = { major_categories: ['History'], subcategories: ['Ancients'] }
 
+/**
+ * Every stubbed multiple-choice question has correct_index 0, so these are a
+ * right and a wrong answer respectively. Tests send responses, not verdicts —
+ * the store grades them, which is the point of gradeAnswer.
+ */
+const RIGHT: AnswerResponse = { type: 'multiple_choice', index: 0 }
+const WRONG: AnswerResponse = { type: 'multiple_choice', index: 1 }
+
 /** Two players, corpus loaded, game started and sitting on the turn gate. */
 function startedGame() {
   const game = useGameStore()
@@ -121,6 +129,42 @@ async function toQuestion(game: ReturnType<typeof useGameStore>) {
   await flush()
   await game.selectSlot(0)
   if (game.state === 'joker_award') game.proceedFromJokerAward()
+  return game
+}
+
+/** Take one peg with a correct answer and end the turn. */
+async function playTurn(game: ReturnType<typeof useGameStore>) {
+  await toQuestion(game)
+  game.submitAnswer(RIGHT)
+  game.proceedToPlacement()
+  const [row, col] = game.turn!.candidate_fields[0]!
+  game.placePeg(row, col)
+  if (game.state === 'victory') return
+  game.confirmEndTurn()
+}
+
+/** Answer any battle that opened, so play returns to an ordinary turn. */
+async function clearBattle(game: ReturnType<typeof useGameStore>) {
+  if (game.state !== 'battle_intro') return
+  await game.proceedFromBattleIntro()
+  // Cast because TypeScript narrows game.state at the guard above and cannot
+  // see that the store has moved it on since.
+  while ((game.state as GameState) === 'battle_gate') {
+    game.proceedFromBattleGate()
+    game.submitBattleAnswer(90 + game.battle!.answers.length * 40)
+  }
+  game.proceedFromBattleReveal()
+}
+
+/**
+ * Both players through round one, past the closing battle. Round two is where
+ * the pass mechanic first has a previous-round player to hand a question to.
+ */
+async function intoRoundTwo() {
+  const game = startedGame()
+  await playTurn(game)
+  await playTurn(game)
+  await clearBattle(game)
   return game
 }
 
@@ -247,7 +291,7 @@ describe('game store', () => {
     it('records a correct answer and moves to placement with candidates', async () => {
       const game = startedGame()
       await toQuestion(game)
-      game.submitAnswer(true)
+      game.submitAnswer(RIGHT)
       expect(game.state).toBe('answer_correct')
       expect(game.isCorrect).toBe(true)
       expect(game.players[0]!.stats.questions_correct).toBe(1)
@@ -261,7 +305,7 @@ describe('game store', () => {
     it('counts a wrong answer as attempted but not correct', async () => {
       const game = startedGame()
       await toQuestion(game)
-      game.submitAnswer(false)
+      game.submitAnswer(WRONG)
       expect(game.state).toBe('answer_wrong')
       expect(game.players[0]!.stats.questions_attempted).toBe(1)
       expect(game.players[0]!.stats.questions_correct).toBe(0)
@@ -270,7 +314,7 @@ describe('game store', () => {
     it('ends the turn instead of passing when there is no previous-round player', async () => {
       const game = startedGame()
       await toQuestion(game)
-      game.submitAnswer(false)
+      game.submitAnswer(WRONG)
       game.proceedFromWrongAnswer()
       // Round 1 player 0 has nobody behind them, so the turn simply ends.
       expect(game.currentPlayerIndex).toBe(1)
@@ -279,7 +323,7 @@ describe('game store', () => {
     it('places a peg on the board and decrements the remaining count', async () => {
       const game = startedGame()
       await toQuestion(game)
-      game.submitAnswer(true)
+      game.submitAnswer(RIGHT)
       game.proceedToPlacement()
       const pegs = game.turn!.pegs_remaining
       const [row, col] = game.turn!.candidate_fields[0]!
@@ -289,10 +333,58 @@ describe('game store', () => {
       expect(game.turn!.pegs_remaining).toBe(pegs - 1)
     })
 
+    it('takes every field at once in auto mode', async () => {
+      const game = startedGame()
+      await toQuestion(game)
+      game.submitAnswer(RIGHT)
+      game.proceedToPlacement()
+      // The Gambler's shape: three fields that all land together.
+      game.turn!.pegs_remaining = 3
+      game.placePegs([
+        [0, 0],
+        [1, 1],
+        [2, 2],
+      ])
+      expect(game.players[0]!.board.peg_count).toBe(3)
+      expect(game.players[0]!.board.fields[0]![0]).toBe(true)
+      expect(game.players[0]!.board.fields[1]![1]).toBe(true)
+      expect(game.players[0]!.board.fields[2]![2]).toBe(true)
+      expect(game.turn!.pegs_remaining).toBe(0)
+    })
+
+    it('checks the win once at the end of a multi-peg placement, not per peg', async () => {
+      const game = startedGame()
+      const board = game.players[0]!.board
+      board.fields[0]![0] = true
+      board.fields[1]![1] = true
+      board.peg_count = 2
+      await toQuestion(game)
+      game.submitAnswer(RIGHT)
+      game.proceedToPlacement()
+      game.turn!.pegs_remaining = 2
+      // Completes the diagonal on the second field; both still land.
+      game.placePegs([
+        [2, 2],
+        [3, 3],
+      ])
+      expect(board.peg_count).toBe(4)
+      expect(game.state).toBe('victory')
+    })
+
+    it('never places two pegs on the same field', async () => {
+      const game = startedGame()
+      await toQuestion(game)
+      game.submitAnswer(RIGHT)
+      game.proceedToPlacement()
+      const [row, col] = game.turn!.candidate_fields[0]!
+      game.placePegs([[row, col], [row, col]])
+      expect(game.players[0]!.board.peg_count).toBe(1)
+    })
+
     it('advances to the next player on ending a turn', async () => {
       const game = startedGame()
       await toQuestion(game)
-      game.submitAnswer(true)
+      game.submitAnswer(RIGHT)
       game.proceedToPlacement()
       const [row, col] = game.turn!.candidate_fields[0]!
       game.placePeg(row, col)
@@ -316,13 +408,44 @@ describe('game store', () => {
       expect(game.players[0]!.stats.jokers_used).toBe(1)
     })
 
+    it('does not apply a joker the player cannot pay for', async () => {
+      const game = startedGame()
+      await toQuestion(game)
+      game.revealHint()
+      // The hint is spent. A second attempt must not reveal it again for free —
+      // the inventory check used to guard the count but not the effect.
+      game.turn!.hint_revealed = false
+      game.revealHint()
+      expect(game.turn!.hint_revealed).toBe(false)
+    })
+
+    it('does not curse for free once the curse is spent', async () => {
+      const game = startedGame()
+      game.players[0]!.jokers.curse = 1
+      await toQuestion(game)
+      game.applyCurse(1)
+      game.players[1]!.is_cursed = false
+      game.applyCurse(1)
+      expect(game.players[1]!.is_cursed).toBe(false)
+    })
+
+    it('does not double down twice on one turn', async () => {
+      const game = startedGame()
+      game.players[0]!.jokers.double_down = 1
+      await toQuestion(game)
+      game.activateDoubleDown()
+      game.turn!.double_down_active = false
+      game.activateDoubleDown()
+      expect(game.turn!.double_down_active).toBe(false)
+    })
+
     it('curses an opponent, and the curse is consumed at the start of their turn', async () => {
       const game = startedGame()
       game.players[0]!.jokers.curse = 1
       await toQuestion(game)
       game.applyCurse(1)
       expect(game.players[1]!.is_cursed).toBe(true)
-      game.submitAnswer(true)
+      game.submitAnswer(RIGHT)
       game.proceedToPlacement()
       const [row, col] = game.turn!.candidate_fields[0]!
       game.placePeg(row, col)
@@ -364,7 +487,7 @@ describe('game store', () => {
       game.players[0]!.jokers.double_down = 1
       await toQuestion(game)
       game.activateDoubleDown()
-      game.submitAnswer(true)
+      game.submitAnswer(RIGHT)
       game.proceedToPlacement()
       expect(game.turn!.pegs_remaining).toBeGreaterThanOrEqual(2)
     })
@@ -404,7 +527,7 @@ describe('game store', () => {
       expect(game.turn!.gambler_staked_field).toEqual([1, 1])
       await game.confirmGambler()
       expect(game.state).toBe('gambler_question')
-      game.resolveGambler(false)
+      game.resolveGambler(WRONG)
       expect(game.gamblerWon).toBe(false)
       expect(game.players[0]!.board.fields[1]![1]).toBe(false)
       expect(game.players[0]!.board.peg_count).toBe(0)
@@ -418,7 +541,7 @@ describe('game store', () => {
       await flush()
       game.startGambler()
       await game.confirmGambler()
-      game.resolveGambler(true)
+      game.resolveGambler(RIGHT)
       expect(game.gamblerWon).toBe(true)
       expect(game.players[0]!.board.fields[1]![1]).toBe(true)
       game.proceedFromGamblerResolve()
@@ -448,7 +571,7 @@ describe('game store', () => {
       board.fields[0]![2] = true
       board.peg_count = 3
       await toQuestion(game)
-      game.submitAnswer(true)
+      game.submitAnswer(RIGHT)
       game.proceedToPlacement()
       game.placePeg(0, 3)
       expect(game.state).toBe('victory')
@@ -474,7 +597,7 @@ describe('game store', () => {
       const game = startedGame()
       for (let i = 0; i < 2; i++) {
         await toQuestion(game)
-        game.submitAnswer(true)
+        game.submitAnswer(RIGHT)
         game.proceedToPlacement()
         const [row, col] = game.turn!.candidate_fields[0]!
         game.placePeg(row, col)
@@ -597,7 +720,7 @@ describe('game store', () => {
       // mattering, then reach player 0 again in round 2.
       for (let i = 0; i < 2; i++) {
         await toQuestion(game)
-        game.submitAnswer(true)
+        game.submitAnswer(RIGHT)
         game.proceedToPlacement()
         const [row, col] = game.turn!.candidate_fields[0]!
         game.placePeg(row, col)
@@ -614,7 +737,7 @@ describe('game store', () => {
       }
       expect(game.round).toBe(2)
       await toQuestion(game)
-      game.submitAnswer(false)
+      game.submitAnswer(WRONG)
       game.proceedFromWrongAnswer()
       expect(game.state).toBe('pass_gate')
       expect(game.turn!.pass).not.toBeNull()
@@ -627,7 +750,7 @@ describe('game store', () => {
       const game = startedGame()
       await toQuestion(game)
       game.revealHint() // puts an entry in turn.jokers_used_this_turn
-      game.submitAnswer(true)
+      game.submitAnswer(RIGHT)
 
       const wire = JSON.parse(JSON.stringify(serializeSession(game.session)))
       const restored = deserializeSession(wire)
@@ -687,7 +810,7 @@ describe('game store', () => {
     it('resumes mid-sequence rather than re-drawing what was already spent', async () => {
       const game = startedGame()
       await toQuestion(game)
-      game.submitAnswer(true)
+      game.submitAnswer(RIGHT)
       game.proceedToPlacement()
       const expected = [...game.turn!.candidate_fields]
 
@@ -758,19 +881,35 @@ describe('game store', () => {
     })
 
     it('re-scrambles the options when a question is passed on', async () => {
-      const game = startedGame()
+      const game = await intoRoundTwo()
       await toQuestion(game)
       const first = [...game.turn!.answer_order]
-      game.turn!.pass = {
-        pass_player_index: 1,
-        original_answer_index: -1,
-        scrambled_order: [],
-        result: null,
-      }
+      game.submitAnswer(WRONG)
+      game.proceedFromWrongAnswer()
+      expect(game.state).toBe('pass_gate')
       game.proceedFromPassGate()
       // A fresh scramble is drawn; it is a permutation of the same indices.
       expect([...game.turn!.answer_order].sort()).toEqual([...first].sort())
       expect(game.state).toBe('pass_answering')
+    })
+  })
+
+  describe('the state machine', () => {
+    it('refuses a transition the table does not allow', () => {
+      const game = startedGame()
+      // turn_start goes only to selection. Nothing else guards this call, so
+      // the transition table is what stops the game entering pass_answering
+      // with no pass in progress.
+      expect(() => game.proceedFromPassGate()).toThrow(/turn_start -> pass_answering/)
+      expect(game.state).toBe('turn_start')
+    })
+
+    it('rejects an answer submitted before a question is on screen', async () => {
+      const game = startedGame()
+      game.proceedFromTurnGate()
+      await flush()
+      // selection cannot go straight to a verdict.
+      expect(() => game.submitAnswer(RIGHT)).toThrow(/Illegal state transition/)
     })
   })
 })

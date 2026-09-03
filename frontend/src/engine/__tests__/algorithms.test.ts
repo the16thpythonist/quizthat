@@ -23,13 +23,14 @@ import {
   rollBasicJokerReEarn,
   awardSpecialJoker,
   scrambleAnswerOrder,
+  gradeAnswer,
 } from '../algorithms'
 import {
   pickPlayerIntroLine,
   GENERIC_PLAYER_INTRO_KEYS,
 } from '../algorithms'
 import { GameRng } from '../rng'
-import type { Board, Player, OfferedSlot } from '../../types/session'
+import type { Board, Player, OfferedSlot, QuestionData } from '../../types/session'
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
@@ -901,5 +902,116 @@ describe('pickPlayerIntroLine', () => {
     for (let seed = 0; seed < 20; seed++) {
       expect(GENERIC).toContain(pickPlayerIntroLine(new GameRng(`y${seed}`), 7))
     }
+  })
+})
+
+// ─── Answer grading ──────────────────────────────────────────────
+
+describe('gradeAnswer', () => {
+  function question(type: QuestionData['question_type'], answer_data: unknown): QuestionData {
+    return {
+      teaser_title: '',
+      question_text: '',
+      hint: null,
+      question_type: type,
+      answer_data: answer_data as QuestionData['answer_data'],
+    }
+  }
+
+  describe('multiple choice', () => {
+    const q = question('multiple_choice', { options: ['a', 'b', 'c', 'd'], correct_index: 2 })
+
+    it('accepts the correct index', () => {
+      expect(gradeAnswer(q, { type: 'multiple_choice', index: 2 })).toBe(true)
+    })
+
+    it('rejects any other index', () => {
+      for (const index of [0, 1, 3]) {
+        expect(gradeAnswer(q, { type: 'multiple_choice', index })).toBe(false)
+      }
+    })
+
+    it('grades against the real index, not the displayed order', () => {
+      // The store scrambles presentation only; correctness never moves.
+      expect(gradeAnswer(q, { type: 'multiple_choice', index: 2 })).toBe(true)
+    })
+  })
+
+  describe('sorting', () => {
+    const q = question('sorting', { items: ['a', 'b', 'c'], correct_order: [2, 0, 1], metric: 'x' })
+
+    it('accepts the exact order', () => {
+      expect(gradeAnswer(q, { type: 'sorting', order: [2, 0, 1] })).toBe(true)
+    })
+
+    it('rejects a wrong order', () => {
+      expect(gradeAnswer(q, { type: 'sorting', order: [0, 1, 2] })).toBe(false)
+    })
+
+    it('rejects a short or long order rather than matching on a prefix', () => {
+      expect(gradeAnswer(q, { type: 'sorting', order: [2, 0] })).toBe(false)
+      expect(gradeAnswer(q, { type: 'sorting', order: [2, 0, 1, 1] })).toBe(false)
+    })
+  })
+
+  describe('calculation', () => {
+    const q = question('calculation', { correct_value: 200, tolerance: 0.05, unit: 'm' })
+
+    it('accepts a value inside the tolerance band', () => {
+      expect(gradeAnswer(q, { type: 'calculation', value: 200 })).toBe(true)
+      expect(gradeAnswer(q, { type: 'calculation', value: 209 })).toBe(true)
+      expect(gradeAnswer(q, { type: 'calculation', value: 191 })).toBe(true)
+    })
+
+    it('accepts the boundary exactly', () => {
+      expect(gradeAnswer(q, { type: 'calculation', value: 210 })).toBe(true)
+      expect(gradeAnswer(q, { type: 'calculation', value: 190 })).toBe(true)
+    })
+
+    it('rejects a value outside it, over or under alike', () => {
+      expect(gradeAnswer(q, { type: 'calculation', value: 211 })).toBe(false)
+      expect(gradeAnswer(q, { type: 'calculation', value: 189 })).toBe(false)
+    })
+
+    it('rejects NaN rather than letting it pass the comparison', () => {
+      expect(gradeAnswer(q, { type: 'calculation', value: NaN })).toBe(false)
+    })
+
+    it('scales the band with the magnitude of the answer', () => {
+      const big = question('calculation', { correct_value: 1_000_000, tolerance: 0.05, unit: 'm' })
+      expect(gradeAnswer(big, { type: 'calculation', value: 1_040_000 })).toBe(true)
+      expect(gradeAnswer(big, { type: 'calculation', value: 1_060_000 })).toBe(false)
+    })
+  })
+
+  describe('map location', () => {
+    // Reykjavik, with a generous ring.
+    const q = question('map_location', {
+      target: { lat: 64.1466, lng: -21.9426 },
+      scoring: [
+        { radius_km: 50, label: 'close' },
+        { radius_km: 300, label: 'near enough' },
+      ],
+    })
+
+    it('accepts a pin inside the widest ring', () => {
+      expect(gradeAnswer(q, { type: 'map_location', point: [64.2, -21.8] })).toBe(true)
+    })
+
+    it('rejects a pin beyond every ring', () => {
+      // Berlin is a very long way from Reykjavik.
+      expect(gradeAnswer(q, { type: 'map_location', point: [52.52, 13.405] })).toBe(false)
+    })
+
+    it('treats the widest ring as the pass mark, not the tightest', () => {
+      // ~200km out: outside the 50km ring, inside the 300km one.
+      expect(gradeAnswer(q, { type: 'map_location', point: [65.9, -21.9426] })).toBe(true)
+    })
+  })
+
+  it('counts a response of the wrong shape as wrong rather than throwing', () => {
+    const q = question('multiple_choice', { options: ['a', 'b'], correct_index: 0 })
+    expect(() => gradeAnswer(q, { type: 'calculation', value: 0 })).not.toThrow()
+    expect(gradeAnswer(q, { type: 'calculation', value: 0 })).toBe(false)
   })
 })

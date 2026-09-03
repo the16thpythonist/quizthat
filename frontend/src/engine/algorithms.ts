@@ -7,6 +7,12 @@ import type {
   Player,
   PlacementRule,
   QuestionMeta,
+  QuestionData,
+  AnswerResponse,
+  MultipleChoiceAnswerData,
+  SortingAnswerData,
+  CalculationAnswerData,
+  MapLocationAnswerData,
   PlayerColor,
   BasicJokerType,
   SpecialJokerType,
@@ -718,6 +724,50 @@ export function haversineKm(a: [number, number], b: [number, number]): number {
       Math.cos((b[0] * Math.PI) / 180) *
       Math.sin(dLng / 2) ** 2
   return R * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h))
+}
+
+/**
+ * Decide whether a response answers the question.
+ *
+ * The single authority on correctness. It used to live in the screens — each
+ * question type grading itself and handing the store a bare boolean — which
+ * meant the store trusted whatever it was told, and the map question carried a
+ * second copy of `haversineKm`.
+ *
+ * A response of the wrong shape for the question is simply wrong, not an error:
+ * that is what a malformed or stale submission looks like, and the game should
+ * carry on rather than throw mid-turn.
+ */
+export function gradeAnswer(question: QuestionData, response: AnswerResponse): boolean {
+  if (question.question_type !== response.type) return false
+
+  switch (response.type) {
+    case 'multiple_choice': {
+      const data = question.answer_data as MultipleChoiceAnswerData
+      return response.index === data.correct_index
+    }
+    case 'sorting': {
+      const data = question.answer_data as SortingAnswerData
+      if (response.order.length !== data.correct_order.length) return false
+      return response.order.every((value, i) => value === data.correct_order[i])
+    }
+    case 'calculation': {
+      const data = question.answer_data as CalculationAnswerData
+      if (!Number.isFinite(response.value)) return false
+      // Tolerance is a fraction of the true value, so a "within 5%" question
+      // scales with magnitude instead of needing an absolute band per question.
+      const threshold = Math.abs(data.correct_value * data.tolerance)
+      return Math.abs(response.value - data.correct_value) <= threshold
+    }
+    case 'map_location': {
+      const data = question.answer_data as MapLocationAnswerData
+      if (data.scoring.length === 0) return false
+      // The widest scoring ring is the pass mark; the tighter ones exist to
+      // describe how good a hit was, not whether it counted.
+      const maxRadius = Math.max(...data.scoring.map((s) => s.radius_km))
+      return haversineKm(response.point, [data.target.lat, data.target.lng]) <= maxRadius
+    }
+  }
 }
 
 export interface BattleOutcome {
