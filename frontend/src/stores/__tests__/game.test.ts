@@ -1,17 +1,19 @@
 /**
- * Characterization tests for the game store.
+ * Tests for the game store — the orchestration layer.
  *
- * These pin down the behaviour of the store as it is *today*, before the
- * GameSession refactor, so that refactor can be verified as behaviour-preserving.
- * The engine tests cover the pure algorithms; nothing covered the orchestration
- * until now, which is the part the refactor rewrites.
+ * The engine tests cover the pure algorithms; these cover the state machine
+ * driving them. They began as characterization tests written against the old
+ * loose-refs store so the GameSession refactor could be shown to preserve
+ * behaviour, which is why they lean on observable outcomes rather than
+ * internals — keep them that way.
  *
  * The corpus is stubbed at the `fetch` boundary rather than by mocking the
  * corpus store, so the store's real fetch-and-await paths are exercised.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
-import { useGameStore } from '../game'
+import { useGameStore, createSession } from '../game'
+import { serializeSession, deserializeSession, snapshotSession } from '../persistence'
 import { useCorpusStore } from '../corpus'
 import type { QuestionMeta, Expertise } from '../../types/session'
 
@@ -620,7 +622,141 @@ describe('game store', () => {
     })
   })
 
+  describe('the session as a save format', () => {
+    it('survives a JSON round-trip with its Sets intact', async () => {
+      const game = startedGame()
+      await toQuestion(game)
+      game.revealHint() // puts an entry in turn.jokers_used_this_turn
+      game.submitAnswer(true)
+
+      const wire = JSON.parse(JSON.stringify(serializeSession(game.session)))
+      const restored = deserializeSession(wire)
+
+      expect(restored.used_question_ids).toBeInstanceOf(Set)
+      expect(restored.turn!.jokers_used_this_turn).toBeInstanceOf(Set)
+      expect(restored.turn!.jokers_used_this_turn.has('reveal_hint')).toBe(true)
+      expect([...restored.used_question_ids]).toEqual([...game.session.used_question_ids])
+      expect(restored.state).toBe(game.state)
+      expect(restored.players).toEqual(game.players)
+      expect(restored.narration).toEqual(game.session.narration)
+    })
+
+    it('carries the battle, so one in flight is not lost on a reload', async () => {
+      const game = startedGame()
+      game.players[0]!.jokers.duel = 1
+      game.proceedFromTurnGate()
+      await flush()
+      game.startDuel(1)
+      await game.proceedFromBattleIntro()
+      game.proceedFromBattleGate()
+      game.submitBattleAnswer(90)
+
+      const restored = deserializeSession(
+        JSON.parse(JSON.stringify(serializeSession(game.session))),
+      )
+      expect(restored.battle).not.toBeNull()
+      expect(restored.battle!.answers).toHaveLength(1)
+      expect(restored.battle!.challenger_index).toBe(0)
+    })
+
+    it('snapshots the live reactive session without choking on the proxy', async () => {
+      const game = startedGame()
+      await toQuestion(game)
+      game.revealHint()
+
+      // `game.session` is a Vue reactive Proxy. structuredClone throws
+      // DataCloneError on those, which is why snapshotSession round-trips
+      // through JSON instead — this is the regression guard for that.
+      const snapshot = snapshotSession(game.session)
+
+      expect(() => JSON.stringify(snapshot)).not.toThrow()
+      expect(Array.isArray(snapshot.data.used_question_ids)).toBe(true)
+      expect(Array.isArray(snapshot.data.turn!.jokers_used_this_turn)).toBe(true)
+      expect(snapshot.data.turn!.jokers_used_this_turn).toContain('reveal_hint')
+      // And it round-trips back into a usable session.
+      expect(deserializeSession(snapshot).state).toBe(game.state)
+    })
+
+    it('records the seed and the generator position once a game starts', () => {
+      const game = startedGame()
+      expect(game.session.rng_seed).toBeGreaterThan(0)
+      expect(game.session.rng_state).not.toBeNull()
+      expect(game.session.created_at).not.toBe('')
+    })
+
+    it('resumes mid-sequence rather than re-drawing what was already spent', async () => {
+      const game = startedGame()
+      await toQuestion(game)
+      game.submitAnswer(true)
+      game.proceedToPlacement()
+      const expected = [...game.turn!.candidate_fields]
+
+      // Reload: a fresh store adopts the serialized session.
+      const wire = JSON.parse(JSON.stringify(serializeSession(game.session)))
+      setActivePinia(createPinia())
+      const reloaded = useGameStore()
+      const corpus = useCorpusStore()
+      corpus.questions = CORPUS
+      corpus.loaded = true
+      reloaded.loadSessionState(deserializeSession(wire))
+
+      expect(reloaded.state).toBe('peg_placement')
+      expect(reloaded.turn!.candidate_fields).toEqual(expected)
+      // Placing from the restored session continues the same board.
+      const [row, col] = reloaded.turn!.candidate_fields[0]!
+      reloaded.placePeg(row, col)
+      expect(reloaded.players[0]!.board.peg_count).toBe(1)
+    })
+
+    it('offers a resumable game and drops it when declined', () => {
+      const game = useGameStore()
+      const saved = { ...createSession(), status: 'in_progress' as const, round: 4 }
+      game.resumableSession = saved
+      expect(game.resumableSession!.round).toBe(4)
+      game.discardResumableGame()
+      expect(game.resumableSession).toBeNull()
+    })
+  })
+
   describe('determinism', () => {
+    it('replays identically from the same seed', async () => {
+      const play = async () => {
+        setActivePinia(createPinia())
+        const game = useGameStore()
+        const corpus = useCorpusStore()
+        corpus.questions = CORPUS
+        corpus.loaded = true
+        game.addPlayer('Alice', 'red', EXPERTISE)
+        game.addPlayer('Bob', 'blue', EXPERTISE)
+        game.startGame(20260903)
+        game.proceedFromTurnGate()
+        await flush()
+        return {
+          slots: game.turn!.offered_slots.map((s) => s.question_id),
+          boosts: [...game.turn!.boosted_slot_indices],
+          turnLine: game.turnLine,
+        }
+      }
+      expect(await play()).toEqual(await play())
+    })
+
+    it('gives different games for different seeds', async () => {
+      const play = async (seed: number) => {
+        setActivePinia(createPinia())
+        const game = useGameStore()
+        const corpus = useCorpusStore()
+        corpus.questions = CORPUS
+        corpus.loaded = true
+        game.addPlayer('Alice', 'red', EXPERTISE)
+        game.addPlayer('Bob', 'blue', EXPERTISE)
+        game.startGame(seed)
+        game.proceedFromTurnGate()
+        await flush()
+        return game.turn!.offered_slots.map((s) => s.question_id).join()
+      }
+      expect(await play(1)).not.toBe(await play(999))
+    })
+
     it('re-scrambles the options when a question is passed on', async () => {
       const game = startedGame()
       await toQuestion(game)

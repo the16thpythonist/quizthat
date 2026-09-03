@@ -1,27 +1,24 @@
 import { defineStore } from 'pinia'
-import { ref, computed, shallowRef } from 'vue'
+import { ref, computed, shallowRef, watch } from 'vue'
 import type {
-  GameState,
   GameSettings,
+  GameSession,
   Player,
   PlayerColor,
   Board,
   JokerInventory,
   PlayerStats,
   Expertise,
-  TurnState,
   OfferedSlot,
   QuestionData,
   QuestionMeta,
   MultipleChoiceAnswerData,
-  BattleState,
   BattleAnswer,
   EstimationAnswerData,
   BattleMapAnswerData,
   JokerType,
   BasicJokerType,
   SpecialJokerType,
-  SessionStatus,
 } from '../types/session'
 import { PLAYER_COLORS, BOARD_SIZE } from '../types/session'
 import { rankBattle, pickTransferField, haversineKm, checkWin, generateSlots, assignBoostSlots, assignJokerSlots, isBoostEligible, placementRuleForSlot, generateCandidates, passPlacementRule, gamblerPlacementRule, filterQuestions } from '../engine/algorithms'
@@ -35,6 +32,7 @@ import {
   pickVictoryRemark,
 } from '../engine/algorithms'
 import { useCorpusStore } from './corpus'
+import { scheduleAutoSave, loadSession, deleteSession } from './persistence'
 
 function createBoard(size: number): Board {
   return {
@@ -93,74 +91,129 @@ function createStats(): PlayerStats {
   }
 }
 
-export const useGameStore = defineStore('game', () => {
-  // Core session state
-  const state = ref<GameState>('setup')
-  const sessionId = ref<string>('')
-  const status = ref<SessionStatus>('setup')
-  const players = ref<Player[]>([])
-  const currentPlayerIndex = ref(0)
-  const round = ref(1)
-  const turn = ref<TurnState | null>(null)
-  const winnerPlayerIndex = ref<number | null>(null)
-  const winningLines = ref<[number, number][][] | null>(null)
-  const usedQuestionIds = ref<Set<string>>(new Set())
-  const settings = ref<GameSettings>({
-    placement_candidates: 2,
-    starting_pegs: 0,
-    lines_to_win: 1,
-    language: 'de',
-  })
+/**
+ * A session in its pre-game state: no players, no seed, sitting on 'setup'.
+ *
+ * Every field of GameSession is written here so a fresh session and a resumed
+ * one have exactly the same shape — a missing key would otherwise only surface
+ * once something tried to serialize it.
+ */
+export function createSession(): GameSession {
+  return {
+    id: '',
+    status: 'setup',
+    settings: {
+      placement_candidates: 2,
+      starting_pegs: 0,
+      lines_to_win: 1,
+      language: 'de',
+    },
+    players: [],
+    current_player_index: 0,
+    round: 1,
+    state: 'setup',
+    turn: null,
+    battle: null,
+    winner_player_index: null,
+    used_question_ids: new Set(),
+    history: [],
+    narration: {
+      verdict_remark: null,
+      victory_remark: null,
+      turn_line: null,
+      battle_intro: null,
+      battle_reveal: null,
+    },
+    created_at: '',
+    updated_at: '',
+    rng_seed: 0,
+    rng_state: null,
+    winning_lines: null,
+  }
+}
 
-  // Current question data (loaded on demand)
+export const useGameStore = defineStore('game', () => {
+  /**
+   * The single source of truth for a game (SPEC §9).
+   *
+   * Everything that must survive a reload — or, in multi-device play, reach
+   * another device — lives in here, so a snapshot is just this object. The
+   * exposed `players`, `round`, `turn` … below are read-only views onto it,
+   * kept as separate names so screens read the store the way they always have.
+   */
+  const session = ref<GameSession>(createSession())
+
+  /**
+   * The question currently on screen.
+   *
+   * Outside the session on purpose: it is corpus payload, not game state, and
+   * is re-fetchable at any time from `turn.selected_question_id`.
+   */
   const currentQuestion = ref<QuestionData | null>(null)
 
-  /** The joker just handed out, for the award screen to show. */
-  const jokerAwarded = ref<JokerType | null>(null)
-
-  /** The battle that closes the current round, or null between them. */
-  const battle = ref<BattleState | null>(null)
-
-  /** Outcome of the last Gambler, for its resolve screen. */
-  const gamblerWon = ref(false)
-
-  // Seeded RNG for deterministic gameplay
-  // shallowRef, not ref: Vue's deep unwrapping rewrites a class instance into a
-  // structural type that drops its private members, so `ref<GameRng>` no longer
-  // satisfies `GameRng` at any call site. A PRNG has no business being deeply
-  // reactive either — nothing renders from its internals.
+  /**
+   * Seeded RNG for deterministic gameplay. Its seed and position live in the
+   * session; this is the live generator built from them.
+   *
+   * shallowRef, not ref: Vue's deep unwrapping rewrites a class instance into a
+   * structural type that drops its private members, so `ref<GameRng>` no longer
+   * satisfies `GameRng` at any call site. A PRNG has no business being deeply
+   * reactive either — nothing renders from its internals.
+   */
   const rng = shallowRef<GameRng | null>(null)
+
   /**
    * Voice-line key for the narrator's roster callout, chosen in
    * goToGameSettings() — i.e. when the player confirms the roster with "Weiter".
    * App.vue plays it; the store stays free of audio concerns.
+   *
+   * Outside the session because it is picked before a session exists.
    */
   const playerIntroLine = ref<string | null>(null)
-  /**
-   * Voice-line key for the narrator's remark on the answer screen. Chosen when
-   * the verdict is set, off the session RNG, so a replay says the same thing.
-   */
-  const verdictRemark = ref<string | null>(null)
-  /** Colour-independent line that follows the winner callout. */
-  const victoryRemark = ref<string | null>(null)
-  /**
-   * Which phrasing of the "your turn" callout the gate should use. Re-picked on
-   * every turn, off the session RNG, so the variant sequence replays too.
-   */
-  const turnLine = ref<string | null>(null)
-  /** Which announcement / reveal phrasing this battle uses. */
-  const battleIntroLine = ref<string | null>(null)
-  const battleRevealLine = ref<string | null>(null)
 
-  // UI sub-state: which phase of setup we're in
+  /** UI sub-state: which phase of setup we're in. Navigation, not game state. */
   const setupPhase = ref<'start' | 'player_setup' | 'game_settings' | 'app_settings'>('start')
+
+  // ─── Read-only views onto the session ─────────────────────────
+  // Screens read these; every write goes through an action below.
+
+  const state = computed(() => session.value.state)
+  const sessionId = computed(() => session.value.id)
+  const status = computed(() => session.value.status)
+  const players = computed(() => session.value.players)
+  const currentPlayerIndex = computed(() => session.value.current_player_index)
+  const round = computed(() => session.value.round)
+  const turn = computed(() => session.value.turn)
+  const battle = computed(() => session.value.battle)
+  const winnerPlayerIndex = computed(() => session.value.winner_player_index)
+  const winningLines = computed(() => session.value.winning_lines)
+  const usedQuestionIds = computed(() => session.value.used_question_ids)
+  const settings = computed(() => session.value.settings)
+  const jokerAwarded = computed(() => session.value.turn?.joker_awarded ?? null)
+  const gamblerWon = computed(() => session.value.turn?.gambler_won ?? false)
+  const verdictRemark = computed(() => session.value.narration.verdict_remark)
+  const victoryRemark = computed(() => session.value.narration.victory_remark)
+  const turnLine = computed(() => session.value.narration.turn_line)
+  const battleIntroLine = computed(() => session.value.narration.battle_intro)
+  const battleRevealLine = computed(() => session.value.narration.battle_reveal)
 
   // Computed
   const currentPlayer = computed<Player | null>(() =>
-    players.value[currentPlayerIndex.value] ?? null,
+    session.value.players[session.value.current_player_index] ?? null,
   )
 
-  const isCorrect = computed(() => state.value === 'answer_correct')
+  const isCorrect = computed(() => session.value.state === 'answer_correct')
+
+  /**
+   * Records the generator's position and the edit time.
+   *
+   * Called after anything that draws from the RNG, so a save or a snapshot can
+   * resume the sequence instead of rewinding it.
+   */
+  function _touch() {
+    if (rng.value) session.value.rng_state = rng.value.saveState()
+    session.value.updated_at = new Date().toISOString()
+  }
 
   // --- Setup actions ---
   function goToPlayerSetup() {
@@ -178,7 +231,10 @@ export const useGameStore = defineStore('game', () => {
     // on each pass so going back and forth varies the line. The session RNG does
     // not exist yet, hence a standalone GameRng — still the seeded PRNG, never
     // Math.random().
-    playerIntroLine.value = pickPlayerIntroLine(new GameRng(Date.now()), players.value.length)
+    playerIntroLine.value = pickPlayerIntroLine(
+      new GameRng(Date.now()),
+      session.value.players.length,
+    )
   }
 
   /** App-wide settings (audio, language), reached from the title screen. */
@@ -188,7 +244,7 @@ export const useGameStore = defineStore('game', () => {
 
   function addPlayer(name: string, color: PlayerColor, expertise: Expertise) {
     const player: Player = {
-      index: players.value.length,
+      index: session.value.players.length,
       name: name || color.charAt(0).toUpperCase() + color.slice(1),
       color,
       expertise,
@@ -197,56 +253,70 @@ export const useGameStore = defineStore('game', () => {
       stats: createStats(),
       is_cursed: false,
     }
-    players.value.push(player)
+    session.value.players.push(player)
   }
 
   /** Lets an expertise be corrected without removing and re-adding the player. */
   function updatePlayerExpertise(index: number, expertise: Expertise) {
-    const player = players.value[index]
+    const player = session.value.players[index]
     if (!player) return
     player.expertise = { ...expertise }
   }
 
   function removePlayer(index: number) {
-    players.value.splice(index, 1)
-    players.value.forEach((p, i) => (p.index = i))
+    session.value.players.splice(index, 1)
+    session.value.players.forEach((p, i) => (p.index = i))
   }
 
   function updateSettings(newSettings: Partial<GameSettings>) {
-    Object.assign(settings.value, newSettings)
+    Object.assign(session.value.settings, newSettings)
   }
 
   function getAvailableColors(): PlayerColor[] {
-    const usedColors = new Set(players.value.map((p) => p.color))
+    const usedColors = new Set(session.value.players.map((p) => p.color))
     return PLAYER_COLORS.filter((c) => !usedColors.has(c))
   }
 
   // --- Game transitions ---
-  function startGame() {
-    if (players.value.length < 2) return
-    rng.value = new GameRng(Date.now())
-    sessionId.value = newSessionId()
-    status.value = 'in_progress'
-    currentPlayerIndex.value = 0
-    round.value = 1
-    state.value = 'turn_start'
+
+  /**
+   * Begin play.
+   *
+   * `seed` is injectable so a game can be replayed exactly; left out, the clock
+   * provides one. Either way it is stored, which is what makes replay possible
+   * at all — before this it was drawn and discarded.
+   */
+  function startGame(seed: number = Date.now()) {
+    if (session.value.players.length < 2) return
+    const now = new Date().toISOString()
+    rng.value = new GameRng(seed)
+    session.value.rng_seed = seed
+    session.value.id = newSessionId()
+    session.value.status = 'in_progress'
+    session.value.current_player_index = 0
+    session.value.round = 1
+    session.value.state = 'turn_start'
+    session.value.created_at = now
+    session.value.updated_at = now
     // The engine will handle TURN_START -> SELECTION transition
     _initTurn()
   }
 
   function _initTurn() {
-    const active = players.value[currentPlayerIndex.value]
-    if (rng.value && active) turnLine.value = pickTurnLine(rng.value, active.color)
+    const active = session.value.players[session.value.current_player_index]
+    if (rng.value && active) {
+      session.value.narration.turn_line = pickTurnLine(rng.value, active.color)
+    }
 
     // A curse laid on this player last round bites now, and is spent doing so.
     const cursed = active?.is_cursed ?? false
     if (active) active.is_cursed = false
 
     const prevPlayer = _previousRoundPlayerIndex()
-    turn.value = {
-      active_player_index: currentPlayerIndex.value,
+    session.value.turn = {
+      active_player_index: session.value.current_player_index,
       previous_round_player_index: prevPlayer,
-      phase: state.value,
+      phase: session.value.state,
       offered_slots: [],
       selected_slot_index: null,
       selected_question_id: null,
@@ -257,40 +327,51 @@ export const useGameStore = defineStore('game', () => {
       jokers_used_this_turn: new Set(),
       pegs_remaining: 0,
       placement_rule: null,
-      placing_player_index: currentPlayerIndex.value,
+      placing_player_index: session.value.current_player_index,
       gambler_staked_field: null,
       pass: null,
       special_joker_earned: null,
       basic_joker_earned: null,
       candidate_fields: [],
       answer_order: [],
+      joker_awarded: null,
+      gambler_won: false,
     }
+    _touch()
   }
 
   function _previousRoundPlayerIndex(): number | null {
-    if (round.value === 1 && currentPlayerIndex.value === 0) return null
-    return (currentPlayerIndex.value - 1 + players.value.length) % players.value.length
+    if (session.value.round === 1 && session.value.current_player_index === 0) return null
+    return (
+      (session.value.current_player_index - 1 + session.value.players.length) %
+      session.value.players.length
+    )
   }
 
   // Transition: Player taps "continue" on TurnGateScreen
   function proceedFromTurnGate() {
-    state.value = 'selection'
-    if (turn.value) {
-      turn.value.phase = 'selection'
+    session.value.state = 'selection'
+    if (session.value.turn) {
+      session.value.turn.phase = 'selection'
     }
     generateAndSetSlots()
   }
 
   async function generateAndSetSlots() {
-    if (!rng.value || !turn.value) return
+    const t = session.value.turn
+    if (!rng.value || !t) return
     const corpus = useCorpusStore()
     if (!corpus.loaded) return
 
-    const player = players.value[currentPlayerIndex.value]
+    const player = session.value.players[session.value.current_player_index]
     if (!player) return
 
     // Everyone has a small chance of a 2x; the trailing player's is raised.
-    const boostEligible = isBoostEligible(round.value, players.value, currentPlayerIndex.value)
+    const boostEligible = isBoostEligible(
+      session.value.round,
+      session.value.players,
+      session.value.current_player_index,
+    )
     const boostSlots = assignBoostSlots(rng.value, boostEligible)
     const jokerSlots = assignJokerSlots(rng.value)
 
@@ -298,23 +379,24 @@ export const useGameStore = defineStore('game', () => {
       rng.value,
       corpus.questions,
       player,
-      settings.value,
-      usedQuestionIds.value,
-      turn.value.curse_active,
+      session.value.settings,
+      session.value.used_question_ids,
+      t.curse_active,
       boostSlots,
       jokerSlots,
     )
 
     // Load teaser titles from question JSON files
-    const lang = settings.value.language
+    const lang = session.value.settings.language
     await Promise.all(
       slots.map(async (slot) => {
         slot.teaser_title = await corpus.fetchTeaserTitle(slot.question_id, lang)
       }),
     )
 
-    turn.value.boosted_slot_indices = boostSlots
+    t.boosted_slot_indices = boostSlots
     setOfferedSlots(slots)
+    _touch()
   }
 
   /**
@@ -325,18 +407,19 @@ export const useGameStore = defineStore('game', () => {
    * on the cheapest card.
    */
   async function reshuffleSelection() {
-    if (!turn.value || !rng.value) return
-    const player = players.value[currentPlayerIndex.value]
+    const t = session.value.turn
+    if (!t || !rng.value) return
+    const player = session.value.players[session.value.current_player_index]
     if (!player) return
     const corpus = useCorpusStore()
     if (!corpus.loaded) return
 
-    const previous = turn.value.offered_slots
+    const previous = t.offered_slots
     const boostSlots = previous.flatMap((slot, i) => (slot.has_2x_boost ? [i] : []))
     const jokerSlots = previous.flatMap((slot, i) => (slot.awards_joker ? [i] : []))
 
     // the questions just discarded should not come straight back
-    const exclude = new Set(usedQuestionIds.value)
+    const exclude = new Set(session.value.used_question_ids)
     for (const slot of previous) exclude.add(slot.question_id)
 
     useJoker('reshuffle_selection')
@@ -345,20 +428,21 @@ export const useGameStore = defineStore('game', () => {
       rng.value,
       corpus.questions,
       player,
-      settings.value,
+      session.value.settings,
       exclude,
-      turn.value.curse_active,
+      t.curse_active,
       boostSlots,
       jokerSlots,
     )
 
-    const lang = settings.value.language
+    const lang = session.value.settings.language
     await Promise.all(
       slots.map(async (slot) => {
         slot.teaser_title = await corpus.fetchTeaserTitle(slot.question_id, lang)
       }),
     )
     setOfferedSlots(slots)
+    _touch()
   }
 
   /**
@@ -369,48 +453,51 @@ export const useGameStore = defineStore('game', () => {
    * usually finds nothing is worse than one that sometimes changes the stakes.
    */
   async function reshuffleQuestion() {
-    if (!turn.value || !rng.value) return
-    const idx = turn.value.selected_slot_index
-    const slot = idx !== null && idx !== undefined ? turn.value.offered_slots[idx] : null
+    const t = session.value.turn
+    if (!t || !rng.value) return
+    const idx = t.selected_slot_index
+    const slot = idx !== null && idx !== undefined ? t.offered_slots[idx] : null
     if (!slot) return
     const corpus = useCorpusStore()
 
-    const exclude = new Set(usedQuestionIds.value)
+    const exclude = new Set(session.value.used_question_ids)
     exclude.add(slot.question_id)
     const candidates = filterQuestions(corpus.questions, {
-      language: settings.value.language,
+      language: session.value.settings.language,
       majorCategory: slot.major_category,
       excludeIds: exclude,
     })
     if (candidates.length === 0) return
 
     const replacement = rng.value.pick(candidates)
-    const data = await corpus.fetchQuestionData(replacement.id, settings.value.language)
+    const data = await corpus.fetchQuestionData(replacement.id, session.value.settings.language)
     if (!data) return
 
     useJoker('reshuffle_question')
     slot.question_id = replacement.id
     slot.difficulty = replacement.difficulty
-    turn.value.selected_question_id = replacement.id
+    t.selected_question_id = replacement.id
     currentQuestion.value = data
-    turn.value.hint_revealed = false
+    t.hint_revealed = false
     _scrambleAnswers()
+    _touch()
   }
 
   // Transition: Set offered slots (called by engine)
   function setOfferedSlots(slots: OfferedSlot[]) {
-    if (turn.value) {
-      turn.value.offered_slots = slots
+    if (session.value.turn) {
+      session.value.turn.offered_slots = slots
     }
   }
 
   // Transition: Player selects a slot
   async function selectSlot(slotIndex: number) {
-    if (!turn.value) return
-    turn.value.selected_slot_index = slotIndex
-    const slot = turn.value.offered_slots[slotIndex]
+    const t = session.value.turn
+    if (!t) return
+    t.selected_slot_index = slotIndex
+    const slot = t.offered_slots[slotIndex]
     if (!slot) return
-    turn.value.selected_question_id = slot.question_id
+    t.selected_question_id = slot.question_id
 
     // The joker is the bait: it lands before the question is even shown, so
     // picking a risky card is guaranteed to pay something even if the answer
@@ -419,7 +506,7 @@ export const useGameStore = defineStore('game', () => {
 
     // Fetch question data from corpus
     const corpus = useCorpusStore()
-    const lang = settings.value.language
+    const lang = session.value.settings.language
     const questionData = await corpus.fetchQuestionData(slot.question_id, lang)
     if (!questionData) {
       console.error(`Failed to load question ${slot.question_id} (lang=${lang})`)
@@ -433,14 +520,16 @@ export const useGameStore = defineStore('game', () => {
     // the question loading. The question is already fetched by now, so
     // "Weiter" goes straight to it.
     if (awarded) {
-      jokerAwarded.value = awarded
-      state.value = 'joker_award'
-      turn.value.phase = 'joker_award'
+      t.joker_awarded = awarded
+      session.value.state = 'joker_award'
+      t.phase = 'joker_award'
+      _touch()
       return
     }
 
-    state.value = 'question_display'
-    turn.value.phase = 'question_display'
+    session.value.state = 'question_display'
+    t.phase = 'question_display'
+    _touch()
   }
 
   /**
@@ -455,37 +544,38 @@ export const useGameStore = defineStore('game', () => {
    * Uses the session RNG, so a seed still replays identically.
    */
   function _scrambleAnswers() {
-    if (!turn.value || !rng.value) return
+    const t = session.value.turn
+    if (!t || !rng.value) return
     const q = currentQuestion.value
     if (!q || q.question_type !== 'multiple_choice') {
-      turn.value.answer_order = []
+      t.answer_order = []
       return
     }
     const count = (q.answer_data as MultipleChoiceAnswerData).options.length
-    turn.value.answer_order = rng.value.shuffle(
-      Array.from({ length: count }, (_, i) => i),
-    )
+    t.answer_order = rng.value.shuffle(Array.from({ length: count }, (_, i) => i))
   }
 
   /** Leaves the award screen for the question that was already loaded. */
   function proceedFromJokerAward() {
-    if (!turn.value) return
-    state.value = 'question_display'
-    turn.value.phase = 'question_display'
+    const t = session.value.turn
+    if (!t) return
+    session.value.state = 'question_display'
+    t.phase = 'question_display'
   }
 
   /** Any of the eight joker types, basic or special. Returns what was given. */
   function _awardRandomJoker(): JokerType | null {
-    if (!rng.value || !turn.value) return null
-    const player = players.value[currentPlayerIndex.value]
+    const t = session.value.turn
+    if (!rng.value || !t) return null
+    const player = session.value.players[session.value.current_player_index]
     if (!player) return null
     const type = rng.value.pick(ALL_JOKER_TYPES)
     player.jokers[type]++
     // recorded in whichever field matches its kind, for the turn summary
     if (SPECIAL_JOKER_TYPES.includes(type as SpecialJokerType)) {
-      turn.value.special_joker_earned = type as SpecialJokerType
+      t.special_joker_earned = type as SpecialJokerType
     } else {
-      turn.value.basic_joker_earned = type as BasicJokerType
+      t.basic_joker_earned = type as BasicJokerType
     }
     return type
   }
@@ -497,61 +587,68 @@ export const useGameStore = defineStore('game', () => {
 
   // Transition: Player submits answer
   function submitAnswer(correct: boolean) {
-    if (!turn.value) return
-    const player = players.value[currentPlayerIndex.value]
+    const t = session.value.turn
+    if (!t) return
+    const player = session.value.players[session.value.current_player_index]
     if (!player) return
     player.stats.questions_attempted++
     // Narrator's remark for this verdict, picked here so it is seeded off the
     // session RNG and fixed before the screen renders.
-    if (rng.value) verdictRemark.value = pickVerdictRemark(rng.value, correct)
+    if (rng.value) {
+      session.value.narration.verdict_remark = pickVerdictRemark(rng.value, correct)
+    }
     if (correct) {
       player.stats.questions_correct++
-      state.value = 'answer_correct'
-      turn.value.phase = 'answer_correct'
+      session.value.state = 'answer_correct'
+      t.phase = 'answer_correct'
     } else {
-      state.value = 'answer_wrong'
-      turn.value.phase = 'answer_wrong'
+      session.value.state = 'answer_wrong'
+      t.phase = 'answer_wrong'
     }
+    _touch()
   }
 
   // Transition: From answer_correct -> peg_placement
   function proceedToPlacement() {
-    if (!turn.value || !rng.value) return
+    const t = session.value.turn
+    if (!t || !rng.value) return
     // Calculate pegs
     let pegs = 1
-    const slotIdx = turn.value.selected_slot_index
-    const slot = slotIdx !== null ? turn.value.offered_slots[slotIdx] : null
+    const slotIdx = t.selected_slot_index
+    const slot = slotIdx !== null ? t.offered_slots[slotIdx] : null
     if (slot?.has_2x_boost) pegs++
-    if (turn.value.double_down_active) pegs++
-    turn.value.pegs_remaining = pegs
-    turn.value.placing_player_index = currentPlayerIndex.value
+    if (t.double_down_active) pegs++
+    t.pegs_remaining = pegs
+    t.placing_player_index = session.value.current_player_index
 
     // Generate placement rule and candidate fields.
     //
     // A rule is always produced, even without a slot: entering peg placement
     // with none leaves the board with nothing lit and no way forward, which
     // strands the player on a dead screen rather than failing loudly.
-    const player = players.value[currentPlayerIndex.value]
+    const player = session.value.players[session.value.current_player_index]
     if (player) {
       const rule = slot
-        ? placementRuleForSlot(slot, settings.value)
-        : passPlacementRule(settings.value)
-      turn.value.placement_rule = rule
-      turn.value.candidate_fields = generateCandidates(rng.value, player.board, rule)
+        ? placementRuleForSlot(slot, session.value.settings)
+        : passPlacementRule(session.value.settings)
+      t.placement_rule = rule
+      t.candidate_fields = generateCandidates(rng.value, player.board, rule)
     }
 
-    state.value = 'peg_placement'
-    turn.value.phase = 'peg_placement'
+    session.value.state = 'peg_placement'
+    t.phase = 'peg_placement'
+    _touch()
   }
 
   // Transition: From answer_wrong
   function proceedFromWrongAnswer() {
-    if (!turn.value) return
-    const prevPlayer = turn.value.previous_round_player_index
-    if (round.value >= 2 && prevPlayer !== null) {
-      state.value = 'pass_gate'
-      turn.value.phase = 'pass_gate'
-      turn.value.pass = {
+    const t = session.value.turn
+    if (!t) return
+    const prevPlayer = t.previous_round_player_index
+    if (session.value.round >= 2 && prevPlayer !== null) {
+      session.value.state = 'pass_gate'
+      t.phase = 'pass_gate'
+      t.pass = {
         pass_player_index: prevPlayer,
         original_answer_index: -1,
         scrambled_order: [],
@@ -565,35 +662,31 @@ export const useGameStore = defineStore('game', () => {
 
   // Transition: Place a peg
   function placePeg(row: number, col: number) {
-    if (!turn.value) return
-    const placingPlayer = players.value[turn.value.placing_player_index]
+    const t = session.value.turn
+    if (!t) return
+    const placingPlayer = session.value.players[t.placing_player_index]
     if (!placingPlayer) return
     const boardRow = placingPlayer.board.fields[row]
     if (!boardRow) return
     boardRow[col] = true
     placingPlayer.board.peg_count++
-    turn.value.pegs_remaining--
+    t.pegs_remaining--
     // Check for win
-    const lines = checkWin(placingPlayer.board, settings.value.lines_to_win)
+    const lines = checkWin(placingPlayer.board, session.value.settings.lines_to_win)
     if (lines) {
-      winnerPlayerIndex.value = turn.value.placing_player_index
-      winningLines.value = lines
-      // Follow-up line after the winner is named, seeded off the session RNG.
-      if (rng.value) victoryRemark.value = pickVictoryRemark(rng.value)
-      state.value = 'victory'
-      status.value = 'finished'
-      if (turn.value) turn.value.phase = 'victory'
+      _declareWin(t.placing_player_index, lines)
       return
     }
-    if (turn.value.pegs_remaining > 0) {
+    if (t.pegs_remaining > 0) {
       // Regenerate candidates for next peg placement
-      if (rng.value && turn.value.placement_rule) {
-        turn.value.candidate_fields = generateCandidates(rng.value, placingPlayer.board, turn.value.placement_rule)
+      if (rng.value && t.placement_rule) {
+        t.candidate_fields = generateCandidates(rng.value, placingPlayer.board, t.placement_rule)
       }
-      state.value = 'peg_placement'
+      session.value.state = 'peg_placement'
     }
     // When pegs_remaining === 0, stay in peg_placement state.
     // The screen will call confirmEndTurn() when the player taps to continue.
+    _touch()
   }
 
   /**
@@ -604,8 +697,9 @@ export const useGameStore = defineStore('game', () => {
    * the end — not after each peg, which would declare a win mid-animation.
    */
   function placePegs(fields: [number, number][]) {
-    if (!turn.value) return
-    const player = players.value[turn.value.placing_player_index]
+    const t = session.value.turn
+    if (!t) return
+    const player = session.value.players[t.placing_player_index]
     if (!player) return
 
     for (const [row, col] of fields) {
@@ -613,26 +707,37 @@ export const useGameStore = defineStore('game', () => {
       if (!boardRow || boardRow[col]) continue
       boardRow[col] = true
       player.board.peg_count++
-      turn.value.pegs_remaining = Math.max(0, turn.value.pegs_remaining - 1)
+      t.pegs_remaining = Math.max(0, t.pegs_remaining - 1)
     }
 
-    const lines = checkWin(player.board, settings.value.lines_to_win)
+    const lines = checkWin(player.board, session.value.settings.lines_to_win)
     if (lines) {
-      winnerPlayerIndex.value = turn.value.placing_player_index
-      winningLines.value = lines
-      state.value = 'victory'
-      status.value = 'finished'
-      turn.value.phase = 'victory'
+      _declareWin(t.placing_player_index, lines)
       return
     }
 
-    if (turn.value.pegs_remaining > 0 && rng.value && turn.value.placement_rule) {
-      turn.value.candidate_fields = generateCandidates(
-        rng.value,
-        player.board,
-        turn.value.placement_rule,
-      )
+    if (t.pegs_remaining > 0 && rng.value && t.placement_rule) {
+      t.candidate_fields = generateCandidates(rng.value, player.board, t.placement_rule)
     }
+    _touch()
+  }
+
+  /**
+   * End the game in favour of one player.
+   *
+   * Shared by the single- and multi-peg placement paths, which previously each
+   * carried their own copy and had already drifted — only one of them picked
+   * the narrator's follow-up line.
+   */
+  function _declareWin(playerIndex: number, lines: [number, number][][]) {
+    session.value.winner_player_index = playerIndex
+    session.value.winning_lines = lines
+    // Follow-up line after the winner is named, seeded off the session RNG.
+    if (rng.value) session.value.narration.victory_remark = pickVictoryRemark(rng.value)
+    session.value.state = 'victory'
+    session.value.status = 'finished'
+    if (session.value.turn) session.value.turn.phase = 'victory'
+    _touch()
   }
 
   function confirmEndTurn() {
@@ -640,16 +745,17 @@ export const useGameStore = defineStore('game', () => {
   }
 
   function _endTurn() {
-    state.value = 'turn_end'
+    session.value.state = 'turn_end'
     // Advance to next player
-    const wasLast = currentPlayerIndex.value === players.value.length - 1
-    currentPlayerIndex.value = (currentPlayerIndex.value + 1) % players.value.length
-    if (currentPlayerIndex.value === 0) round.value++
+    const wasLast = session.value.current_player_index === session.value.players.length - 1
+    session.value.current_player_index =
+      (session.value.current_player_index + 1) % session.value.players.length
+    if (session.value.current_player_index === 0) session.value.round++
 
     // Everyone has played: the round closes with a battle before the next one.
     if (wasLast && _startBattle()) return
     // Start next turn
-    state.value = 'turn_start'
+    session.value.state = 'turn_start'
     _initTurn()
   }
 
@@ -666,60 +772,63 @@ export const useGameStore = defineStore('game', () => {
     if (!rng.value) return null
     const corpus = useCorpusStore()
     const candidates = filterQuestions(corpus.questions, {
-      language: settings.value.language,
-      excludeIds: usedQuestionIds.value,
+      language: session.value.settings.language,
+      excludeIds: session.value.used_question_ids,
       battleOnly: true,
     })
     if (candidates.length === 0) return null
     const question = rng.value.pick(candidates)
-    usedQuestionIds.value.add(question.id)
+    session.value.used_question_ids.add(question.id)
     return question
   }
 
   function _startBattle(): boolean {
-    if (!rng.value || players.value.length < 2) return false
+    if (!rng.value || session.value.players.length < 2) return false
     const question = _pickBattleQuestion()
     if (!question) return false
 
-    battle.value = {
+    session.value.battle = {
       question_id: question.id,
       challenger_index: null,
       question_type: question.question_type as 'estimation' | 'battle_map',
-      order: players.value.map((p) => p.index),
+      order: session.value.players.map((p) => p.index),
       answers: [],
       transfer: null,
       winner_index: null,
       loser_index: null,
     }
     // Narrator phrasings for this battle, seeded so a replay says the same.
-    battleIntroLine.value = pickBattleIntro(rng.value)
-    battleRevealLine.value = pickBattleReveal(rng.value)
-    state.value = 'battle_intro'
+    session.value.narration.battle_intro = pickBattleIntro(rng.value)
+    session.value.narration.battle_reveal = pickBattleReveal(rng.value)
+    session.value.state = 'battle_intro'
+    _touch()
     return true
   }
 
   /** Whose turn it is to answer, or null once everyone has. */
   const battlePlayerIndex = computed(() => {
-    const b = battle.value
+    const b = session.value.battle
     if (!b) return null
     return b.order[b.answers.length] ?? null
   })
 
   const battlePlayer = computed(() =>
-    battlePlayerIndex.value === null ? null : players.value[battlePlayerIndex.value] ?? null,
+    battlePlayerIndex.value === null
+      ? null
+      : session.value.players[battlePlayerIndex.value] ?? null,
   )
 
   async function proceedFromBattleIntro() {
-    const b = battle.value
+    const b = session.value.battle
     if (!b) return
     const corpus = useCorpusStore()
-    const data = await corpus.fetchQuestionData(b.question_id, settings.value.language)
+    const data = await corpus.fetchQuestionData(b.question_id, session.value.settings.language)
     if (data) currentQuestion.value = data
-    state.value = 'battle_gate'
+    session.value.state = 'battle_gate'
   }
 
   function proceedFromBattleGate() {
-    state.value = 'battle_answering'
+    session.value.state = 'battle_answering'
   }
 
   /**
@@ -727,7 +836,7 @@ export const useGameStore = defineStore('game', () => {
    * reveal once everybody has had the device.
    */
   function submitBattleAnswer(value: number | [number, number]) {
-    const b = battle.value
+    const b = session.value.battle
     const playerIndex = battlePlayerIndex.value
     const question = currentQuestion.value
     if (!b || playerIndex === null || !question) return
@@ -744,7 +853,7 @@ export const useGameStore = defineStore('game', () => {
     b.answers.push({ player_index: playerIndex, value, distance } as BattleAnswer)
 
     if (b.answers.length < b.order.length) {
-      state.value = 'battle_gate'
+      session.value.state = 'battle_gate'
       return
     }
     _resolveBattle()
@@ -752,18 +861,20 @@ export const useGameStore = defineStore('game', () => {
 
   /** Rank, then move one peg from last place to first — same square. */
   function _resolveBattle() {
-    const b = battle.value
+    const b = session.value.battle
     if (!b || !rng.value) return
 
-    const outcome = rankBattle(b.answers.map((a) => ({
-      player_index: a.player_index,
-      distance: a.distance,
-    })))
+    const outcome = rankBattle(
+      b.answers.map((a) => ({
+        player_index: a.player_index,
+        distance: a.distance,
+      })),
+    )
     b.winner_index = outcome.winnerIndex
     b.loser_index = outcome.loserIndex
 
-    const winner = outcome.winnerIndex !== null ? players.value[outcome.winnerIndex] : null
-    const loser = outcome.loserIndex !== null ? players.value[outcome.loserIndex] : null
+    const winner = outcome.winnerIndex !== null ? session.value.players[outcome.winnerIndex] : null
+    const loser = outcome.loserIndex !== null ? session.value.players[outcome.loserIndex] : null
 
     // A duel only ever moves a peg towards the challenger: losing it costs
     // them nothing but the joker.
@@ -784,7 +895,8 @@ export const useGameStore = defineStore('game', () => {
 
     // Deliberately no win check: a battle never ends the game (IDEA.md). A line
     // completed by a transferred peg is honoured at the winner's next placement.
-    state.value = 'battle_reveal'
+    session.value.state = 'battle_reveal'
+    _touch()
   }
 
   /**
@@ -794,50 +906,55 @@ export const useGameStore = defineStore('game', () => {
    * challenger's own turn, so it hands them back their selection screen.
    */
   function proceedFromBattleReveal() {
-    const wasDuel = battle.value !== null && battle.value.challenger_index !== null
-    battle.value = null
+    const wasDuel =
+      session.value.battle !== null && session.value.battle.challenger_index !== null
+    session.value.battle = null
     currentQuestion.value = null
     if (wasDuel) {
-      state.value = 'selection'
-      if (turn.value) turn.value.phase = 'selection'
+      session.value.state = 'selection'
+      if (session.value.turn) session.value.turn.phase = 'selection'
       return
     }
-    state.value = 'turn_start'
+    session.value.state = 'turn_start'
     _initTurn()
   }
 
   // Transition: Pass gate -> pass answering
   function proceedFromPassGate() {
-    if (!turn.value) return
+    const t = session.value.turn
+    if (!t) return
     // Re-scrambled for the inheriting player: they watched the first attempt,
     // so the options must not be in the same places.
     _scrambleAnswers()
-    state.value = 'pass_answering'
-    turn.value.phase = 'pass_answering'
+    session.value.state = 'pass_answering'
+    t.phase = 'pass_answering'
+    _touch()
   }
 
   // Transition: Pass answer submitted
   function submitPassAnswer(result: 'correct' | 'wrong' | 'declined') {
-    if (!turn.value?.pass) return
-    turn.value.pass.result = result
+    const t = session.value.turn
+    if (!t?.pass) return
+    t.pass.result = result
     if (result === 'correct') {
-      const passPlayer = players.value[turn.value.pass.pass_player_index]
+      const passPlayer = session.value.players[t.pass.pass_player_index]
       if (!passPlayer || !rng.value) return
       passPlayer.stats.passes_correct++
-      turn.value.pegs_remaining = 1
-      turn.value.placing_player_index = turn.value.pass.pass_player_index
+      t.pegs_remaining = 1
+      t.placing_player_index = t.pass.pass_player_index
 
       // Generate placement rule and candidates for pass placement
-      const rule = passPlacementRule(settings.value)
-      turn.value.placement_rule = rule
-      turn.value.candidate_fields = generateCandidates(rng.value, passPlayer.board, rule)
+      const rule = passPlacementRule(session.value.settings)
+      t.placement_rule = rule
+      t.candidate_fields = generateCandidates(rng.value, passPlayer.board, rule)
 
-      state.value = 'peg_placement'
-      turn.value.phase = 'peg_placement'
+      session.value.state = 'peg_placement'
+      t.phase = 'peg_placement'
     } else {
-      state.value = 'pass_resolve'
-      turn.value.phase = 'pass_resolve'
+      session.value.state = 'pass_resolve'
+      t.phase = 'pass_resolve'
     }
+    _touch()
   }
 
   // Transition: resolve pass (wrong/declined) -> end turn
@@ -847,13 +964,14 @@ export const useGameStore = defineStore('game', () => {
 
   // Joker actions
   function useJoker(type: JokerType) {
-    if (!turn.value) return
-    const player = players.value[currentPlayerIndex.value]
+    const t = session.value.turn
+    if (!t) return
+    const player = session.value.players[session.value.current_player_index]
     if (!player) return
     if (player.jokers[type] <= 0) return
-    if (turn.value.jokers_used_this_turn.has(type)) return
+    if (t.jokers_used_this_turn.has(type)) return
     player.jokers[type]--
-    turn.value.jokers_used_this_turn.add(type)
+    t.jokers_used_this_turn.add(type)
     player.stats.jokers_used++
   }
 
@@ -862,16 +980,16 @@ export const useGameStore = defineStore('game', () => {
    * Consumed when that player's turn begins, not here.
    */
   function applyCurse(targetIndex: number) {
-    const target = players.value[targetIndex]
-    if (!target || targetIndex === currentPlayerIndex.value) return
+    const target = session.value.players[targetIndex]
+    if (!target || targetIndex === session.value.current_player_index) return
     useJoker('curse')
     target.is_cursed = true
   }
 
   /** Remove one chosen peg from an opponent's board. */
   function snipePeg(targetIndex: number, row: number, col: number) {
-    const target = players.value[targetIndex]
-    if (!target || targetIndex === currentPlayerIndex.value) return
+    const target = session.value.players[targetIndex]
+    if (!target || targetIndex === session.value.current_player_index) return
     const boardRow = target.board.fields[row]
     if (!boardRow?.[col]) return
     useJoker('snipe')
@@ -887,26 +1005,27 @@ export const useGameStore = defineStore('game', () => {
    * round battle's own screens with an order of exactly two.
    */
   function startDuel(targetIndex: number) {
-    if (!turn.value || !rng.value) return
-    const target = players.value[targetIndex]
-    if (!target || targetIndex === currentPlayerIndex.value) return
+    if (!session.value.turn || !rng.value) return
+    const target = session.value.players[targetIndex]
+    if (!target || targetIndex === session.value.current_player_index) return
     const question = _pickBattleQuestion()
     if (!question) return
 
     useJoker('duel')
-    battle.value = {
+    session.value.battle = {
       question_id: question.id,
-      challenger_index: currentPlayerIndex.value,
+      challenger_index: session.value.current_player_index,
       question_type: question.question_type as 'estimation' | 'battle_map',
-      order: [currentPlayerIndex.value, targetIndex],
+      order: [session.value.current_player_index, targetIndex],
       answers: [],
       transfer: null,
       winner_index: null,
       loser_index: null,
     }
-    battleIntroLine.value = pickBattleIntro(rng.value)
-    battleRevealLine.value = pickBattleReveal(rng.value)
-    state.value = 'battle_intro'
+    session.value.narration.battle_intro = pickBattleIntro(rng.value)
+    session.value.narration.battle_reveal = pickBattleReveal(rng.value)
+    session.value.state = 'battle_intro'
+    _touch()
   }
 
   // ─── The Gambler ──────────────────────────────────────────────
@@ -918,8 +1037,9 @@ export const useGameStore = defineStore('game', () => {
    * front, so the confirmation can show exactly what is at risk.
    */
   function startGambler() {
-    if (!turn.value || !rng.value) return
-    const player = players.value[currentPlayerIndex.value]
+    const t = session.value.turn
+    if (!t || !rng.value) return
+    const player = session.value.players[session.value.current_player_index]
     if (!player || player.board.peg_count < 1) return
 
     const owned: [number, number][] = []
@@ -930,38 +1050,42 @@ export const useGameStore = defineStore('game', () => {
     }
     if (owned.length === 0) return
 
-    turn.value.gambler_staked_field = rng.value.pick(owned)
-    state.value = 'gambler_confirm'
-    turn.value.phase = 'gambler_confirm'
+    t.gambler_staked_field = rng.value.pick(owned)
+    session.value.state = 'gambler_confirm'
+    t.phase = 'gambler_confirm'
+    _touch()
   }
 
   function cancelGambler() {
-    if (!turn.value) return
-    turn.value.gambler_staked_field = null
-    state.value = 'selection'
-    turn.value.phase = 'selection'
+    const t = session.value.turn
+    if (!t) return
+    t.gambler_staked_field = null
+    session.value.state = 'selection'
+    t.phase = 'selection'
   }
 
   /** Any category, any difficulty — the point is that it is unpredictable. */
   async function confirmGambler() {
-    if (!turn.value || !rng.value) return
+    const t = session.value.turn
+    if (!t || !rng.value) return
     const corpus = useCorpusStore()
     const candidates = filterQuestions(corpus.questions, {
-      language: settings.value.language,
-      excludeIds: new Set(usedQuestionIds.value),
+      language: session.value.settings.language,
+      excludeIds: new Set(session.value.used_question_ids),
     })
     if (candidates.length === 0) return
 
     const question = rng.value.pick(candidates)
-    const data = await corpus.fetchQuestionData(question.id, settings.value.language)
+    const data = await corpus.fetchQuestionData(question.id, session.value.settings.language)
     if (!data) return
 
     useJoker('the_gambler')
-    turn.value.selected_question_id = question.id
+    t.selected_question_id = question.id
     currentQuestion.value = data
-    state.value = 'gambler_question'
-    turn.value.phase = 'gambler_question'
+    session.value.state = 'gambler_question'
+    t.phase = 'gambler_question'
     _scrambleAnswers()
+    _touch()
   }
 
   /**
@@ -969,15 +1093,16 @@ export const useGameStore = defineStore('game', () => {
    * ordinary placement screen. Wrong: the staked peg is taken.
    */
   function resolveGambler(correct: boolean) {
-    if (!turn.value) return
-    const player = players.value[currentPlayerIndex.value]
+    const t = session.value.turn
+    if (!t) return
+    const player = session.value.players[session.value.current_player_index]
     if (!player) return
 
     player.stats.questions_attempted++
     if (correct) {
       player.stats.questions_correct++
     } else {
-      const staked = turn.value.gambler_staked_field
+      const staked = t.gambler_staked_field
       const boardRow = staked ? player.board.fields[staked[0]] : null
       if (staked && boardRow?.[staked[1]]) {
         boardRow[staked[1]] = false
@@ -985,9 +1110,10 @@ export const useGameStore = defineStore('game', () => {
       }
     }
 
-    gamblerWon.value = correct
-    state.value = 'gambler_resolve'
-    turn.value.phase = 'gambler_resolve'
+    t.gambler_won = correct
+    session.value.state = 'gambler_resolve'
+    t.phase = 'gambler_resolve'
+    _touch()
   }
 
   /**
@@ -999,61 +1125,123 @@ export const useGameStore = defineStore('game', () => {
    * but never chooses where any of them go.
    */
   function proceedFromGamblerResolve() {
-    if (!turn.value || !rng.value || !gamblerWon.value) {
+    const t = session.value.turn
+    if (!t || !rng.value || !t.gambler_won) {
       _endTurn()
       return
     }
-    const player = players.value[currentPlayerIndex.value]
+    const player = session.value.players[session.value.current_player_index]
     if (!player) {
       _endTurn()
       return
     }
 
-    const rule = gamblerPlacementRule(settings.value) // three fields, all taken
-    turn.value.pegs_remaining = 3
-    turn.value.placing_player_index = currentPlayerIndex.value
-    turn.value.placement_rule = rule
-    turn.value.candidate_fields = generateCandidates(rng.value, player.board, rule)
-    state.value = 'peg_placement'
-    turn.value.phase = 'peg_placement'
+    const rule = gamblerPlacementRule(session.value.settings) // three fields, all taken
+    t.pegs_remaining = 3
+    t.placing_player_index = session.value.current_player_index
+    t.placement_rule = rule
+    t.candidate_fields = generateCandidates(rng.value, player.board, rule)
+    session.value.state = 'peg_placement'
+    t.phase = 'peg_placement'
+    _touch()
   }
 
   function revealHint() {
-    if (!turn.value) return
+    const t = session.value.turn
+    if (!t) return
     useJoker('reveal_hint')
-    turn.value.hint_revealed = true
+    t.hint_revealed = true
   }
 
   function activateDoubleDown() {
-    if (!turn.value) return
+    const t = session.value.turn
+    if (!t) return
     useJoker('double_down')
-    turn.value.double_down_active = true
+    t.double_down_active = true
   }
+
+  // ─── Session lifecycle ────────────────────────────────────────
+
+  /**
+   * Adopt a whole session — resuming a saved game, or, later, applying a
+   * snapshot from the host device.
+   *
+   * The generator is rebuilt at its stored position rather than from the seed,
+   * so play continues the sequence instead of re-drawing it.
+   */
+  function loadSessionState(next: GameSession) {
+    session.value = next
+    rng.value =
+      next.status === 'setup' ? null : new GameRng(next.rng_seed, next.rng_state ?? null)
+    currentQuestion.value = null
+    setupPhase.value = 'start'
+  }
+
+  /**
+   * A saved game found at startup, offered on the title screen.
+   *
+   * Held separately from `session` so the title screen still shows a title
+   * screen — the saved game is only adopted once the player says to resume.
+   */
+  const resumableSession = ref<GameSession | null>(null)
+
+  /** Look for an interrupted game. Called once, at app start. */
+  async function checkForResumableGame() {
+    try {
+      const saved = await loadSession()
+      if (saved && saved.status === 'in_progress') resumableSession.value = saved
+    } catch (err) {
+      console.error('Could not read the saved game:', err)
+    }
+  }
+
+  function resumeGame() {
+    const saved = resumableSession.value
+    if (!saved) return
+    resumableSession.value = null
+    loadSessionState(saved)
+  }
+
+  /** Decline the offer and drop the save, per SPEC §9 resume flow. */
+  function discardResumableGame() {
+    resumableSession.value = null
+    deleteSession().catch((err) => console.error('Could not delete the saved game:', err))
+  }
+
+  /**
+   * Auto-save after every state transition (SPEC §9).
+   *
+   * Deep, because almost every transition mutates inside the session rather
+   * than replacing it. The write itself is debounced 500 ms inside
+   * `scheduleAutoSave`, with an immediate flush on backgrounding, so this fires
+   * far more often than it writes.
+   */
+  watch(
+    session,
+    (current) => {
+      if (current.status === 'in_progress') scheduleAutoSave(current)
+    },
+    { deep: true },
+  )
 
   // Reset for new game
   function resetGame() {
-    state.value = 'setup'
+    session.value = createSession()
     setupPhase.value = 'start'
-    status.value = 'setup'
-    players.value = []
-    currentPlayerIndex.value = 0
-    round.value = 1
-    turn.value = null
-    winnerPlayerIndex.value = null
-    winningLines.value = null
-    usedQuestionIds.value.clear()
     currentQuestion.value = null
     rng.value = null
     playerIntroLine.value = null
-    verdictRemark.value = null
-    victoryRemark.value = null
-    turnLine.value = null
-    battleIntroLine.value = null
-    battleRevealLine.value = null
+    resumableSession.value = null
+    deleteSession().catch(() => {
+      /* nothing to drop */
+    })
   }
 
   return {
-    // State
+    // The whole session — the save format and, later, the sync unit.
+    session,
+
+    // State (read-only views onto the session)
     state,
     sessionId,
     status,
@@ -1128,6 +1316,13 @@ export const useGameStore = defineStore('game', () => {
     proceedFromGamblerResolve,
     revealHint,
     activateDoubleDown,
+
+    // Session lifecycle
+    loadSessionState,
+    resumableSession,
+    checkForResumableGame,
+    resumeGame,
+    discardResumableGame,
     resetGame,
   }
 })

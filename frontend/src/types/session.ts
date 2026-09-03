@@ -1,3 +1,7 @@
+import type { GameRngState } from '../engine/rng'
+
+export type { GameRngState }
+
 /** Game state enum — drives screen rendering via the state machine. */
 export type GameState =
   | 'setup'
@@ -221,6 +225,25 @@ export interface TurnState {
    * never modified, so correctness is still checked against the real index.
    */
   answer_order: number[]
+  /** The joker just handed out by a chipped slot, for the award screen. */
+  joker_awarded: JokerType | null
+  /** Outcome of this turn's Gambler, for its resolve screen. */
+  gambler_won: boolean
+}
+
+/**
+ * Narrator voice-line keys for this session.
+ *
+ * Keys only — the store stays free of audio concerns; App.vue and the screens
+ * play them. Every one is drawn off the session RNG at the moment the line is
+ * decided, so replaying a seed says the same things in the same order.
+ */
+export interface SessionNarration {
+  verdict_remark: string | null
+  victory_remark: string | null
+  turn_line: string | null
+  battle_intro: string | null
+  battle_reveal: string | null
 }
 
 export interface GameSettings {
@@ -251,6 +274,19 @@ export interface TurnHistory {
   curse_target: number | null
 }
 
+/**
+ * The complete state of one game.
+ *
+ * This is the save format (SPEC §9) and, in multi-device play, the unit of
+ * synchronisation: the host serializes it after every transition and the
+ * server relays it. Anything that must survive a reload or reach another
+ * device belongs here.
+ *
+ * Deliberately *not* in here: `setupPhase` (pre-game navigation, not game
+ * state), `currentQuestion` (corpus payload, re-fetchable from
+ * `turn.selected_question_id`), and the `GameRng` instance itself — only its
+ * `rng_seed` is stored, and the generator is rebuilt from it.
+ */
 export interface GameSession {
   id: string
   status: SessionStatus
@@ -260,13 +296,26 @@ export interface GameSession {
   round: number
   state: GameState
   turn: TurnState | null
+  /** The battle closing the current round, a duel, or null between them. */
+  battle: BattleState | null
   winner_player_index: number | null
   used_question_ids: Set<string>
   history: TurnHistory[]
+  narration: SessionNarration
   created_at: string
   updated_at: string
   rng_seed: number
-  winning_line: [number, number][] | null
+  /**
+   * The generator's position in its sequence. Stored alongside the seed because
+   * reseeding alone rewinds, so a resumed game would re-draw what it had spent.
+   * Null before the game starts.
+   */
+  rng_state: GameRngState | null
+  /**
+   * Every line the winner completed. Plural because `lines_to_win` can require
+   * more than one, and a single placement can complete two at once.
+   */
+  winning_lines: [number, number][][] | null
 }
 
 /** Question data loaded from corpus */

@@ -7,6 +7,7 @@ import en from './i18n/en.json'
 import de from './i18n/de.json'
 import { setupAutoSaveListeners } from './stores/persistence'
 import { useCorpusStore } from './stores/corpus'
+import { useGameStore } from './stores/game'
 
 /**
  * The stored language, read before the app mounts so the first paint is already
@@ -42,3 +43,6 @@ const corpus = useCorpusStore()
 corpus.loadCorpus().catch(err => {
   console.error('Failed to load corpus:', err)
 })
+
+// An interrupted game is offered on the title screen, not adopted outright.
+useGameStore().checkForResumableGame()

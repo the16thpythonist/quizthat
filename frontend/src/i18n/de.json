@@ -8,6 +8,7 @@
     "howToPlay": "Spielanleitung",
     "resumeGame": "Spiel fortsetzen",
     "resumePrompt": "Du hast ein unvollendetes Spiel. Fortsetzen?",
+    "resumeSummary": "{names} · Runde {round} · {current} ist am Zug",
     "resumeYes": "Fortsetzen",
     "resumeNo": "Neu starten",
     "tagline": "Das Quiz-Brettspiel"

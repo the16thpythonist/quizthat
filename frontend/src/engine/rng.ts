@@ -4,11 +4,45 @@ import seedrandom from 'seedrandom'
  * Wrapper around seedrandom for deterministic randomness.
  * All game randomness must go through this — never Math.random().
  */
-export class GameRng {
-  private rng: seedrandom.PRNG
+/**
+ * A generator's position in its sequence, as a plain object.
+ *
+ * Opaque — it is seedrandom's internal ARC4 state, and only ever produced by
+ * `GameRng.saveState()` and consumed by the constructor.
+ */
+export type GameRngState = Record<string, unknown>
 
-  constructor(seed: number | string) {
-    this.rng = seedrandom(String(seed))
+/**
+ * seedrandom's bundled types predate its own state API: `PRNG` does not declare
+ * `.state()`, and the options type only accepts its internal `Arc4` class where
+ * a restored plain state object belongs. Both casts are confined to this file
+ * and covered by the round-trip tests in `__tests__/rng.test.ts`.
+ */
+type StatefulPRNG = seedrandom.PRNG & { state(): GameRngState }
+
+export class GameRng {
+  private rng: StatefulPRNG
+
+  /**
+   * Restores an exact position when `state` is given, otherwise starts a fresh
+   * sequence from `seed`.
+   *
+   * Reseeding alone would rewind the generator, so a resumed or relayed game
+   * would re-draw the sequence it had already spent. Both a saved game and a
+   * snapshot sent to another device therefore carry the state, not just the
+   * seed.
+   */
+  constructor(seed: number | string, state?: GameRngState | null) {
+    this.rng = (
+      state
+        ? seedrandom('', { state: state as never })
+        : seedrandom(String(seed), { state: true })
+    ) as StatefulPRNG
+  }
+
+  /** The current position, for storing alongside the seed. */
+  saveState(): GameRngState {
+    return this.rng.state()
   }
 
   /** Returns a float in [0, 1). */

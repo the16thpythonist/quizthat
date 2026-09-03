@@ -8,6 +8,7 @@
     "howToPlay": "How to Play",
     "resumeGame": "Resume Game",
     "resumePrompt": "You have an unfinished game. Resume?",
+    "resumeSummary": "{names} · Round {round} · {current} to play",
     "resumeYes": "Resume",
     "resumeNo": "Start Fresh",
     "tagline": "The Quiz Board Game"

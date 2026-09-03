@@ -21,7 +21,7 @@ interface QuizThatDB {
 /**
  * Serializable version of GameSession (Sets -> Arrays for JSON/IndexedDB).
  */
-interface SerializedSession {
+export interface SerializedSession {
   data: Omit<GameSession, 'used_question_ids' | 'turn'> & {
     used_question_ids: string[]
     turn: SerializedTurnState | null
@@ -34,6 +34,15 @@ interface SerializedTurnState {
 }
 
 let dbPromise: Promise<IDBPDatabase<QuizThatDB>> | null = null
+
+/**
+ * IndexedDB is missing in a few places the game legitimately runs: jsdom under
+ * the test runner, and some private-browsing modes. Persistence degrades to a
+ * no-op there rather than throwing on every state transition.
+ */
+export function isPersistenceAvailable(): boolean {
+  return typeof indexedDB !== 'undefined'
+}
 
 function getDB(): Promise<IDBPDatabase<QuizThatDB>> {
   if (!dbPromise) {
@@ -51,8 +60,15 @@ function getDB(): Promise<IDBPDatabase<QuizThatDB>> {
   return dbPromise
 }
 
-/** Serialize a GameSession for IndexedDB storage. */
-function serialize(session: GameSession): SerializedSession {
+/**
+ * Serialize a GameSession for storage.
+ *
+ * Exported because this is the session's wire format, not just its disk
+ * format: the two Sets it converts (`used_question_ids` and the turn's
+ * `jokers_used_this_turn`) are the only parts of a session that do not survive
+ * JSON, so anything sending a session elsewhere goes through here too.
+ */
+export function serializeSession(session: GameSession): SerializedSession {
   const turnData = session.turn
     ? {
         ...session.turn,
@@ -69,8 +85,8 @@ function serialize(session: GameSession): SerializedSession {
   }
 }
 
-/** Deserialize a stored session back to a GameSession. */
-function deserialize(stored: SerializedSession): GameSession {
+/** Rebuild a GameSession from its serialized form, restoring the Sets. */
+export function deserializeSession(stored: SerializedSession): GameSession {
   const data = stored.data
   const turn = data.turn
     ? {
@@ -86,40 +102,61 @@ function deserialize(stored: SerializedSession): GameSession {
   } as GameSession
 }
 
+/**
+ * A synchronous, plain-data copy of a session, ready to be written.
+ *
+ * The JSON round-trip is load-bearing, not belt-and-braces: the session handed
+ * in is a Vue reactive Proxy, and `structuredClone` refuses those outright with
+ * a DataCloneError. Going through the serializer gives plain data that both
+ * IndexedDB and the network will accept.
+ */
+export function snapshotSession(session: GameSession): SerializedSession {
+  return JSON.parse(JSON.stringify(serializeSession(session))) as SerializedSession
+}
+
 /** Save a session to IndexedDB. */
 export async function saveSession(session: GameSession): Promise<void> {
+  if (!isPersistenceAvailable()) return
+  await saveSnapshot(snapshotSession(session))
+}
+
+/** Write an already-snapshotted session. */
+async function saveSnapshot(snapshot: SerializedSession): Promise<void> {
+  if (!isPersistenceAvailable()) return
   const db = await getDB()
-  await db.put(STORE_NAME, serialize(session), ACTIVE_SESSION_KEY)
+  await db.put(STORE_NAME, snapshot, ACTIVE_SESSION_KEY)
 }
 
 /** Load the active session from IndexedDB. Returns null if none exists. */
 export async function loadSession(): Promise<GameSession | null> {
+  if (!isPersistenceAvailable()) return null
   const db = await getDB()
   const stored = await db.get(STORE_NAME, ACTIVE_SESSION_KEY)
   if (!stored) return null
-  return deserialize(stored)
+  return deserializeSession(stored)
 }
 
 /** Delete the active session from IndexedDB. */
 export async function deleteSession(): Promise<void> {
+  if (!isPersistenceAvailable()) return
   const db = await getDB()
   await db.delete(STORE_NAME, ACTIVE_SESSION_KEY)
 }
 
 // ─── Debounced Auto-Save ────────────────────────────────────────
 
-let pendingSnapshot: GameSession | null = null
+let pendingSnapshot: SerializedSession | null = null
 let debounceTimer: ReturnType<typeof setTimeout> | null = null
 const DEBOUNCE_MS = 500
 
 /**
  * Take a snapshot and schedule a debounced write.
- * The in-memory snapshot is synchronous (structuredClone).
- * The actual IndexedDB write is debounced at 500ms trailing.
+ * The in-memory snapshot is synchronous; the IndexedDB write is debounced at
+ * 500ms trailing, so a burst of transitions costs one write.
  */
 export function scheduleAutoSave(session: GameSession): void {
-  // Synchronous in-memory snapshot
-  pendingSnapshot = structuredClone(session)
+  if (!isPersistenceAvailable()) return
+  pendingSnapshot = snapshotSession(session)
 
   if (debounceTimer !== null) {
     clearTimeout(debounceTimer)
@@ -141,7 +178,7 @@ export function flushAutoSave(): void {
   if (pendingSnapshot) {
     const snapshot = pendingSnapshot
     pendingSnapshot = null
-    saveSession(snapshot).catch(err => {
+    saveSnapshot(snapshot).catch(err => {
       console.error('Auto-save failed:', err)
     })
   }
@@ -149,6 +186,7 @@ export function flushAutoSave(): void {
 
 /** Record a seen question for cross-session depletion. */
 export async function recordSeenQuestion(questionId: string): Promise<void> {
+  if (!isPersistenceAvailable()) return
   const db = await getDB()
   await db.put(SEEN_QUESTIONS_STORE, {
     question_id: questionId,
@@ -158,6 +196,7 @@ export async function recordSeenQuestion(questionId: string): Promise<void> {
 
 /** Get all seen question IDs. */
 export async function getSeenQuestions(): Promise<Set<string>> {
+  if (!isPersistenceAvailable()) return new Set()
   const db = await getDB()
   const keys = await db.getAllKeys(SEEN_QUESTIONS_STORE)
   return new Set(keys as string[])
