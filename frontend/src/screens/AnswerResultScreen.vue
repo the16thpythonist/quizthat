@@ -2,12 +2,14 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import { audioManager } from '../audio/audioManager'
 import { SFX, VOICE, VERDICT_REMARK_DELAY_MS, voiceLine } from '../audio/sfx'
 import { COLOR_HEX } from '../types/session'
 
 const { t, locale } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const isCorrect = computed(() => game.isCorrect)
 const player = computed(() => game.currentPlayer)
@@ -59,9 +61,9 @@ const groundStyle = computed(() =>
 
 function handleContinue() {
   if (isCorrect.value) {
-    game.proceedToPlacement()
+    act.proceedToPlacement()
   } else {
-    game.proceedFromWrongAnswer()
+    act.proceedFromWrongAnswer()
   }
 }
 </script>

@@ -178,10 +178,17 @@ def post_snapshot(request, code: str):
     """
     Publish the state, already redacted per recipient.
 
-    The body is `{"version": n, "snapshots": {member_token: blob}}`. The host
+    The body is `{"version": n, "snapshots": {member_id: blob}}`. The host
     decides what each member may see; this only files the blobs under the right
-    members. A token that is not in this lobby is ignored rather than rejected,
-    so a member leaving mid-broadcast does not fail the whole publish.
+    members.
+
+    Addressed by member id rather than token because a token is a credential:
+    the host would have to be told everyone else's to address them, and then a
+    single compromised phone could impersonate the table. Ids are already public
+    in the roster and are enough to route by.
+
+    An id that is not in this lobby is ignored rather than rejected, so a member
+    leaving mid-broadcast does not fail the whole publish.
     """
     member = _member_or_none(code, _token_from(request))
     if not member:
@@ -192,7 +199,7 @@ def post_snapshot(request, code: str):
     snapshots = request.data.get("snapshots")
     if not isinstance(snapshots, dict):
         return Response(
-            {"detail": "snapshots must be an object keyed by member token."},
+            {"detail": "snapshots must be an object keyed by member id."},
             status=status.HTTP_400_BAD_REQUEST,
         )
     try:
@@ -200,10 +207,10 @@ def post_snapshot(request, code: str):
     except (TypeError, ValueError):
         return Response({"detail": "version must be a number."}, status=status.HTTP_400_BAD_REQUEST)
 
-    by_token = {m.token: m for m in member.lobby.members.all()}
+    by_id = {str(m.id): m for m in member.lobby.members.all()}
     written = 0
-    for token, blob in snapshots.items():
-        target = by_token.get(token)
+    for member_id, blob in snapshots.items():
+        target = by_id.get(str(member_id))
         if target is None:
             continue
         Snapshot.objects.update_or_create(

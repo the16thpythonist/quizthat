@@ -4,6 +4,7 @@
   },
   "start": {
     "newGame": "Neues Spiel",
+    "multiDevice": "Mit mehreren Geräten",
     "settings": "Einstellungen",
     "howToPlay": "Spielanleitung",
     "resumeGame": "Spiel fortsetzen",
@@ -249,5 +250,30 @@
       "estimation": "Schätzfrage",
       "battle_map": "Kartenduell"
     }
+  },
+  "lobby": {
+    "title": "Mehrgeräte-Spiel",
+    "nickname": "Dein Name",
+    "nicknamePlaceholder": "z. B. Jonas",
+    "nicknameHint": "Derselbe Name zählt auf dasselbe Statistik-Profil ein.",
+    "hostGame": "Spiel eröffnen",
+    "joinGame": "Beitreten",
+    "joinAsSpectator": "Nur zuschauen (z. B. Fernseher)",
+    "code": "Beitrittscode",
+    "shareCode": "Sag den Code den anderen am Tisch.",
+    "hostTag": "Gastgeber",
+    "spectatorTag": "Zuschauer",
+    "startGame": "Spiel starten",
+    "waitingForHost": "Warte auf den Gastgeber …",
+    "waitingToStart": "Wartet auf den Start",
+    "leave": "Lobby verlassen",
+    "back": "Zurück"
+  },
+  "spectate": {
+    "waitingFor": "{name} ist am Zug",
+    "watching": "Zuschauen",
+    "round": "Runde {round}",
+    "tvHint": "Dieser Bildschirm zeigt nur mit — gespielt wird auf den Handys.",
+    "yourTurnSoon": "Du bist gleich dran."
   }
 }

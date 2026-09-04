@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import type { PlayerColor, Expertise } from '../types/session'
 import { COLOR_HEX, PLAYER_COLORS } from '../types/session'
 import ExpertisePicker from '../components/ExpertisePicker.vue'
@@ -9,6 +10,9 @@ import SettingsPanel from '../components/SettingsPanel.vue'
 
 const { t } = useI18n()
 const game = useGameStore()
+const act = useActions()
+
+const emit = defineEmits<{ multiDevice: [] }>()
 
 // Title -> player list -> game settings. Each phase is matched explicitly:
 // a negated condition would have swallowed the third phase.
@@ -67,7 +71,7 @@ const sheetExpertise = computed<Expertise>({
     if (editingExpertise.value === 'new') {
       newPlayerExpertise.value = value
     } else if (typeof editingExpertise.value === 'number') {
-      game.updatePlayerExpertise(editingExpertise.value, value)
+      act.updatePlayerExpertise(editingExpertise.value, value)
     }
   },
 })
@@ -85,7 +89,7 @@ function isColorTaken(color: PlayerColor): boolean {
 
 function handleAddPlayer() {
   if (!newPlayerColor.value) return
-  game.addPlayer(
+  act.addPlayer(
     newPlayerName.value || '',
     newPlayerColor.value,
     { ...newPlayerExpertise.value },
@@ -96,14 +100,14 @@ function handleAddPlayer() {
 }
 
 function handleRemovePlayer(index: number) {
-  game.removePlayer(index)
+  act.removePlayer(index)
   if (!newPlayerColor.value && availableColors.value.length > 0) {
     newPlayerColor.value = availableColors.value[0] ?? null
   }
 }
 
 function handleStartGame() {
-  if (canStart.value) game.startGame()
+  if (canStart.value) act.startGame()
 }
 
 function handleNewGame() {
@@ -112,17 +116,17 @@ function handleNewGame() {
 }
 
 function setPlacementCandidates(n: number) {
-  game.updateSettings({ placement_candidates: n })
+  act.updateSettings({ placement_candidates: n })
 }
 
 /** The only length dial: the board is always 4x4, so games are shortened by
  *  starting with pegs already on it rather than by shrinking the grid. */
 function setStartingPegs(n: number) {
-  game.updateSettings({ starting_pegs: n })
+  act.updateSettings({ starting_pegs: n })
 }
 
 function setLinesToWin(n: number) {
-  game.updateSettings({ lines_to_win: n })
+  act.updateSettings({ lines_to_win: n })
 }
 
 const CANDIDATE_OPTIONS = [1, 2, 3, 4]
@@ -158,6 +162,13 @@ const LINES_TO_WIN_OPTIONS = [1, 2]
 
       <div v-else class="qt-menu">
         <button class="qt-cta qt-cta--accent" @click="handleNewGame">{{ t('start.newGame') }}</button>
+        <!--
+          Shared tablet stays the default and the first option: it needs no
+          server and no codes, and it is still how most tables will play.
+        -->
+        <button class="qt-cta qt-cta--ghost" @click="emit('multiDevice')">
+          {{ t('start.multiDevice') }}
+        </button>
         <button class="qt-cta qt-cta--ghost" @click="game.goToAppSettings()">{{ t('start.settings') }}</button>
         <button class="qt-cta qt-cta--ghost">{{ t('start.howToPlay') }}</button>
       </div>

@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import { audioManager } from '../audio/audioManager'
 import { SFX } from '../audio/sfx'
 import GameBar from '../components/GameBar.vue'
@@ -16,6 +17,7 @@ import PlayerStrip from '../components/PlayerStrip.vue'
  */
 const { t } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const player = computed(() => game.currentPlayer)
 const won = computed(() => game.gamblerWon)
@@ -25,7 +27,7 @@ onMounted(() => {
 })
 
 function handleContinue() {
-  game.proceedFromGamblerResolve()
+  act.proceedFromGamblerResolve()
 }
 </script>
 

@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import { audioManager } from '../audio/audioManager'
 import { SFX, VOICE, voiceLine } from '../audio/sfx'
 import BoardGrid from '../components/BoardGrid.vue'
@@ -18,6 +19,7 @@ import type { EstimationAnswerData, BattleMapAnswerData } from '../types/session
  */
 const { t, locale } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const battle = computed(() => game.battle)
 let pegTimer: ReturnType<typeof setTimeout> | null = null
@@ -161,7 +163,7 @@ const transfer = computed(() => {
   <div
     class="qt-screen qt-doodles select-none"
     style="background: linear-gradient(158deg,#3F1263 0%,#7A1F8B 55%,#A8248C 100%)"
-    @click="game.proceedFromBattleReveal()"
+    @click="act.proceedFromBattleReveal()"
   >
     <div class="qt-verdict" style="justify-content: flex-start; padding-top: 28px">
       <h1 class="qt-verdict-title" style="font-size: 30px">{{ t('battle.result') }}</h1>

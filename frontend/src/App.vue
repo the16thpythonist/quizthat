@@ -2,6 +2,7 @@
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from './stores/game'
+import { useNetStore } from './stores/net'
 import { screenForState } from './engine/screenMap'
 import { audioManager } from './audio/audioManager'
 import {
@@ -21,10 +22,47 @@ import BoardViewerOverlay from './components/BoardViewerOverlay.vue'
 import SettingsSheet from './components/SettingsSheet.vue'
 import AnimationTestScreen from './screens/AnimationTestScreen.vue'
 import AudioTestScreen from './screens/AudioTestScreen.vue'
+import LobbyScreen from './screens/LobbyScreen.vue'
+import SpectatorScreen from './screens/SpectatorScreen.vue'
 
 const game = useGameStore()
+const net = useNetStore()
 const { locale } = useI18n()
-const currentScreen = computed(() => screenForState(game.state))
+
+/** Set from the title screen; leaving it returns to the offline menu. */
+const inLobby = ref(false)
+
+/**
+ * Whether this device may act on the current state.
+ *
+ * Offline, always — one tablet, whoever is holding it. Online, only the seat
+ * the game is waiting on, and never a spectator. This is where the pass-the-
+ * device gates are replaced: instead of trusting people not to look, a phone
+ * that is not being waited on is simply not shown the interactive screen.
+ */
+const myTurn = computed(() => {
+  if (!net.isOnline) return true
+  if (net.role === 'spectator') return false
+  // Announcements and the victory screen belong to nobody in particular; the
+  // host drives those so one slow phone cannot hold up the table.
+  if (game.awaitingSeat === null) return net.isHost
+  return net.seat === game.awaitingSeat
+})
+
+/**
+ * Which screen this device shows.
+ *
+ * The lobby is resolved here and nowhere else. Rendering it from two branches
+ * meant that creating a lobby — which flips `net.isOnline` — swapped one
+ * instance of LobbyScreen for another, remounting it and losing the step the
+ * player was on.
+ */
+const currentScreen = computed(() => {
+  const beforeTheGame = !net.isOnline || game.status !== 'in_progress'
+  if ((inLobby.value || net.isOnline) && beforeTheGame) return LobbyScreen
+  if (!myTurn.value) return SpectatorScreen
+  return screenForState(game.state)
+})
 
 const testRoute = ref(window.location.hash)
 /** Test benches run silent — they drive audio themselves. */
@@ -188,7 +226,11 @@ onUnmounted(() => {
   <AnimationTestScreen v-if="testRoute === '#test-board'" />
   <AudioTestScreen v-else-if="testRoute === '#test-audio'" />
   <template v-else>
-    <component :is="currentScreen" />
+    <component
+      :is="currentScreen"
+      @multi-device="inLobby = true"
+      @back="inLobby = false"
+    />
     <BoardViewerOverlay />
     <SettingsSheet />
   </template>

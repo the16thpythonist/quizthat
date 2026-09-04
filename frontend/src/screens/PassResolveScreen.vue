@@ -2,10 +2,12 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import type { MultipleChoiceAnswerData } from '../types/session'
 
 const { t } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const declined = computed(() => game.turn?.pass?.result === 'declined')
 
@@ -18,7 +20,7 @@ const correctAnswer = computed(() => {
 })
 
 function handleContinue() {
-  game.proceedFromPassResolve()
+  act.proceedFromPassResolve()
 }
 </script>
 

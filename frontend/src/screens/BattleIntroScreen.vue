@@ -2,6 +2,7 @@
 import { computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import { audioManager } from '../audio/audioManager'
 import { VOICE, voiceLine } from '../audio/sfx'
 import { battleFormatLine } from '../engine/algorithms'
@@ -9,6 +10,7 @@ import { battleFormatLine } from '../engine/algorithms'
 /** Announces the battle that closes a round, and which format it is. */
 const { t, locale } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const format = computed(() => game.battle?.question_type ?? 'estimation')
 
@@ -42,7 +44,7 @@ onUnmounted(() => audioManager.clearQueue())
   <div
     class="qt-screen qt-doodles select-none"
     style="background: linear-gradient(158deg,#3F1263 0%,#7A1F8B 55%,#A8248C 100%)"
-    @click="game.proceedFromBattleIntro()"
+    @click="act.proceedFromBattleIntro()"
   >
     <div class="qt-gate">
       <div class="qt-battle-mark">⚔</div>

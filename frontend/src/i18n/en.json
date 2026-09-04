@@ -4,6 +4,7 @@
   },
   "start": {
     "newGame": "New Game",
+    "multiDevice": "Play on separate devices",
     "settings": "Settings",
     "howToPlay": "How to Play",
     "resumeGame": "Resume Game",
@@ -249,5 +250,30 @@
       "estimation": "Estimation",
       "battle_map": "Map battle"
     }
+  },
+  "lobby": {
+    "title": "Multi-device game",
+    "nickname": "Your name",
+    "nicknamePlaceholder": "e.g. Jonas",
+    "nicknameHint": "The same name counts towards the same stats profile.",
+    "hostGame": "Host a game",
+    "joinGame": "Join",
+    "joinAsSpectator": "Just watch (e.g. a TV)",
+    "code": "Join code",
+    "shareCode": "Read the code out to everyone at the table.",
+    "hostTag": "Host",
+    "spectatorTag": "Spectator",
+    "startGame": "Start the game",
+    "waitingForHost": "Waiting for the host …",
+    "waitingToStart": "Waiting to start",
+    "leave": "Leave lobby",
+    "back": "Back"
+  },
+  "spectate": {
+    "waitingFor": "{name} is playing",
+    "watching": "Watching",
+    "round": "Round {round}",
+    "tvHint": "This screen only watches — the game is played on the phones.",
+    "yourTurnSoon": "Your turn is coming up."
   }
 }

@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import { audioManager } from '../audio/audioManager'
 import { VOICE, voiceLine } from '../audio/sfx'
 import { COLOR_HEX } from '../types/session'
@@ -9,6 +10,7 @@ import BoardGrid from '../components/BoardGrid.vue'
 
 const { t, locale } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const locked = ref(true)
 const showTapHint = ref(false)
@@ -47,7 +49,7 @@ const groundStyle = computed(() => ({
 
 function handleTap() {
   if (locked.value) return
-  game.proceedFromTurnGate()
+  act.proceedFromTurnGate()
 }
 </script>
 

@@ -3,6 +3,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import L from 'leaflet'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import GameBar from '../components/GameBar.vue'
 import PlayerStrip from '../components/PlayerStrip.vue'
 import type { EstimationAnswerData } from '../types/session'
@@ -16,6 +17,7 @@ import type { EstimationAnswerData } from '../types/session'
  */
 const { t } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const player = computed(() => game.battlePlayer)
 const question = computed(() => game.currentQuestion)
@@ -39,7 +41,7 @@ function press(key: string) {
 function submitNumber() {
   const value = parseFloat(input.value.replace(',', '.'))
   if (Number.isNaN(value)) return
-  game.submitBattleAnswer(value)
+  act.submitBattleAnswer(value)
 }
 
 // --- map ---
@@ -79,7 +81,7 @@ onUnmounted(() => {
 })
 
 function submitPin() {
-  if (pin.value) game.submitBattleAnswer(pin.value)
+  if (pin.value) act.submitBattleAnswer(pin.value)
 }
 </script>
 

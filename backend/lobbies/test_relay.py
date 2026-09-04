@@ -28,6 +28,10 @@ def make_lobby(api: APIClient, nickname: str = "Alice"):
     return response.data["lobby"]["code"], response.data["member"]["token"]
 
 
+def member_id(token: str) -> str:
+    return str(Member.objects.get(token=token).id)
+
+
 def join(api: APIClient, code: str, nickname: str, role: str = "player"):
     fresh = APIClient()
     response = fresh.post(
@@ -178,7 +182,10 @@ class TestSnapshots:
             f"/api/lobbies/{code}/snapshot/",
             {
                 "version": 4,
-                "snapshots": {host: {"state": "selection", "mine": True}, bob: {"state": "selection"}},
+                "snapshots": {
+                    member_id(host): {"state": "selection", "mine": True},
+                    member_id(bob): {"state": "selection"},
+                },
             },
             format="json",
         )
@@ -203,8 +210,8 @@ class TestSnapshots:
             {
                 "version": 1,
                 "snapshots": {
-                    host: {"battle": {"answers": [{"seat": 0, "value": 42}]}},
-                    bob: {"battle": {"answers": []}},
+                    member_id(host): {"battle": {"answers": [{"seat": 0, "value": 42}]}},
+                    member_id(bob): {"battle": {"answers": []}},
                 },
             },
             format="json",
@@ -217,25 +224,43 @@ class TestSnapshots:
         guest = join(api, code, "Bob").data["member"]["token"]
         response = auth(APIClient(), guest).post(
             f"/api/lobbies/{code}/snapshot/",
-            {"version": 1, "snapshots": {guest: {"state": "victory"}}},
+            {"version": 1, "snapshots": {member_id(guest): {"state": "victory"}}},
             format="json",
         )
         assert response.status_code == 403
 
-    def test_a_token_from_another_lobby_is_ignored_not_fatal(self, api):
+    def test_an_id_from_another_lobby_is_ignored_not_fatal(self, api):
         """A member who left mid-broadcast must not fail the whole publish."""
         code, host = make_lobby(api, "Alice")
         bob = join(api, code, "Bob").data["member"]["token"]
-        other_code, other_host = make_lobby(APIClient(), "Zoe")
+        _, other_host = make_lobby(APIClient(), "Zoe")
 
         response = auth(api, host).post(
             f"/api/lobbies/{code}/snapshot/",
-            {"version": 1, "snapshots": {bob: {"ok": True}, other_host: {"leaked": True}}},
+            {
+                "version": 1,
+                "snapshots": {
+                    member_id(bob): {"ok": True},
+                    member_id(other_host): {"leaked": True},
+                },
+            },
             format="json",
         )
         assert response.status_code == 200
         assert response.data["written"] == 1
         assert not Snapshot.objects.filter(member__token=other_host).exists()
+
+    def test_a_member_never_learns_another_member_token(self, api):
+        """
+        Tokens are credentials, which is why snapshots are addressed by id.
+
+        The host has to name every recipient to publish; if that needed tokens,
+        one phone would hold the whole table's.
+        """
+        code, host = make_lobby(api, "Alice")
+        join(api, code, "Bob")
+        roster = auth(api, host).get(f"/api/lobbies/{code}/").data
+        assert all("token" not in m for m in roster["members"])
 
     def test_publishing_replaces_rather_than_accumulates(self, api):
         code, host = make_lobby(api, "Alice")
@@ -243,7 +268,7 @@ class TestSnapshots:
         for version in (1, 2, 3):
             auth(api, host).post(
                 f"/api/lobbies/{code}/snapshot/",
-                {"version": version, "snapshots": {host: {"v": version}}},
+                {"version": version, "snapshots": {member_id(host): {"v": version}}},
                 format="json",
             )
         snapshot = Snapshot.objects.get(member__token=host)

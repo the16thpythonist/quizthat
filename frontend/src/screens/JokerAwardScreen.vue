@@ -2,6 +2,7 @@
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import { audioManager } from '../audio/audioManager'
 import { SFX } from '../audio/sfx'
 import GameBar from '../components/GameBar.vue'
@@ -17,6 +18,7 @@ import JokerIcon from '../components/JokerIcon.vue'
  */
 const { t } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const player = computed(() => game.currentPlayer)
 const joker = computed(() => game.jokerAwarded)
@@ -26,7 +28,7 @@ onMounted(() => {
 })
 
 function handleContinue() {
-  game.proceedFromJokerAward()
+  act.proceedFromJokerAward()
 }
 </script>
 

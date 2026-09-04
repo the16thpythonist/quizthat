@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import GameBar from '../components/GameBar.vue'
 import PlayerStrip from '../components/PlayerStrip.vue'
 import JokerTray from '../components/JokerTray.vue'
@@ -11,6 +12,7 @@ import { SKULL_ICON } from '../components/jokerIcons'
 
 const { t } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const player = computed(() => game.currentPlayer)
 const slots = computed(() => game.turn?.offered_slots ?? [])
@@ -48,7 +50,7 @@ function awardsJoker(slot: OfferedSlot): boolean {
 }
 
 function handleSelectSlot(index: number) {
-  game.selectSlot(index)
+  act.selectSlot(index)
 }
 
 /** Curse, Snipe and Duel all need a target, so they open the same sheet. */
@@ -56,9 +58,9 @@ const targeting = ref<'curse' | 'snipe' | 'duel' | null>(null)
 
 function handleUseJoker(type: JokerType) {
   if (type === 'reshuffle_selection') {
-    void game.reshuffleSelection()
+    void act.reshuffleSelection()
   } else if (type === 'the_gambler') {
-    game.startGambler()
+    act.startGambler()
   } else if (type === 'curse' || type === 'snipe' || type === 'duel') {
     targeting.value = type
   }

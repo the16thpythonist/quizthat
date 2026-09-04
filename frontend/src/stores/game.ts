@@ -270,6 +270,42 @@ export const useGameStore = defineStore('game', () => {
   const isCorrect = computed(() => session.value.state === 'answer_correct')
 
   /**
+   * Whose input the game is waiting on, as a seat index.
+   *
+   * On a shared tablet this is implicit — whoever is holding it. On separate
+   * devices it has to be explicit, because every phone renders the same state
+   * and only one of them should be able to act on it. Null means nobody in
+   * particular: setup and the victory screen are anyone's to tap.
+   *
+   * It is not always the current player. The pass belongs to the player one
+   * round behind, placement can belong to them too, and during a battle it
+   * moves down the answering order.
+   */
+  const awaitingSeat = computed<number | null>(() => {
+    const s = session.value
+    switch (s.state) {
+      case 'setup':
+      case 'victory':
+        return null
+      case 'battle_intro':
+      case 'battle_reveal':
+        // Announcements: the host advances them so a slow phone cannot stall
+        // the table waiting for one particular person to tap.
+        return null
+      case 'battle_gate':
+      case 'battle_answering':
+        return battlePlayerIndex.value
+      case 'pass_gate':
+      case 'pass_answering':
+        return s.turn?.pass?.pass_player_index ?? null
+      case 'peg_placement':
+        return s.turn?.placing_player_index ?? s.current_player_index
+      default:
+        return s.current_player_index
+    }
+  })
+
+  /**
    * What the current answer is worth.
    *
    * Exposed rather than recomputed on the verdict screen: the screen and
@@ -1477,6 +1513,7 @@ export const useGameStore = defineStore('game', () => {
     currentPlayer,
     isCorrect,
     pegsEarned,
+    awaitingSeat,
 
     // Setup actions
     goToPlayerSetup,

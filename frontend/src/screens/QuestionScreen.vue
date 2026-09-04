@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import { useCorpusStore } from '../stores/corpus'
 import { audioManager } from '../audio/audioManager'
 import { QUESTION_READ_DELAY_MS } from '../audio/sfx'
@@ -21,6 +22,7 @@ import { JOKER_ICONS } from '../components/jokerIcons'
 
 const { t, locale } = useI18n()
 const game = useGameStore()
+const act = useActions()
 const corpus = useCorpusStore()
 
 /**
@@ -77,13 +79,13 @@ function submitCurrentAnswer(response: AnswerResponse) {
   // taken. Routing it through the ordinary verdict left the turn with no
   // placement rule and stranded the player on an empty placement board.
   if (game.state === 'gambler_question') {
-    game.resolveGambler(response)
+    act.resolveGambler(response)
     return
   }
   if (isPassPhase.value) {
-    game.submitPassAnswer(response)
+    act.submitPassAnswer(response)
   } else {
-    game.submitAnswer(response)
+    act.submitAnswer(response)
   }
 }
 
@@ -280,17 +282,17 @@ function submitCalcAnswer() {
 // --- Joker handlers ---
 function handleUseJoker(type: JokerType) {
   if (type === 'reveal_hint') {
-    game.revealHint()
+    act.revealHint()
   } else if (type === 'double_down') {
-    game.activateDoubleDown()
+    act.activateDoubleDown()
   } else if (type === 'reshuffle_question') {
-    void game.reshuffleQuestion()
+    void act.reshuffleQuestion()
   }
 }
 
 // --- Pass decline ---
 function handleDecline() {
-  game.submitPassAnswer('declined')
+  act.submitPassAnswer('declined')
 }
 
 /** What the strip's right-hand line says on this screen. */

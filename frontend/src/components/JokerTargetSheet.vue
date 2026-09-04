@@ -2,6 +2,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import { COLOR_HEX } from '../types/session'
 import BoardGrid from './BoardGrid.vue'
 import JokerIcon from './JokerIcon.vue'
@@ -15,6 +16,7 @@ import JokerIcon from './JokerIcon.vue'
  */
 const { t } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const props = defineProps<{ joker: 'curse' | 'snipe' | 'duel' }>()
 const emit = defineEmits<{ close: [] }>()
@@ -41,12 +43,12 @@ const chosen = computed(() =>
 
 function choose(index: number) {
   if (props.joker === 'curse') {
-    game.applyCurse(index)
+    act.applyCurse(index)
     emit('close')
     return
   }
   if (props.joker === 'duel') {
-    game.startDuel(index)
+    act.startDuel(index)
     emit('close')
     return
   }
@@ -55,7 +57,7 @@ function choose(index: number) {
 
 function snipe(row: number, col: number) {
   if (chosenIndex.value === null) return
-  game.snipePeg(chosenIndex.value, row, col)
+  act.snipePeg(chosenIndex.value, row, col)
   emit('close')
 }
 
@@ -72,7 +74,7 @@ onMounted(() => {
   if (props.joker !== 'curse' || eligible.value.length !== 1) return
   const only = eligible.value[0]
   if (!only) return
-  game.applyCurse(only.index)
+  act.applyCurse(only.index)
   emit('close')
 })
 </script>

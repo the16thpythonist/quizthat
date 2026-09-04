@@ -2,6 +2,7 @@
 import { computed, ref, watch, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import { audioManager } from '../audio/audioManager'
 import { SFX, RATTLE_PITCH_JITTER } from '../audio/sfx'
 import { GameRng } from '../engine/rng'
@@ -11,6 +12,7 @@ import PlayerStrip from '../components/PlayerStrip.vue'
 
 const { t } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const placingPlayer = computed(() => {
   if (!game.turn) return null
@@ -147,7 +149,7 @@ function finishReveal(finalCandidates: [number, number][]) {
     canInteract.value = false
     audioManager.playSfx(SFX.PEG_DROP)
     lastPlacedField.value = finalCandidates[finalCandidates.length - 1] ?? null
-    game.placePegs(finalCandidates)
+    act.placePegs(finalCandidates)
     // More pegs to come regenerates the candidates and re-runs the reveal; this
     // was the last one, so hand the turn back to the player.
     if (game.turn?.pegs_remaining === 0) {
@@ -196,7 +198,7 @@ function handleFieldClick(row: number, col: number) {
   audioManager.playSfx(SFX.PEG_DROP)
   lastPlacedField.value = [row, col]
   canInteract.value = false
-  game.placePeg(row, col)
+  act.placePeg(row, col)
 
   // If that was the last peg, enable continue on NEXT click (not this one)
   if (game.turn?.pegs_remaining === 0) {
@@ -218,7 +220,7 @@ const constraintLabel = computed(() => {
 
 function handleContinueTap() {
   if (!awaitingContinueTap.value) return
-  game.confirmEndTurn()
+  act.confirmEndTurn()
 }
 </script>
 

@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useSettingsStore } from '../stores/settings'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import { useSettingsSheet } from '../composables/useSettingsSheet'
 import type { UiLanguage } from '../stores/settings'
 
@@ -15,6 +16,7 @@ import type { UiLanguage } from '../stores/settings'
 const { t, locale } = useI18n()
 const settings = useSettingsStore()
 const game = useGameStore()
+const act = useActions()
 const sheet = useSettingsSheet()
 
 const s = computed(() => settings.settings)
@@ -37,7 +39,7 @@ function setVolume(key: 'masterVolume' | 'musicVolume' | 'voiceVolume', event: E
 function setLanguage(lang: UiLanguage) {
   settings.set('language', lang)
   locale.value = lang
-  game.updateSettings({ language: lang })
+  act.updateSettings({ language: lang })
 }
 
 /**

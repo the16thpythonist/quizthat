@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
 import GameBar from '../components/GameBar.vue'
 import PlayerStrip from '../components/PlayerStrip.vue'
 import BoardGrid from '../components/BoardGrid.vue'
@@ -16,6 +17,7 @@ import JokerIcon from '../components/JokerIcon.vue'
  */
 const { t } = useI18n()
 const game = useGameStore()
+const act = useActions()
 
 const player = computed(() => game.currentPlayer)
 const staked = computed(() => game.turn?.gambler_staked_field ?? null)
@@ -53,10 +55,10 @@ const stakedLabel = computed(() => {
     </div>
 
     <div class="qt-cta-bar">
-      <button class="qt-cta qt-cta--accent" @click="game.confirmGambler()">
+      <button class="qt-cta qt-cta--accent" @click="act.confirmGambler()">
         {{ t('gambler.confirm') }}
       </button>
-      <button class="qt-cta qt-cta--ghost" @click="game.cancelGambler()">
+      <button class="qt-cta qt-cta--ghost" @click="act.cancelGambler()">
         {{ t('joker.cancel') }}
       </button>
     </div>

@@ -2,6 +2,8 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useActions } from '../composables/useActions'
+import { useNetStore } from '../stores/net'
 import { audioManager } from '../audio/audioManager'
 import { VOICE, voiceLine } from '../audio/sfx'
 import { passLine } from '../engine/algorithms'
@@ -10,6 +12,8 @@ import BoardGrid from '../components/BoardGrid.vue'
 
 const { t, locale } = useI18n()
 const game = useGameStore()
+const act = useActions()
+const net = useNetStore()
 
 const locked = ref(true)
 const showTapHint = ref(false)
@@ -50,8 +54,19 @@ const groundStyle = computed(() => ({
 
 function handleTap() {
   if (locked.value) return
-  game.proceedFromPassGate()
+  act.proceedFromPassGate()
 }
+
+/**
+ * Skipped on separate devices.
+ *
+ * Handing the tablet over is what keeps the first player from watching the
+ * second answer; on their own phones that is already true, so the gate has
+ * nothing left to protect.
+ */
+onMounted(() => {
+  if (net.isOnline) void act.proceedFromPassGate()
+})
 </script>
 
 <template>
