@@ -21,6 +21,7 @@ This document describes the current codebase: how the pieces fit together, where
 13. [Corpus](#13-corpus)
 14. [Infrastructure](#14-infrastructure)
 15. [Testing](#15-testing)
+16. [Backend — the relay](#16-backend--the-relay)
 
 ---
 
@@ -53,17 +54,21 @@ The project has two independent systems that share a single data format (the que
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**No runtime server — for now.** The game app is a pure client-side SPA. The
-corpus is served as static files (Nginx in production, separate container in
-dev). The pipeline is an offline CLI tool that produces the corpus.
+**Shared-tablet play needs no server.** The game app is a client-side SPA and the
+corpus is static files (nginx in production, its own container in dev). The
+pipeline is an offline CLI tool that produces the corpus.
 
-A Django + DRF backend is planned, to add multi-device lobbies (everyone on
-their own phone, plus an optional TV joined as a spectator). It will be a **thin
-relay**: it stores an opaque session blob and fans it out, while one client
-remains authoritative and runs the engine below. The single `GameSession` object,
-the `gradeAnswer` move into the engine, the enforced state machine and the intent
-layer are all groundwork for that — see `stores/game.ts`. Offline shared-tablet
-play stays, on the same code path.
+**`backend/` is a thin relay** for multi-device play. It stores an opaque session
+blob and fans it out; one client stays authoritative and runs the engine below,
+so the rules exist once, in TypeScript. See §16.
+
+```
+  Guest phone            Django (relay)                Host device
+  ───────────            ──────────────                ───────────
+  act.selectSlot(2) ─POST /intents─▶ Intent ──SSE──▶ dispatch() → engine/
+                                                            │
+      state ◀──SSE── Snapshot ◀─POST /snapshot── redactSessionFor(s, seat) × N
+```
 
 **No Vue Router.** The Pinia game store holds the current `GameState` enum value. `App.vue` maps states to screen components via `screenForState()`. Navigating means changing the state — there are no URLs, no back button, no route guards.
 
@@ -610,12 +615,17 @@ The frontend loads this at startup, filters by language, and lazy-loads individu
 
 ### `docker-compose.yml`
 
-Two services:
+Three services:
 
 | Service | Image | Port | Purpose |
 |---------|-------|------|---------|
 | `frontend` | Built from `frontend/Dockerfile` | 5173 | Vite dev server (Vue app only) |
 | `corpus` | `nginx:alpine` | 8080 | Static file server for `questions/` directory |
+| `backend` | Built from `backend/Dockerfile` | 8000 | Lobby relay, corpus browser, stats |
+
+`backend` mounts `questions/` read-write, because the corpus browser writes edits
+back to the JSON files, and keeps its SQLite database in a named volume. It runs a
+**single worker**: SQLite wants one writer, and a lobby is a handful of clients.
 
 ### `frontend/Dockerfile`
 
@@ -623,7 +633,10 @@ Node 22 Alpine, `npm ci`, exposes 5173, runs `npm run dev -- --host 0.0.0.0`.
 
 ### `frontend/vite.config.ts`
 
-Vue plugin + Tailwind CSS plugin. Path alias `@` → `src/`. Dev server on `0.0.0.0:5173`.
+Vue plugin + Tailwind CSS plugin. Path alias `@` → `src/`. Dev server on
+`0.0.0.0:5173`. Proxies `/corpus` to the static server and `/api` to the backend, so
+a phone that loaded the game over the LAN reaches the relay at the same host it
+already trusts — no second address to type, and no CORS preflight per intent.
 
 ### `frontend/package.json`
 
@@ -655,6 +668,9 @@ question types.
 `engine/__tests__/rng.test.ts` — seeded determinism, and that a saved generator
 state resumes mid-sequence rather than rewinding.
 
+`engine/__tests__/redact.test.ts` — what each device is allowed to see: in-flight
+battle answers and an open pass, hidden from everyone they do not belong to.
+
 `stores/__tests__/game.test.ts` — the orchestration the engine tests do not
 reach: setup, selection, answering, jokers, the Gambler, battles and duels, the
 pass, victory, the session as a save format, and a full turn driven through
@@ -665,8 +681,65 @@ These began as characterization tests written against the old loose-refs store s
 the GameSession refactor could be shown to preserve behaviour — which is why they
 assert observable outcomes rather than internals. Keep them that way.
 
+### Backend
+
+`cd backend && uv run pytest` — 34 tests over `lobbies/test_relay.py` (who may
+act, who may publish, and who receives what: the only guarantees the server
+makes) and `stats/test_stats.py` (the nickname-as-identity trade).
+
 ### Pipeline
 
 **Framework:** pytest (configured in pyproject.toml as optional dev dependency).
 
 No tests written yet.
+
+## 16. Backend — the relay
+
+`backend/` is a uv project matching `pipeline/`'s conventions. Run it with
+`uv run uvicorn quizthat_server.asgi:application --reload` — **with `--reload`**,
+or it serves whatever code it started with.
+
+### `lobbies/` — the relay
+
+Four models and no game logic. `Lobby` (a 5-character join code, drawn without
+O/0 or I/1/L because it gets read aloud), `Member` (opaque per-device token;
+nickname is the only identity), `Snapshot` (one row per member, replaced in
+place) and `Intent` (queued, so a host whose phone locked still receives what
+happened while it was away).
+
+Snapshots are per member because the blobs differ — the host redacts each one.
+The server cannot check that and does not try; all it guarantees is that a blob
+filed under one member is never handed to another. They are addressed by member
+**id**, not token: the host names every recipient to publish, and doing that by
+token would put the whole table's credentials on one phone.
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/api/lobbies/` | create; returns join code + the creator's token |
+| POST | `/api/lobbies/{code}/join/` | nickname + role → member token |
+| POST | `/api/lobbies/{code}/start/` | host only; fixes the seat order |
+| GET | `/api/lobbies/{code}/events/` | **SSE**: `lobby`, `snapshot`, and `intent` (host) |
+| POST | `/api/lobbies/{code}/intents/` | a player acts; the server attaches their seat |
+| POST | `/api/lobbies/{code}/snapshot/` | host publishes `{member_id: blob}` |
+
+The event stream polls the database rather than using an in-process wakeup: a
+third of a second is imperceptible next to a turn, and it stays correct across
+worker processes. EventSource cannot set headers, so that one endpoint takes its
+token in the query string.
+
+### `corpus/` — the folder, browsable
+
+**No Question model.** `questions/` is the source of truth: the pipeline writes
+it, git tracks it, nginx serves it. A database copy would be a second source of
+truth to keep in sync. So `corpus/service.py` reads the folder and caches an
+index for search, and `/corpus/` is a plain-Django browser (not Django Admin,
+which is built on models) whose editor writes back to the JSON files — an edit
+shows up as an ordinary `git diff`.
+
+### `stats/` — match history
+
+`Profile` is keyed on the casefolded nickname, so "jonas" and "Jonas" are one
+person and two different people called Jonas are also one person. That is the
+accepted cost of having no accounts, and it is pinned by a test so nobody
+"fixes" it by accident. Reports are keyed on the session id, so a host that
+reconnects and re-sends does not double-count the game.

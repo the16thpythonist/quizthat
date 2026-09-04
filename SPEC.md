@@ -295,9 +295,10 @@ The `answer_data` field is polymorphic by question type:
 - The app must be **natively playable on tablets and smartphones**.
 - Layout is **tablet-first**: optimized for tablet landscape (primary use case). Phone portrait uses the same layout scaled down — no separate phone-specific UI adaptations for V1.
 - The app runs as a **single shared-device experience** by default — all players
-  interact with the same screen. A multi-device mode is being added alongside it
-  (each player on their own phone, plus an optional TV as a read-only spectator);
-  shared-device play remains, as a setting, and both run the same game logic.
+  interact with the same screen. A **multi-device mode** exists alongside it: each
+  player on their own phone, plus an optional TV joined as a read-only spectator.
+  Both run the same game logic — one device is authoritative and the others send it
+  intents. See IMPL.md §16.
 
 ### Accessibility
 

@@ -58,12 +58,11 @@ Vite proxies `/corpus/*` to `CORPUS_PROXY_TARGET` (default `http://localhost:808
 
 Two independent systems sharing one data format (the `questions/` corpus).
 
-**There is no runtime server _yet_.** The game is a pure client-side SPA; the corpus
-is static files; the pipeline is an offline authoring tool.
+**Shared-tablet play needs no server.** The game is a client-side SPA and the corpus
+is static files; offline is the default and still works with the backend switched off.
 
-A Django + DRF backend is being added for **multi-device lobbies** — everyone on
-their own phone, plus an optional TV joined as a read-only spectator. Shared-tablet
-play stays, as a setting, on the same code path. The shape is fixed:
+A Django + DRF backend in `backend/` adds **multi-device lobbies** — everyone on their
+own phone, plus an optional TV joined as a read-only spectator. The shape:
 
 - **Thin relay.** The server stores an opaque session blob and fans it out. It never
   parses the game state and never knows the rules. One client is authoritative and
@@ -78,8 +77,32 @@ play stays, as a setting, on the same code path. The shape is fixed:
 - **`VALID_TRANSITIONS` is enforced**, via `_setState`. That is what refuses a
   malformed or out-of-turn intent.
 
-Don't undo that groundwork as "unused indirection" — it is what the backend attaches
-to. Don't move the rules back into components.
+- **Who may act is decided in `App.vue`**, from `game.awaitingSeat`. That is what
+  replaces the pass-the-device gates: a phone the game is not waiting on is never
+  shown the interactive screen. `redactSessionFor()` is the other half — a guest
+  cannot be shown a secret and asked not to look.
+- **Screens call `useActions()`**, not the store directly: `act.selectSlot(2)` routes
+  through the transport so no screen knows which mode it is in.
+
+Don't undo that as "unused indirection", and don't move the rules back into components.
+
+### Backend (`backend/`)
+
+```bash
+uv sync --extra dev                  # venv at backend/.venv, like pipeline/
+uv run python manage.py migrate
+uv run pytest                        # relay routing + stats
+uv run uvicorn quizthat_server.asgi:application --reload --port 8000
+```
+
+**Use `--reload`.** Without it uvicorn serves the code it started with, and an hour
+disappears debugging a fix that is already on disk.
+
+Three apps, none of which knows the game: `lobbies` (the relay), `corpus` (reads
+`questions/` off disk — **no Question model**, the folder is the source of truth), and
+`stats` (nickname is the whole identity; two people called "Jonas" share a profile).
+
+Vite proxies `/api` to it, so a phone on the LAN reaches both at the same host.
 
 ### Frontend conventions
 
