@@ -390,6 +390,15 @@ export interface QuestionMeta {
   version: number
   created_at: string
   generation_batch: string | null
+  /**
+   * Whether a person has checked this question.
+   *
+   * Written `false` by the generation pipeline and flipped in the editor at
+   * /admin. `build-corpus-index` omits unreviewed questions, so the game never
+   * sees one — which is why this is optional here: by the time the corpus index
+   * reaches the game, everything in it is reviewed.
+   */
+  reviewed?: boolean
 }
 
 /** Cross-session depletion tracking (stored at app level, not per session) */

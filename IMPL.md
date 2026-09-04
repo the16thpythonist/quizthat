@@ -22,6 +22,7 @@ This document describes the current codebase: how the pieces fit together, where
 14. [Infrastructure](#14-infrastructure)
 15. [Testing](#15-testing)
 16. [Backend — the relay](#16-backend--the-relay)
+17. [The corpus editor](#17-the-corpus-editor)
 
 ---
 
@@ -732,9 +733,38 @@ token in the query string.
 **No Question model.** `questions/` is the source of truth: the pipeline writes
 it, git tracks it, nginx serves it. A database copy would be a second source of
 truth to keep in sync. So `corpus/service.py` reads the folder and caches an
-index for search, and `/corpus/` is a plain-Django browser (not Django Admin,
-which is built on models) whose editor writes back to the JSON files — an edit
-shows up as an ordinary `git diff`.
+index for search, and the editor writes back to the JSON files — an edit shows
+up as an ordinary `git diff`.
+
+`corpus/views.py` is the JSON API the editor at `/admin` runs on. Reads are
+open, because nginx already serves the very same files to every device in a
+game; everything write-shaped needs the login:
+
+| route | |
+|---|---|
+| `GET/POST/DELETE /api/corpus/session/` | who is signed in, sign in, sign out |
+| `GET /api/corpus/index/` | the listing, including teaser titles |
+| `GET /api/corpus/tree/` | the category tree and the filter facets |
+| `GET /api/corpus/questions/<id>/` | meta, **every** language, and the clips |
+| `GET /api/corpus/questions/<id>/audio/<file>` | one clip, streamed |
+| `PUT /api/corpus/questions/<id>/<lang>/` | save the question file |
+| `PUT /api/corpus/questions/<id>/meta/` | save the editable half of meta.json |
+| `POST /api/corpus/reload/` | re-scan the folder |
+
+The bundle carries every language at once because the detail pane has a
+language switcher, and refetching per flick would make a comparison feel like
+navigation. `write_meta` merges only `CorpusIndex.EDITABLE_META` over what is on
+disk, so `id`, `languages`, `version` and provenance stay the pipeline's.
+
+Audio is streamed by Django rather than left to nginx, so the editor works
+wherever it is reachable — including from outside the LAN, where the corpus
+volume the game's static server exposes need not be published at all. The
+filename is matched against the corpus's own `<kind>.<lang>.mp3` pattern rather
+than merely sanitised, so a name from a URL cannot be talked into a traversal.
+
+`/corpus/` is still the older plain-Django browser (not Django Admin, which is
+built on models): the same listing and a raw-JSON textarea. It writes the same
+files as `/admin`, so prefer one or the other rather than both at once.
 
 ### Admin login
 
@@ -752,3 +782,119 @@ person and two different people called Jonas are also one person. That is the
 accepted cost of having no accounts, and it is pinned by a test so nobody
 "fixes" it by accident. Reports are keyed on the session id, so a host that
 reconnects and re-sends does not double-count the game.
+
+
+---
+
+## 17. The corpus editor
+
+`/admin` in the Vue app: a three-pane editor for the question folder. Tree of
+categories on the left, the filtered listing in the middle, one question on the
+right.
+
+### It has its own route, and that is the only route
+
+`frontend/src/router.ts` has exactly two entries — `/` for the game and `/admin`
+for the editor — and `RootApp.vue` is a bare `<RouterView>` above them.
+
+**This does not weaken "no Vue Router" for the game.** Navigation inside a game
+still means changing `GameState`, and `App.vue` still renders
+`screenForState(state)`; nothing routes a screen. The editor is a separate
+application that happens to share a build: no session, no seat, no board.
+Putting it behind a `GameState` would have meant inventing states that
+`VALID_TRANSITIONS` then had to allow. Do not add a third route for something
+that is really a game screen.
+
+The editor chunk is lazily imported, so a tablet that only ever plays never
+downloads it, and `main.ts` skips the game's startup (auto-save listeners,
+corpus fetch, resume prompt) on `/admin`.
+
+### The files
+
+| file | |
+|---|---|
+| `admin/api.ts` | the editor's half of the corpus API, and `detach()` |
+| `admin/store.ts` | session, listing, selection, and the filter |
+| `admin/AdminView.vue` | the shell: header, error bar, three panes |
+| `admin/LoginGate.vue` | the sign-in form, and the "no password set" notice |
+| `admin/CategoryTree.vue` | majors expanding to subcategories, with counts |
+| `admin/QuestionList.vue` | the filtered listing, led by teaser title |
+| `admin/QuestionDetail.vue` | drafts, both forms, audio, and Save |
+| `admin/AnswerDataEditor.vue` | one small form per `question_type` |
+| `admin/QuestionPreview.vue` | an approximation of the table |
+| `admin/GeneratePane.vue` | the Generate tab: the form, and the live run |
+
+### Three things worth knowing
+
+**`detach()`, never `structuredClone`.** Everything the editor clones comes out
+of a store, so it is a reactive proxy, and `structuredClone` throws
+`DataCloneError` on a Proxy — the trap `snapshotSession()` exists for in
+`stores/persistence.ts`. The corpus is JSON on disk, so a JSON round-trip is
+exact. This was a real bug, not a hypothetical: it left the detail pane stuck on
+"Loading…" with nothing in the console.
+
+**Filtering is in the browser.** The listing is fetched once and narrowed in
+memory, which is what makes clicking a category instant instead of a round trip.
+`admin/__tests__/store.test.ts` pins that the filters compose rather than
+override each other.
+
+**The tree is derived from the corpus**, not from
+`pipeline/config/categories.yaml`, so every node has questions behind it. The
+cost is that the inconsistency this file records elsewhere is visible: a corpus
+holding both `physics` and `Physics` shows two nodes, because to everything else
+they are two different categories. The detail pane can edit the category, which
+is how they merge — and saving one re-reads the tree.
+
+### The preview is deliberately not the game's screens
+
+`QuestionPreview.vue` re-reads the same data into its own cards. The real
+screens take a live `GameSession`, a seat and a turn; feeding them a stub from
+the editor would mean knowing about state the engine owns, and would break the
+moment a screen read one more field. The preview will drift. When it matters,
+play the question.
+
+### Generating from the editor
+
+The Generate tab starts a pipeline run and watches it happen.
+
+`backend/corpus/generation.py` runs `quizthat generate-batch --json-events` as a
+**subprocess**, not as an import: the pipeline is a separate application with
+its own virtualenv, and the question-writing agent is the `claude` CLI it spawns
+in turn. `--json-events` exists for exactly this reader — one JSON object per
+line on stdout, flushed per line, so a run can be followed while it is still
+going. Emitting events and drawing the Rich display are mutually exclusive;
+escape codes in the stream would choke the reader.
+
+A thread drains stdout into a buffer and `generation_views.generate_events`
+replays that buffer over SSE, so a browser that reconnects mid-run catches up
+instead of starting blind. A finished run stays readable for a while for the
+same reason. **One run at a time, server-wide** — generation is sequential
+inside the pipeline anyway, since parallel agents would race on the duplicate
+check.
+
+`GET /api/corpus/categories/` offers `pipeline/config/categories.yaml` as the
+category list for the form; it is the one place the editor reads that file
+rather than the corpus. Everything write-shaped here needs the login, and
+`capability()` reports up front whether the pipeline and the `claude` CLI are
+actually on PATH — in the container they are, because `backend/Dockerfile`
+builds from the repo root to carry both.
+
+### Nothing reaches the game unreviewed
+
+`meta.json` carries a `reviewed` flag, written `false` by the pipeline and
+flipped by `POST /api/corpus/questions/<id>/review/` when a person has looked at
+the question in the editor. `scripts/build-corpus-index` leaves unreviewed
+questions out of `corpus-index.json`, which is what the game actually reads, so
+a freshly generated question is invisible until someone approves it
+(`--include-unreviewed` overrides that for inspection).
+
+A question with **no** `reviewed` key counts as reviewed: the flag postdates
+most of the corpus, and defaulting the other way would empty the game. That is
+also why `QuestionMeta.reviewed` is optional in `types/session.ts` — by the time
+an index reaches the frontend, everything in it is reviewed.
+
+### Placeholder audio
+
+A clip is listed with its size, and a zero-byte file — what a keyless
+`audio batch` run leaves behind — is shown as a placeholder to regenerate rather
+than offered as playable silence. Most of the corpus is in that state today.

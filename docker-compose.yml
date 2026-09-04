@@ -22,12 +22,23 @@ services:
   # because the browser at /corpus/ writes edits back to the JSON files — those
   # files are the source of truth, and git is the undo.
   backend:
-    build: ./backend
+    # The repo root, so the image can carry the generation pipeline too.
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     ports:
       - "8000:8000"
     volumes:
       - ./questions:/corpus
       - backend-data:/data
+      # The token the `claude` CLI signs in with, so the container can run the
+      # generation agent as you.
+      #
+      # **Only the credentials file**, never the whole ~/.claude — that folder
+      # holds every Claude Code transcript, plan and project history on this
+      # machine, and none of that belongs in a container that serves a website.
+      # Read-only: the container has no business rotating your token.
+      - ${HOME}/.claude/.credentials.json:/root/.claude/.credentials.json:ro
     # The same gitignored .env the pipeline uses. Marked optional so the stack
     # still comes up without one — the corpus editor then refuses to open,
     # which is the intended failure.

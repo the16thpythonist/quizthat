@@ -9,6 +9,9 @@ dependencies = [
     "django-cors-headers>=4.4",
     "uvicorn[standard]>=0.30",
     "python-dotenv>=1.0",
+    # Only for reading the pipeline's categories.yaml, which the editor
+    # offers as the category list when starting a generation run.
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]

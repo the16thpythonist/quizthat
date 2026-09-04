@@ -13,6 +13,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from .constants import DEFAULT_MODEL
+from .events import EventSink, emit
 from .agent.runner import generate_question_with_agent, validate_question_with_agent
 from .tts.client import generate_all_voice_lines
 from .agent.tools import get_questions_dir
@@ -197,11 +199,31 @@ def generate_single(
     question_type: str = "multiple_choice",
     languages: list[str] | None = None,
     validate: bool = False,
-    model: str = "claude-sonnet-4-20250514",
+    model: str = DEFAULT_MODEL,
+    on_event: EventSink = None,
 ) -> None:
-    """Generate a single question via the agent pipeline with live progress."""
+    """
+    Generate a single question via the agent pipeline with live progress.
+
+    With `on_event` set the Rich display is skipped entirely and progress is
+    reported as events instead — the two cannot share stdout, because Rich's
+    escape codes would land in the middle of the JSON stream.
+    """
     if languages is None:
         languages = ["en", "de"]
+
+    if on_event is not None:
+        _generate_single_headless(
+            prompt=prompt,
+            category=category,
+            subcategory=subcategory,
+            difficulty=difficulty,
+            question_type=question_type,
+            languages=languages,
+            model=model,
+            on_event=on_event,
+        )
+        return
 
     tracker = StageTracker()
     research_idx = tracker.add_stage("Researching topic...", f'prompt: "{prompt[:50]}"')
@@ -407,3 +429,87 @@ def generate_single(
     else:
         logger.debug("No question directory found — card skipped")
     console.print()
+
+
+def _generate_single_headless(
+    prompt: str,
+    category: str,
+    subcategory: str,
+    difficulty: str,
+    question_type: str,
+    languages: list[str],
+    model: str,
+    on_event: EventSink,
+    batch_id: str | None = None,
+    index: int = 0,
+    total: int = 1,
+) -> Path | None:
+    """
+    One question, reported as events.
+
+    Returns the folder it wrote, or None. Shares no code with the Rich path
+    above on purpose: that one is a display with the work threaded through it,
+    and untangling the two would leave both harder to follow than either.
+
+    TTS is deliberately not run here. Narration is metered on a paid ElevenLabs
+    tier and the editor generates questions one topic at a time, so it stays a
+    separate, explicit `quizthat audio generate` step.
+    """
+    emit(
+        on_event,
+        "question_started",
+        index=index,
+        total=total,
+        prompt=prompt,
+        category=category,
+        subcategory=subcategory,
+        difficulty=difficulty,
+        question_type=question_type,
+        model=model,
+    )
+
+    try:
+        result = asyncio.run(
+            generate_question_with_agent(
+                prompt=prompt,
+                category=category,
+                subcategory=subcategory,
+                difficulty=difficulty,
+                question_type=question_type,
+                languages=languages,
+                batch_id=batch_id,
+                model=model,
+                on_event=on_event,
+            )
+        )
+    except BaseException as exc:  # noqa: BLE001 - reported, not swallowed
+        # The SDK raises ExceptionGroups; the first leaf is the real cause and
+        # the group's own repr says nothing useful.
+        cause = exc
+        while isinstance(cause, BaseExceptionGroup) and cause.exceptions:
+            cause = cause.exceptions[0]
+        emit(on_event, "question_finished", index=index, status="failed", error=str(cause))
+        return None
+
+    question_dir = result.get("question_dir")
+    if not question_dir:
+        errors = result.get("_tool_errors") or []
+        emit(
+            on_event,
+            "question_finished",
+            index=index,
+            status="failed",
+            error=errors[0] if errors else "the agent did not write a question",
+        )
+        return None
+
+    path = Path(question_dir)
+    emit(
+        on_event,
+        "question_finished",
+        index=index,
+        status="ok",
+        question_id=path.name,
+        question_dir=str(path),
+    )
+    return path

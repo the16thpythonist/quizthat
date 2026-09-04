@@ -7,6 +7,7 @@ import os
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ..constants import DEFAULT_MODEL
 from ..schemas import QuestionMeta, QuestionContent
 
 
@@ -22,10 +23,14 @@ def write_question_folder(
     question_de: dict | None,
     research_notes: str,
     batch_id: str | None = None,
+    model: str | None = None,
 ) -> Path:
     """Write a complete question folder to disk.
 
     Returns the path to the created question folder.
+
+    Everything written here is marked unreviewed, so `build-corpus-index` keeps
+    it out of the game until a person has looked at it in the editor.
     """
     questions_dir = get_questions_dir()
     question_dir = questions_dir / question_id
@@ -50,6 +55,7 @@ def write_question_folder(
         version=1,
         created_at=datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         generation_batch=batch_id,
+        reviewed=False,
     )
 
     (question_dir / "meta.json").write_text(
@@ -83,7 +89,9 @@ def write_question_folder(
         (gen_dir / "research.md").write_text(research_notes, encoding="utf-8")
 
     log_entry = {
-        "model": "claude-sonnet-4-20250514",
+        # The model actually used, not a constant — the audit trail is worthless
+        # if it says Sonnet 4 for a question a different model wrote.
+        "model": model or DEFAULT_MODEL,
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "batch_id": batch_id,
         "question_id": question_id,

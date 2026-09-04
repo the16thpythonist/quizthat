@@ -1,7 +1,8 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import { createI18n } from 'vue-i18n'
-import App from './App.vue'
+import RootApp from './RootApp.vue'
+import { router } from './router'
 import './style.css'
 import en from './i18n/en.json'
 import de from './i18n/de.json'
@@ -32,17 +33,27 @@ const i18n = createI18n({
   messages: { en, de },
 })
 
-const app = createApp(App)
+const app = createApp(RootApp)
 app.use(createPinia())
 app.use(i18n)
+app.use(router)
 app.mount('#app')
 
-setupAutoSaveListeners()
+/**
+ * The game's startup, skipped for the curator's editor.
+ *
+ * The editor has no session to restore and reads the corpus through its own
+ * authenticated API, so running these there would mean a pointless fetch and a
+ * "resume your game?" prompt on a page with no game on it.
+ */
+if (!window.location.pathname.startsWith('/admin')) {
+  setupAutoSaveListeners()
 
-const corpus = useCorpusStore()
-corpus.loadCorpus().catch(err => {
-  console.error('Failed to load corpus:', err)
-})
+  const corpus = useCorpusStore()
+  corpus.loadCorpus().catch(err => {
+    console.error('Failed to load corpus:', err)
+  })
 
-// An interrupted game is offered on the title screen, not adopted outright.
-useGameStore().checkForResumableGame()
+  // An interrupted game is offered on the title screen, not adopted outright.
+  useGameStore().checkForResumableGame()
+}

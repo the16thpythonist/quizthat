@@ -112,12 +112,21 @@ Vite proxies `/api` to it, so a phone on the LAN reaches both at the same host.
 
 ### Frontend conventions
 
-- **No Vue Router.** The Pinia store holds a `GameState` enum; `App.vue` renders
-  `screenForState(state)`. Navigation means changing state — no URLs, no back button.
+- **No Vue Router *in the game*.** The Pinia store holds a `GameState` enum; `App.vue`
+  renders `screenForState(state)`. Navigation means changing state — no URLs, no back
+  button. The router in `router.ts` has exactly two entries, `/` and `/admin`, and exists
+  only to keep the curator's editor off the game's page; it never routes a screen. Don't
+  add a third route for something that is really a game screen.
 - **Never use `Math.random()`.** Every random decision goes through the seeded PRNG in
   `engine/rng.ts`. `GameSession` stores both `rng_seed` and `rng_state` — reseeding
   alone rewinds the generator, so a resumed or relayed game would re-draw what it had
   already spent. Confetti and the dev animation harness are the only exemptions.
+- **`/admin` is the corpus editor**, not part of the game: tree, listing, and a detail
+  pane that edits `meta.json` and `question.<lang>.json`, plays the clips and previews the
+  card. Behind the one shared login (`QUIZTHAT_ADMIN_USER` / `QUIZTHAT_ADMIN_PASSWORD` in
+  the repo-root `.env`); with no password set it refuses to open. See IMPL.md §17.
+- **`structuredClone` throws on reactive proxies**, so the editor clones through
+  `detach()` in `admin/api.ts`, as the game does through `snapshotSession()`.
 - **`engine/` is pure logic** — no Vue imports, no DOM. Keep new game logic there
   rather than in components. In particular **components never decide an outcome**:
   `gradeAnswer()` is the only authority on whether an answer is right, and

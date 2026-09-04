@@ -8,7 +8,9 @@ import logging
 from pathlib import Path
 from typing import Any
 
+from ..events import EventSink, emit, summarize
 from .prompts import GENERATION_SYSTEM_PROMPT, VALIDATION_SYSTEM_PROMPT
+from ..constants import DEFAULT_MODEL
 from .tools import write_question_folder, find_similar_questions
 
 logger = logging.getLogger(__name__)
@@ -22,11 +24,12 @@ async def generate_question_with_agent(
     question_type: str,
     languages: list[str],
     batch_id: str | None = None,
-    model: str = "claude-sonnet-4-20250514",
+    model: str = DEFAULT_MODEL,
+    on_event: EventSink = None,
 ) -> dict[str, Any]:
     """Generate a question using the Claude Agent SDK.
 
-    Falls back to a simple API call if the Agent SDK is not available.
+    `on_event` receives the agent's turns as they happen; see `quizthat.events`.
     """
     try:
         return await _run_agent_sdk(
@@ -38,6 +41,7 @@ async def generate_question_with_agent(
             languages=languages,
             batch_id=batch_id,
             model=model,
+            on_event=on_event,
         )
     except ImportError:
         logger.warning(
@@ -58,6 +62,7 @@ async def _run_agent_sdk(
     languages: list[str],
     batch_id: str | None,
     model: str,
+    on_event: EventSink = None,
 ) -> dict[str, Any]:
     """Run question generation through the Claude Agent SDK."""
     from claude_agent_sdk import query, tool, create_sdk_mcp_server, ClaudeAgentOptions
@@ -101,8 +106,15 @@ async def _run_agent_sdk(
                 question_de=_ensure_dict(args.get("question_de")),
                 research_notes=args.get("research_notes", ""),
                 batch_id=batch_id,
+                model=model,
             )
             written_question_dir = question_dir
+            emit(
+                on_event,
+                "question_written",
+                question_dir=str(question_dir),
+                question_id=args.get("question_id"),
+            )
             return {
                 "content": [
                     {
@@ -198,15 +210,41 @@ async def _run_agent_sdk(
                 text = getattr(block, "text", "")
                 if text:
                     debug_messages.append(f"  result: {str(text)[:100]}")
+                # A tool's answer comes back as a user-role message; this is
+                # what a watcher sees as "the search returned something".
+                content = getattr(block, "content", None)
+                if content is not None and not text:
+                    emit(
+                        on_event,
+                        "tool_result",
+                        summary=summarize(content),
+                        is_error=bool(getattr(block, "is_error", False)),
+                    )
         if isinstance(message, AssistantMessage):
             for block in message.content:
                 block_name = type(block).__name__
                 # Log tool use names
                 if hasattr(block, "name"):
                     block_name += f"({block.name})"
+                    emit(
+                        on_event,
+                        "tool_use",
+                        name=block.name,
+                        summary=summarize(getattr(block, "input", "")),
+                    )
                 debug_messages.append(f"  {block_name}")
                 if isinstance(block, TextBlock):
                     result_text += block.text
+                    emit(on_event, "agent_text", text=block.text)
+        if isinstance(message, ResultMessage):
+            # The SDK measures the run even though nothing used to read it.
+            emit(
+                on_event,
+                "agent_result",
+                cost_usd=getattr(message, "total_cost_usd", None),
+                duration_ms=getattr(message, "duration_ms", None),
+                num_turns=getattr(message, "num_turns", None),
+            )
 
     return {
         "status": "ok",
@@ -220,7 +258,7 @@ async def _run_agent_sdk(
 async def validate_question_with_agent(
     question_content: dict,
     meta: dict,
-    model: str = "claude-sonnet-4-20250514",
+    model: str = DEFAULT_MODEL,
 ) -> dict[str, Any]:
     """Validate a question using a separate agent run."""
     try:

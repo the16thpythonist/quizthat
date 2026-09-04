@@ -21,6 +21,9 @@ REPO_ROOT = Path(os.environ.get("QUIZTHAT_REPO_ROOT", BASE_DIR.parent))
 # there and not in this file, which is committed.
 load_dotenv(REPO_ROOT / ".env")
 CORPUS_DIR = Path(os.environ.get("QUIZTHAT_CORPUS_DIR", REPO_ROOT / "questions"))
+# The generation pipeline, driven as a subprocess from its own venv — see
+# corpus/generation.py for why it is not imported.
+PIPELINE_DIR = Path(os.environ.get("QUIZTHAT_PIPELINE_DIR", REPO_ROOT / "pipeline"))
 
 # Development default. Set DJANGO_SECRET_KEY before exposing this anywhere.
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "dev-only-not-a-secret")

@@ -41,6 +41,11 @@ class GenerationCommandsMixin:
         default=DEFAULT_LANGUAGES,
         help="Comma-separated language codes",
     )
+    @click.option(
+        "--json-events",
+        is_flag=True,
+        help="Emit one JSON object per line instead of drawing progress",
+    )
     @click.option("-v", "--validate", is_flag=True, help="Run validation after generation")
     @click.option("-m", "--model", default=DEFAULT_MODEL, help="Model to use")
     def generate_command(
@@ -51,15 +56,18 @@ class GenerationCommandsMixin:
         difficulty: str,
         question_type: str,
         languages: str,
+        json_events: bool,
         validate: bool,
         model: str,
     ) -> None:
         """Generate a single question from a prompt."""
+        from quizthat.events import jsonl_sink
         from quizthat.generate import generate_single
 
         lang_list = [lang.strip() for lang in languages.split(",")]
 
         generate_single(
+            on_event=jsonl_sink() if json_events else None,
             prompt=prompt,
             category=category,
             subcategory=subcategory,
@@ -94,6 +102,11 @@ class GenerationCommandsMixin:
         default=DEFAULT_LANGUAGES,
         help="Comma-separated language codes",
     )
+    @click.option(
+        "--json-events",
+        is_flag=True,
+        help="Emit one JSON object per line instead of drawing progress",
+    )
     @click.option("--dry-run", is_flag=True, help="Preview without generating")
     @click.option("-m", "--model", default=DEFAULT_MODEL, help="Model to use")
     def generate_batch_command(
@@ -104,15 +117,18 @@ class GenerationCommandsMixin:
         count: int,
         question_type: str,
         languages: str,
+        json_events: bool,
         dry_run: bool,
         model: str,
     ) -> None:
         """Generate a batch of questions."""
         from quizthat.batch import generate_batch
+        from quizthat.events import jsonl_sink
 
         lang_list = [lang.strip() for lang in languages.split(",")]
 
         generate_batch(
+            on_event=jsonl_sink() if json_events else None,
             category=category,
             subcategory=subcategory,
             difficulty=difficulty,

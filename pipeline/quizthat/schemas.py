@@ -113,6 +113,13 @@ class QuestionMeta(BaseModel):
     version: int = 1
     created_at: str = Field(default_factory=lambda: datetime.utcnow().isoformat() + "Z")
     generation_batch: str | None = None
+    #: Whether a person has looked at this question.
+    #:
+    #: Generation writes `False`; the editor at /admin flips it. Defaults to
+    #: `True` so the questions that predate the flag — and anything written by
+    #: hand — count as reviewed rather than silently vanishing from the game the
+    #: moment `build-corpus-index` learned to filter on it.
+    reviewed: bool = True
 
 
 class QuestionContent(BaseModel):

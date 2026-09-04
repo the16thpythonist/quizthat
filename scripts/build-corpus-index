@@ -16,9 +16,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 
-def build_index(questions_dir: Path) -> dict:
-    """Scan all meta.json files and build the corpus index."""
+def build_index(questions_dir: Path, include_unreviewed: bool = False) -> dict:
+    """
+    Scan all meta.json files and build the corpus index.
+
+    Questions marked `"reviewed": false` are left out unless
+    `include_unreviewed` is set. That flag is written by the generation
+    pipeline, and this is what keeps a freshly generated question out of the
+    game until a person has looked at it in the editor at /admin. A question
+    with no `reviewed` key counts as reviewed — the flag postdates most of the
+    corpus, and defaulting the other way would empty the game.
+    """
     entries = []
+    skipped_unreviewed = 0
 
     if not questions_dir.exists():
         print(f"Error: questions directory does not exist: {questions_dir}", file=sys.stderr)
@@ -41,6 +51,10 @@ def build_index(questions_dir: Path) -> dict:
             print(f"  Warning: skipping {item.name}/ (invalid JSON: {e})", file=sys.stderr)
             continue
 
+        if not include_unreviewed and meta.get("reviewed", True) is False:
+            skipped_unreviewed += 1
+            continue
+
         entry = {
             "id": meta.get("id", item.name),
             "major_category": meta.get("major_category", ""),
@@ -52,6 +66,13 @@ def build_index(questions_dir: Path) -> dict:
             "path": f"{item.name}/",
         }
         entries.append(entry)
+
+    if skipped_unreviewed:
+        print(
+            f"  Skipped {skipped_unreviewed} unreviewed question(s) — "
+            f"review them at /admin to include them.",
+            file=sys.stderr,
+        )
 
     index = {
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
@@ -74,13 +95,18 @@ def main():
         default=None,
         help="Output file path (default: <questions-dir>/corpus-index.json)",
     )
+    parser.add_argument(
+        "--include-unreviewed",
+        action="store_true",
+        help="Also index questions marked reviewed: false (normally hidden from the game)",
+    )
     args = parser.parse_args()
 
     questions_dir = Path(args.questions_dir)
     output_path = Path(args.output) if args.output else questions_dir / "corpus-index.json"
 
     print(f"Scanning {questions_dir}/ ...")
-    index = build_index(questions_dir)
+    index = build_index(questions_dir, include_unreviewed=args.include_unreviewed)
     print(f"Found {index['question_count']} questions.")
 
     output_path.write_text(
