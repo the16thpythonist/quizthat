@@ -1,0 +1,26 @@
+{% extends "corpus/base.html" %}
+{% block subtitle %}{{ question_id }} · {{ language }}{% endblock %}
+{% block content %}
+  <p>
+    {% for lang in languages %}
+      <a href="{% url 'corpus-browser-edit' question_id lang %}" class="tag">{{ lang }}</a>
+    {% endfor %}
+    <a href="{% url 'corpus-browser' %}" class="muted">back to list</a>
+  </p>
+
+  {% if error %}<p class="msg error">{{ error }}</p>{% endif %}
+
+  <form method="post">
+    {% csrf_token %}
+    <textarea name="payload" spellcheck="false">{{ payload }}</textarea>
+    <p>
+      <button type="submit">Save to questions/{{ question_id }}/question.{{ language }}.json</button>
+      <span class="muted">Written straight to the file — git is the undo.</span>
+    </p>
+  </form>
+
+  <details>
+    <summary>meta.json <span class="muted">(read-only here; the pipeline owns it)</span></summary>
+    <pre>{{ meta }}</pre>
+  </details>
+{% endblock %}

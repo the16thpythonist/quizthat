@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}QuizThat corpus{% endblock %}</title>
+  <style>
+    :root { color-scheme: light dark; --line: #8883; }
+    body { margin: 0; font: 14px/1.5 system-ui, sans-serif; }
+    header { padding: 12px 20px; border-bottom: 1px solid var(--line); display: flex;
+             gap: 16px; align-items: baseline; }
+    header a { text-decoration: none; font-weight: 700; }
+    main { padding: 20px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { text-align: left; padding: 6px 10px; border-bottom: 1px solid var(--line); }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; opacity: .7; }
+    form.filters { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px; }
+    input, select, button, textarea { font: inherit; padding: 6px 8px; }
+    textarea { width: 100%; min-height: 60vh; font-family: ui-monospace, monospace; }
+    .muted { opacity: .6; }
+    .msg { padding: 8px 12px; border: 1px solid var(--line); margin-bottom: 12px; }
+    .error { border-color: #c33; color: #c33; }
+    .tag { font-size: 12px; padding: 1px 6px; border: 1px solid var(--line); border-radius: 999px; }
+  </style>
+</head>
+<body>
+  <header>
+    <a href="{% url 'corpus-browser' %}">QuizThat corpus</a>
+    <span class="muted">{% block subtitle %}{% endblock %}</span>
+  </header>
+  <main>
+    {% if messages %}{% for message in messages %}
+      <p class="msg">{{ message }}</p>
+    {% endfor %}{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -1,0 +1,57 @@
+{% extends "corpus/base.html" %}
+{% block subtitle %}{{ results|length }} of {{ total }} questions{% endblock %}
+{% block content %}
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ filters.text }}" placeholder="id or category">
+  <select name="major">
+    <option value="">any category</option>
+    {% for value in facets.major_category %}
+      <option value="{{ value }}" {% if value == filters.major %}selected{% endif %}>{{ value }}</option>
+    {% endfor %}
+  </select>
+  <select name="difficulty">
+    <option value="">any difficulty</option>
+    {% for value in facets.difficulty %}
+      <option value="{{ value }}" {% if value == filters.difficulty %}selected{% endif %}>{{ value }}</option>
+    {% endfor %}
+  </select>
+  <select name="type">
+    <option value="">any type</option>
+    {% for value in facets.question_type %}
+      <option value="{{ value }}" {% if value == filters.question_type %}selected{% endif %}>{{ value }}</option>
+    {% endfor %}
+  </select>
+  <select name="language">
+    <option value="">any language</option>
+    {% for value in facets.language %}
+      <option value="{{ value }}" {% if value == filters.language %}selected{% endif %}>{{ value }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit">Filter</button>
+  <a href="?reload=1"><button type="button">Re-scan folder</button></a>
+</form>
+
+<table>
+  <thead>
+    <tr><th>ID</th><th>Category</th><th>Difficulty</th><th>Type</th><th>Languages</th><th>Audio</th></tr>
+  </thead>
+  <tbody>
+    {% for entry in results %}
+    <tr>
+      <td><code>{{ entry.id }}</code></td>
+      <td>{{ entry.major_category }} <span class="muted">/ {{ entry.subcategory }}</span></td>
+      <td>{{ entry.difficulty }}</td>
+      <td>{{ entry.question_type }}</td>
+      <td>
+        {% for lang in entry.present_languages %}
+          <a href="{% url 'corpus-browser-edit' entry.id lang %}" class="tag">{{ lang }}</a>
+        {% empty %}<span class="muted">none</span>{% endfor %}
+      </td>
+      <td>{% if entry.has_audio %}yes{% else %}<span class="muted">no</span>{% endif %}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="6" class="muted">Nothing matches.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

@@ -8,6 +8,7 @@ services:
       - /app/node_modules
     environment:
       - CORPUS_PROXY_TARGET=http://corpus:80
+      - BACKEND_PROXY_TARGET=http://backend:8000
     command: npm run dev -- --host 0.0.0.0
 
   corpus:
@@ -16,3 +17,21 @@ services:
       - "8080:80"
     volumes:
       - ./questions:/usr/share/nginx/html:ro
+
+  # Lobby relay, corpus browser and match stats. The corpus is mounted read-write
+  # because the browser at /corpus/ writes edits back to the JSON files — those
+  # files are the source of truth, and git is the undo.
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./questions:/corpus
+      - backend-data:/data
+    environment:
+      - QUIZTHAT_CORPUS_DIR=/corpus
+      - DJANGO_DB_PATH=/data/db.sqlite3
+      - DJANGO_DEBUG=0
+
+volumes:
+  backend-data:
