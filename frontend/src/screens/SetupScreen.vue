@@ -12,7 +12,7 @@ const { t } = useI18n()
 const game = useGameStore()
 const act = useActions()
 
-const emit = defineEmits<{ multiDevice: [] }>()
+const emit = defineEmits<{ multiDevice: []; spectate: [] }>()
 
 // Title -> player list -> game settings. Each phase is matched explicitly:
 // a negated condition would have swallowed the third phase.
@@ -145,9 +145,10 @@ const LINES_TO_WIN_OPTIONS = [1, 2]
       <p class="qt-game-sub">{{ t('start.tagline') }}</p>
 
       <!--
-        An interrupted game takes over the menu until it is answered: offering
-        "New Game" alongside it invites losing the save by reflex. Declining
-        deletes it and falls back to the ordinary menu (SPEC §9).
+        An interrupted game is offered *above* the menu rather than in place of
+        it. Taking the menu over meant a device that had played once could not
+        reach "Zuschauen" without first answering a question about a game it did
+        not care about — exactly the position a television ends up in.
       -->
       <div v-if="game.resumableSession" class="qt-menu qt-resume">
         <p class="qt-resume-prompt">{{ t('start.resumePrompt') }}</p>
@@ -160,7 +161,7 @@ const LINES_TO_WIN_OPTIONS = [1, 2]
         </button>
       </div>
 
-      <div v-else class="qt-menu">
+      <div class="qt-menu">
         <button class="qt-cta qt-cta--accent" @click="handleNewGame">{{ t('start.newGame') }}</button>
         <!--
           Shared tablet stays the default and the first option: it needs no
@@ -168,6 +169,14 @@ const LINES_TO_WIN_OPTIONS = [1, 2]
         -->
         <button class="qt-cta qt-cta--ghost" @click="emit('multiDevice')">
           {{ t('start.multiDevice') }}
+        </button>
+        <!--
+          Its own entry rather than a checkbox inside the join flow: this is what
+          a television opens, and it should not have to type a name or a code to
+          get there.
+        -->
+        <button class="qt-cta qt-cta--ghost" @click="emit('spectate')">
+          {{ t('start.spectate') }}
         </button>
         <button class="qt-cta qt-cta--ghost" @click="game.goToAppSettings()">{{ t('start.settings') }}</button>
         <button class="qt-cta qt-cta--ghost">{{ t('start.howToPlay') }}</button>

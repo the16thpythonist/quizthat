@@ -12,6 +12,7 @@ import time
 
 from asgiref.sync import sync_to_async
 from django.http import StreamingHttpResponse
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -54,6 +55,66 @@ def _forbidden(detail: str) -> Response:
     return Response({"detail": detail}, status=status.HTTP_403_FORBIDDEN)
 
 
+@api_view(["GET"])
+def open_lobbies(request):
+    """
+    Games a spectator could watch, newest first.
+
+    **Deliberately without join codes.** A television cannot reasonably type a
+    code, so this exists to let one be picked from a list — but publishing the
+    codes here would let anyone who can reach the server join any game as a
+    *player* without being told one, which is the whole point of the code.
+    So this carries only what is needed to choose and to watch.
+
+    Games already under way are included: a TV is usually switched on after
+    everyone has sat down, and spectators may join at any time.
+    """
+    lobbies = (
+        Lobby.objects.filter(status__in=[Lobby.Status.OPEN, Lobby.Status.PLAYING])
+        .annotate(player_count=Count("members", filter=Q(members__role=Member.Role.PLAYER)))
+        .order_by("-created_at")[:40]
+    )
+    return Response(
+        [
+            {
+                "id": lobby.id,
+                "name": lobby.name or "",
+                "status": lobby.status,
+                "player_count": lobby.player_count,
+                "created_at": lobby.created_at,
+            }
+            for lobby in lobbies
+        ]
+    )
+
+
+@api_view(["POST"])
+def watch_lobby(request, lobby_id: int):
+    """
+    Join a listed game as a spectator, by id rather than by code.
+
+    The counterpart to the listing above: picking a game from a list has to
+    work without knowing its code, but this can only ever produce a spectator.
+    A device that wants to play still has to be told the code.
+
+    No nickname either — a spectator has no stats and no seat, so a TV can go
+    from the main menu to watching without typing anything at all.
+    """
+    lobby = get_object_or_404(Lobby, pk=lobby_id)
+    if lobby.status == Lobby.Status.FINISHED:
+        return Response({"detail": "That game has finished."}, status=status.HTTP_409_CONFLICT)
+
+    nickname = (request.data.get("nickname") or "").strip() or "TV"
+    member = Member.objects.create(
+        lobby=lobby, nickname=nickname, role=Member.Role.SPECTATOR
+    )
+    lobby.save(update_fields=["updated_at"])
+    return Response(
+        {"lobby": LobbySerializer(lobby).data, "member": MemberSerializer(member, secret=True).data},
+        status=status.HTTP_201_CREATED,
+    )
+
+
 @api_view(["POST"])
 def create_lobby(request):
     """Open a lobby. The creator is its host and its first player."""
@@ -61,7 +122,10 @@ def create_lobby(request):
     if not nickname:
         return Response({"detail": "A nickname is required."}, status=status.HTTP_400_BAD_REQUEST)
 
-    lobby = Lobby.create_unique()
+    # A game with no name is still findable in the list, so rather than demand
+    # one, fall back to whoever opened it.
+    name = (request.data.get("name") or "").strip()[:60] or f"{nickname}s Spiel"
+    lobby = Lobby.create_unique(name=name)
     member = Member.objects.create(
         lobby=lobby, nickname=nickname, role=Member.Role.PLAYER, is_host=True
     )

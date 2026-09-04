@@ -26,4 +26,4 @@ class LobbySerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Lobby
-        fields = ["code", "status", "members", "created_at", "updated_at"]
+        fields = ["code", "name", "status", "members", "created_at", "updated_at"]

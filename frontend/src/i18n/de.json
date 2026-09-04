@@ -12,7 +12,8 @@
     "resumeSummary": "{names} · Runde {round} · {current} ist am Zug",
     "resumeYes": "Fortsetzen",
     "resumeNo": "Neu starten",
-    "tagline": "Das Quiz-Brettspiel"
+    "tagline": "Das Quiz-Brettspiel",
+    "spectate": "Zuschauen"
   },
   "setup": {
     "title": "Spieler-Einrichtung",
@@ -267,7 +268,19 @@
     "waitingForHost": "Warte auf den Gastgeber …",
     "waitingToStart": "Wartet auf den Start",
     "leave": "Lobby verlassen",
-    "back": "Zurück"
+    "back": "Zurück",
+    "name": "Name des Spiels",
+    "namePlaceholder": "{name}s Spiel",
+    "nameHint": "Nur zur Anzeige — beigetreten wird weiterhin mit dem Code.",
+    "watch": "Laufendes Spiel ansehen",
+    "watchTitle": "Spiel auswählen",
+    "watchLoading": "Suche Spiele …",
+    "watchEmpty": "Gerade läuft kein Spiel.",
+    "watchMeta": "{count} Spieler · {state}",
+    "running": "läuft",
+    "notStarted": "noch nicht gestartet",
+    "watchingHint": "Du schaust zu. Das Spiel startet der Gastgeber.",
+    "unnamed": "Unbenanntes Spiel"
   },
   "spectate": {
     "waitingFor": "{name} ist am Zug",

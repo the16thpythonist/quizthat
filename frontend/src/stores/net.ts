@@ -19,8 +19,25 @@ export interface LobbyMember {
 
 export interface LobbyState {
   code: string
+  /** What the game is called at the table. Display only — joining uses the code. */
+  name: string
   status: 'open' | 'playing' | 'finished'
   members: LobbyMember[]
+}
+
+/**
+ * A game as it appears in the watch list.
+ *
+ * Note what is missing: the join code. The list exists so a television can pick
+ * a game without typing, and publishing codes here would let anyone reach the
+ * server and join any game as a player without being told one.
+ */
+export interface OpenLobby {
+  id: number
+  name: string
+  status: 'open' | 'playing'
+  player_count: number
+  created_at: string
 }
 
 export type NetRole = 'offline' | 'host' | 'guest' | 'spectator'
@@ -103,11 +120,28 @@ export const useNetStore = defineStore('net', () => {
         : 'guest'
   }
 
-  async function createLobby(nickname: string) {
+  async function createLobby(nickname: string, name = '') {
     error.value = null
     adopt(
-      await request('/', { method: 'POST', body: JSON.stringify({ nickname }) }),
+      await request('/', { method: 'POST', body: JSON.stringify({ nickname, name }) }),
     )
+    connect()
+  }
+
+  /** The games a television could watch. No codes; see OpenLobby. */
+  async function listOpenLobbies(): Promise<OpenLobby[]> {
+    return request<OpenLobby[]>('/open/')
+  }
+
+  /**
+   * Watch a game picked from the list.
+   *
+   * By id rather than by code, and it can only ever produce a spectator — so a
+   * TV gets from the main menu to watching without typing anything.
+   */
+  async function watchLobby(lobbyId: number) {
+    error.value = null
+    adopt(await request(`/watch/${lobbyId}/`, { method: 'POST', body: '{}' }))
     connect()
   }
 
@@ -411,6 +445,8 @@ export const useNetStore = defineStore('net', () => {
     spectators,
     createLobby,
     joinLobby,
+    listOpenLobbies,
+    watchLobby,
     startLobby,
     leave,
     connect,

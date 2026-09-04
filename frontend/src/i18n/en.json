@@ -12,7 +12,8 @@
     "resumeSummary": "{names} · Round {round} · {current} to play",
     "resumeYes": "Resume",
     "resumeNo": "Start Fresh",
-    "tagline": "The Quiz Board Game"
+    "tagline": "The Quiz Board Game",
+    "spectate": "Watch a game"
   },
   "setup": {
     "title": "Player Setup",
@@ -267,7 +268,19 @@
     "waitingForHost": "Waiting for the host …",
     "waitingToStart": "Waiting to start",
     "leave": "Leave lobby",
-    "back": "Back"
+    "back": "Back",
+    "name": "Name of the game",
+    "namePlaceholder": "{name}'s game",
+    "nameHint": "Shown to everyone — joining still uses the code.",
+    "watch": "Watch a running game",
+    "watchTitle": "Pick a game",
+    "watchLoading": "Looking for games …",
+    "watchEmpty": "No game is running right now.",
+    "watchMeta": "{count} players · {state}",
+    "running": "in progress",
+    "notStarted": "not started yet",
+    "watchingHint": "You are watching. The host starts the game.",
+    "unnamed": "Unnamed game"
   },
   "spectate": {
     "waitingFor": "{name} is playing",

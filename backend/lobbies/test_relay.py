@@ -275,3 +275,110 @@ class TestSnapshots:
         assert snapshot.version == 3
         assert snapshot.blob == {"v": 3}
         assert Snapshot.objects.filter(member__token=host).count() == 1
+
+
+@pytest.mark.django_db
+class TestNamesAndWatching:
+    def test_a_lobby_carries_the_name_it_was_given(self, api):
+        response = api.post(
+            "/api/lobbies/", {"nickname": "Alice", "name": "Jonas' Spielabend"}, format="json"
+        )
+        assert response.data["lobby"]["name"] == "Jonas' Spielabend"
+
+    def test_an_unnamed_lobby_is_named_after_whoever_opened_it(self, api):
+        response = api.post("/api/lobbies/", {"nickname": "Alice"}, format="json")
+        # Findable in the list either way, so a missing name is filled in rather
+        # than demanded.
+        assert response.data["lobby"]["name"] == "Alices Spiel"
+
+    def test_names_may_repeat(self, api):
+        for _ in range(2):
+            response = APIClient().post(
+                "/api/lobbies/", {"nickname": "Alice", "name": "Quizabend"}, format="json"
+            )
+            assert response.status_code == 201
+
+    def test_open_and_running_games_are_both_listed(self, api):
+        code, host = make_lobby(api, "Alice")
+        join(api, code, "Bob")
+        api.post("/api/lobbies/", {"nickname": "Zoe", "name": "Not started"}, format="json")
+        auth(api, host).post(f"/api/lobbies/{code}/start/")
+
+        rows = APIClient().get("/api/lobbies/open/").data
+        statuses = {row["status"] for row in rows}
+        # A TV is usually switched on after everyone has sat down.
+        assert statuses == {"open", "playing"}
+        assert len(rows) == 2
+
+    def test_a_finished_game_drops_off_the_list(self, api):
+        code, host = make_lobby(api, "Alice")
+        auth(api, host).post(f"/api/lobbies/{code}/leave/")  # the host leaving closes it
+        assert APIClient().get("/api/lobbies/open/").data == []
+
+    def test_the_listing_never_exposes_a_join_code(self, api):
+        """
+        The listing exists so a television can pick a game without typing.
+
+        If it carried codes, anyone who could reach the server could join any
+        game as a *player* without being told one — which is the entire point of
+        having a code. Playing still requires being told it.
+        """
+        make_lobby(api, "Alice")
+        rows = APIClient().get("/api/lobbies/open/").data
+        assert rows
+        for row in rows:
+            assert "code" not in row
+            assert "token" not in row
+        assert set(rows[0]) == {"id", "name", "status", "player_count", "created_at"}
+
+    def test_the_listing_counts_players_not_spectators(self, api):
+        code, _ = make_lobby(api, "Alice")
+        join(api, code, "Bob")
+        join(api, code, "TV", role="spectator")
+        row = APIClient().get("/api/lobbies/open/").data[0]
+        assert row["player_count"] == 2
+
+    def test_watching_by_id_needs_no_code_and_no_nickname(self, api):
+        code, _ = make_lobby(api, "Alice")
+        lobby_id = Lobby.objects.get(code=code).id
+        response = APIClient().post(f"/api/lobbies/watch/{lobby_id}/", {}, format="json")
+        assert response.status_code == 201
+        assert response.data["member"]["role"] == "spectator"
+        assert response.data["member"]["nickname"] == "TV"
+        assert response.data["lobby"]["code"] == code  # they get it once inside
+
+    def test_watching_by_id_can_only_ever_produce_a_spectator(self, api):
+        code, _ = make_lobby(api, "Alice")
+        lobby_id = Lobby.objects.get(code=code).id
+        response = APIClient().post(
+            f"/api/lobbies/watch/{lobby_id}/", {"role": "player", "nickname": "Sneak"}, format="json"
+        )
+        # The role in the body is ignored: this route is not a way in to playing.
+        assert response.data["member"]["role"] == "spectator"
+        assert Member.objects.get(nickname="Sneak").seat is None
+
+    def test_watching_a_running_game_works(self, api):
+        code, host = make_lobby(api, "Alice")
+        join(api, code, "Bob")
+        auth(api, host).post(f"/api/lobbies/{code}/start/")
+        lobby_id = Lobby.objects.get(code=code).id
+        assert APIClient().post(f"/api/lobbies/watch/{lobby_id}/", {}, format="json").status_code == 201
+
+    def test_watching_a_finished_game_is_refused(self, api):
+        code, host = make_lobby(api, "Alice")
+        lobby_id = Lobby.objects.get(code=code).id
+        auth(api, host).post(f"/api/lobbies/{code}/leave/")
+        assert APIClient().post(f"/api/lobbies/watch/{lobby_id}/", {}, format="json").status_code == 409
+
+    def test_a_watcher_still_cannot_act(self, api):
+        code, host = make_lobby(api, "Alice")
+        join(api, code, "Bob")
+        auth(api, host).post(f"/api/lobbies/{code}/start/")
+        lobby_id = Lobby.objects.get(code=code).id
+        token = APIClient().post(f"/api/lobbies/watch/{lobby_id}/", {}, format="json").data["member"]["token"]
+        response = auth(APIClient(), token).post(
+            f"/api/lobbies/{code}/intents/",
+            {"intent": {"type": "placePeg", "args": [0, 0]}},
+            format="json",
+        )
+        assert response.status_code == 403

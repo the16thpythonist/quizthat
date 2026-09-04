@@ -58,7 +58,13 @@ const roundLabel = computed(() => t('spectate.round', { round: game.round }))
 <template>
   <div class="qt-screen qt-doodles">
     <div class="qt-spectate-head">
-      <p class="qt-spectate-round">{{ roundLabel }}</p>
+      <!--
+        A room can have two games going; the name is how the TV says which one
+        it is showing.
+      -->
+      <p class="qt-spectate-round">
+        <span v-if="net.lobby?.name">{{ net.lobby.name }} · </span>{{ roundLabel }}
+      </p>
       <h1 class="qt-spectate-title">{{ headline }}</h1>
       <p v-if="publicQuestion" class="qt-spectate-question">{{ publicQuestion }}</p>
       <p v-else-if="net.role === 'spectator'" class="qt-spectate-sub">

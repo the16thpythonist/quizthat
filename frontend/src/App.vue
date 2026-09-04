@@ -29,8 +29,14 @@ const game = useGameStore()
 const net = useNetStore()
 const { locale } = useI18n()
 
-/** Set from the title screen; leaving it returns to the offline menu. */
+/**
+ * Set from the title screen; leaving it returns to the offline menu.
+ *
+ * 'watch' opens straight on the list of games, which is the whole point of the
+ * separate menu entry — a television gets there without typing.
+ */
 const inLobby = ref(false)
+const lobbyMode = ref<'play' | 'watch'>('play')
 
 /**
  * Whether this device may act on the current state.
@@ -228,7 +234,9 @@ onUnmounted(() => {
   <template v-else>
     <component
       :is="currentScreen"
-      @multi-device="inLobby = true"
+      :mode="currentScreen === LobbyScreen ? lobbyMode : undefined"
+      @multi-device="lobbyMode = 'play'; inLobby = true"
+      @spectate="lobbyMode = 'watch'; inLobby = true"
       @back="inLobby = false"
     />
     <BoardViewerOverlay />

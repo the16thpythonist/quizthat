@@ -7,7 +7,7 @@
  * and the game has no router, so a screen that navigated between them would
  * have to invent one.
  */
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
 import { useNetStore } from '../stores/net'
@@ -15,17 +15,20 @@ import { useActions } from '../composables/useActions'
 import ExpertisePicker from '../components/ExpertisePicker.vue'
 import { COLOR_HEX, PLAYER_COLORS } from '../types/session'
 import type { Expertise, PlayerColor } from '../types/session'
+import type { OpenLobby } from '../stores/net'
 
 const { t } = useI18n()
 const game = useGameStore()
 const net = useNetStore()
 const act = useActions()
 
+const props = withDefaults(defineProps<{ mode?: 'play' | 'watch' }>(), { mode: 'play' })
 const emit = defineEmits<{ back: [] }>()
 
-type Step = 'choose' | 'code' | 'roster'
+type Step = 'choose' | 'code' | 'watch' | 'roster'
 const step = ref<Step>('choose')
 const nickname = ref('')
+const lobbyName = ref('')
 const joinCode = ref('')
 const asSpectator = ref(false)
 const busy = ref(false)
@@ -43,6 +46,7 @@ onMounted(() => {
   } catch {
     /* storage unavailable — they can type it again */
   }
+  if (props.mode === 'watch') openWatchList()
 })
 
 function rememberNickname() {
@@ -74,7 +78,7 @@ async function run(action: () => Promise<void>) {
   }
 }
 
-const host = () => run(() => net.createLobby(nickname.value.trim()))
+const host = () => run(() => net.createLobby(nickname.value.trim(), lobbyName.value.trim()))
 const join = () =>
   run(() => net.joinLobby(joinCode.value, nickname.value.trim(), asSpectator.value))
 
@@ -109,6 +113,47 @@ async function beginGame() {
   }
 }
 
+// ─── Watching ─────────────────────────────────────────────────
+
+/**
+ * The games on offer, refreshed while the list is open.
+ *
+ * Polled rather than streamed: this is a list somebody is staring at for a few
+ * seconds before tapping, not a live game, and it would be a second SSE
+ * connection per television for no benefit.
+ */
+const openLobbies = ref<OpenLobby[]>([])
+const loadingList = ref(false)
+let listTimer: ReturnType<typeof setInterval> | null = null
+
+async function refreshList() {
+  try {
+    openLobbies.value = await net.listOpenLobbies()
+  } catch (err) {
+    net.error = err instanceof Error ? err.message : String(err)
+  }
+}
+
+async function openWatchList() {
+  step.value = 'watch'
+  loadingList.value = true
+  await refreshList()
+  loadingList.value = false
+  listTimer ??= setInterval(refreshList, 4000)
+}
+
+function stopPolling() {
+  if (listTimer) clearInterval(listTimer)
+  listTimer = null
+}
+
+onUnmounted(stopPolling)
+
+async function watch(lobby: OpenLobby) {
+  stopPolling()
+  await run(() => net.watchLobby(lobby.id))
+}
+
 /** The colour a member will play as, or is provisionally shown as. */
 function colorFor(member: { seat: number | null; role: string }, index: number): string {
   if (member.role === 'spectator') return 'rgba(255,255,255,0.35)'
@@ -125,7 +170,9 @@ async function leave() {
 <template>
   <div class="qt-screen qt-doodles">
     <div class="qt-title-wrap">
-      <h1 class="qt-game-title">{{ t('lobby.title') }}</h1>
+      <h1 class="qt-game-title">
+        {{ t(step === 'watch' ? 'lobby.watchTitle' : 'lobby.title') }}
+      </h1>
 
       <p v-if="net.error" class="qt-lobby-error">{{ net.error }}</p>
 
@@ -141,6 +188,16 @@ async function leave() {
         />
         <p class="qt-lobby-hint">{{ t('lobby.nicknameHint') }}</p>
 
+        <label class="qt-lobby-label" for="lobbyname">{{ t('lobby.name') }}</label>
+        <input
+          id="lobbyname"
+          v-model="lobbyName"
+          class="qt-input"
+          :placeholder="t('lobby.namePlaceholder', { name: nickname.trim() || 'Jonas' })"
+          maxlength="60"
+        />
+        <p class="qt-lobby-hint">{{ t('lobby.nameHint') }}</p>
+
         <button class="qt-cta qt-cta--ghost" @click="pickingExpertise = true">
           {{ expertise.major_categories.length ? expertise.major_categories.join(' · ') : t('setup.chooseExpertise') }}
         </button>
@@ -151,6 +208,7 @@ async function leave() {
         <button class="qt-cta qt-cta--ghost" :disabled="!nickname.trim()" @click="step = 'code'">
           {{ t('lobby.joinGame') }}
         </button>
+        <button class="qt-cta qt-cta--ghost" @click="openWatchList">{{ t('lobby.watch') }}</button>
         <button class="qt-cta qt-cta--ghost" @click="emit('back')">{{ t('lobby.back') }}</button>
       </div>
 
@@ -180,8 +238,33 @@ async function leave() {
         <button class="qt-cta qt-cta--ghost" @click="step = 'choose'">{{ t('lobby.back') }}</button>
       </div>
 
+      <!-- Watching: pick a game, no typing at all -->
+      <div v-else-if="step === 'watch'" class="qt-menu">
+        <p v-if="loadingList" class="qt-lobby-hint">{{ t('lobby.watchLoading') }}</p>
+        <p v-else-if="openLobbies.length === 0" class="qt-lobby-hint">
+          {{ t('lobby.watchEmpty') }}
+        </p>
+        <ul class="qt-lobby-roster">
+          <li v-for="lobby in openLobbies" :key="lobby.id">
+            <button class="qt-watch-row" :disabled="busy" @click="watch(lobby)">
+              <b>{{ lobby.name || t('lobby.unnamed') }}</b>
+              <span class="qt-lobby-tag">
+                {{ t('lobby.watchMeta', {
+                  count: lobby.player_count,
+                  state: t(lobby.status === 'playing' ? 'lobby.running' : 'lobby.notStarted'),
+                }) }}
+              </span>
+            </button>
+          </li>
+        </ul>
+        <button class="qt-cta qt-cta--ghost" @click="stopPolling(); step = 'choose'">
+          {{ t('lobby.back') }}
+        </button>
+      </div>
+
       <!-- Step 3: waiting for everyone -->
       <div v-else class="qt-menu">
+        <p class="qt-lobby-name">{{ net.lobby?.name }}</p>
         <p class="qt-lobby-label">{{ t('lobby.code') }}</p>
         <p class="qt-lobby-code">{{ net.code }}</p>
         <p class="qt-lobby-hint">{{ t('lobby.shareCode') }}</p>
@@ -210,6 +293,9 @@ async function leave() {
         >
           {{ t('lobby.startGame') }}
         </button>
+        <p v-else-if="net.role === 'spectator'" class="qt-lobby-hint">
+          {{ t('lobby.watchingHint') }}
+        </p>
         <p v-else class="qt-lobby-hint">{{ t('lobby.waitingForHost') }}</p>
         <button class="qt-cta qt-cta--ghost" @click="leave">{{ t('lobby.leave') }}</button>
       </div>
@@ -247,6 +333,26 @@ async function leave() {
   border-radius: 12px;
   padding: 8px 14px;
   margin: 0 0 12px;
+}
+.qt-lobby-name {
+  margin: 0 0 4px;
+  text-align: center;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 900;
+}
+.qt-watch-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
 }
 .qt-lobby-code {
   margin: 0;
