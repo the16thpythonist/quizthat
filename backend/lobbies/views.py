@@ -80,6 +80,7 @@ def open_lobbies(request):
                 "id": lobby.id,
                 "name": lobby.name or "",
                 "status": lobby.status,
+                "local": lobby.local,
                 "player_count": lobby.player_count,
                 "created_at": lobby.created_at,
             }
@@ -125,7 +126,7 @@ def create_lobby(request):
     # A game with no name is still findable in the list, so rather than demand
     # one, fall back to whoever opened it.
     name = (request.data.get("name") or "").strip()[:60] or f"{nickname}s Spiel"
-    lobby = Lobby.create_unique(name=name)
+    lobby = Lobby.create_unique(name=name, local=bool(request.data.get("local")))
     member = Member.objects.create(
         lobby=lobby, nickname=nickname, role=Member.Role.PLAYER, is_host=True
     )
@@ -138,10 +139,13 @@ def create_lobby(request):
 @api_view(["POST"])
 def join_lobby(request, code: str):
     """
-    Join an open lobby as a player, or at any time as a spectator.
+    Join a lobby, before or during a game.
 
-    A spectator is the TV: it can join a game already in progress, because it
-    only ever watches. A player cannot, since seats are fixed when play starts.
+    A latecomer takes the next seat and starts on an empty board. That is a real
+    disadvantage in a game already several rounds old, and it is deliberately
+    not compensated for here: the 2x boost already favours whoever has answered
+    fewest correctly (IDEA.md), so the catch-up mechanic the game was designed
+    with is what carries them.
     """
     lobby = get_object_or_404(Lobby, code=code.upper())
     nickname = (request.data.get("nickname") or "").strip()
@@ -153,20 +157,33 @@ def join_lobby(request, code: str):
     if not nickname:
         return Response({"detail": "A nickname is required."}, status=status.HTTP_400_BAD_REQUEST)
 
+    seat = None
     if role == Member.Role.PLAYER:
-        if lobby.status != Lobby.Status.OPEN:
+        if lobby.status == Lobby.Status.FINISHED:
+            return Response({"detail": "That game has finished."}, status=status.HTTP_409_CONFLICT)
+        if lobby.local:
+            # Everyone is already sitting at the same tablet; there is no seat
+            # here for a second device to take.
             return Response(
-                {"detail": "This game has already started."}, status=status.HTTP_409_CONFLICT
+                {"detail": "This game is being played on one device."},
+                status=status.HTTP_409_CONFLICT,
             )
-        if lobby.members.filter(role=Member.Role.PLAYER).count() >= 6:
+        players = lobby.members.filter(role=Member.Role.PLAYER)
+        if players.count() >= 6:
             return Response({"detail": "This lobby is full."}, status=status.HTTP_409_CONFLICT)
-        if lobby.members.filter(role=Member.Role.PLAYER, nickname__iexact=nickname).exists():
+        if players.filter(nickname__iexact=nickname).exists():
             return Response(
                 {"detail": "Somebody in this lobby is already called that."},
                 status=status.HTTP_409_CONFLICT,
             )
+        # A game already under way seats the newcomer at the end of the turn
+        # order. Seats are handed out here rather than at `start` so they stay
+        # contiguous and never move — the host uses them as player indices, and
+        # an intent names its sender by seat alone.
+        if lobby.status == Lobby.Status.PLAYING:
+            seat = players.count()
 
-    member = Member.objects.create(lobby=lobby, nickname=nickname, role=role)
+    member = Member.objects.create(lobby=lobby, nickname=nickname, role=role, seat=seat)
     lobby.save(update_fields=["updated_at"])  # wakes the roster on every stream
     return Response(
         {"lobby": LobbySerializer(lobby).data, "member": MemberSerializer(member, secret=True).data},

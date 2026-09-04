@@ -27,6 +27,9 @@
   <header>
     <a href="{% url 'corpus-browser' %}">QuizThat corpus</a>
     <span class="muted">{% block subtitle %}{% endblock %}</span>
+    {% if request.session.corpus_admin %}
+      <a href="{% url 'corpus-logout' %}" class="muted" style="margin-left: auto">Sign out</a>
+    {% endif %}
   </header>
   <main>
     {% if messages %}{% for message in messages %}

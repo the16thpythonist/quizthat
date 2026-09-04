@@ -4,6 +4,8 @@ import type { GameIntent } from './game'
 import { useGameStore } from './game'
 import { redactForAll } from '../engine/redact'
 import { useCorpusStore } from './corpus'
+import { PLAYER_COLORS } from '../types/session'
+import type { PlayerColor } from '../types/session'
 import { deserializeSession, serializeSession } from './persistence'
 import type { SerializedSession } from './persistence'
 
@@ -40,7 +42,15 @@ export interface OpenLobby {
   created_at: string
 }
 
-export type NetRole = 'offline' | 'host' | 'guest' | 'spectator'
+/**
+ * What this device is doing.
+ *
+ * 'broadcast' is a shared-tablet game publishing itself so a television can
+ * follow along. It is authoritative like a host, but every seat is played on
+ * this one device — so none of the per-seat gating that governs a multi-device
+ * game applies to it.
+ */
+export type NetRole = 'offline' | 'broadcast' | 'host' | 'guest' | 'spectator'
 
 const API = '/api/lobbies'
 
@@ -97,9 +107,33 @@ export const useNetStore = defineStore('net', () => {
   let version = 0
   let wakeLock: WakeLockSentinel | null = null
 
+  /** Seats are gated: several devices share one game. */
+  const isMultiDevice = computed(() =>
+    role.value === 'host' || role.value === 'guest' || role.value === 'spectator',
+  )
+  /** Connected to a lobby at all — including a broadcasting tablet. */
   const isOnline = computed(() => role.value !== 'offline')
-  const isHost = computed(() => role.value === 'host')
-  const canAct = computed(() => role.value !== 'spectator')
+  /** Runs the engine and publishes. A broadcasting tablet does both. */
+  const isHost = computed(() => role.value === 'host' || role.value === 'broadcast')
+  const isBroadcasting = computed(() => role.value === 'broadcast')
+
+  /**
+   * Whether this device may act on the state in front of it.
+   *
+   * The single gate for the whole app. Screens are mirrored on a device that
+   * cannot act, and mirroring is not passive: PegPlacementScreen places pegs
+   * from a watcher when the reveal settles, and JokerTargetSheet curses an
+   * opponent on mount. Blocking taps would not stop either of those, so the
+   * check belongs here, where every action already passes through.
+   */
+  const canActNow = computed(() => {
+    if (!isMultiDevice.value) return true // one device, playing every seat
+    if (role.value === 'spectator') return false
+    // Announcements belong to nobody in particular; the host drives them so a
+    // slow phone cannot hold up the table.
+    if (game.awaitingSeat === null) return isHost.value
+    return seat.value === game.awaitingSeat
+  })
   const players = computed(() => lobby.value?.members.filter((m) => m.role === 'player') ?? [])
   const spectators = computed(
     () => lobby.value?.members.filter((m) => m.role === 'spectator') ?? [],
@@ -126,6 +160,40 @@ export const useNetStore = defineStore('net', () => {
       await request('/', { method: 'POST', body: JSON.stringify({ nickname, name }) }),
     )
     connect()
+  }
+
+  /**
+   * Publish a shared-tablet game so a television can follow it.
+   *
+   * Entirely best-effort. Playing round a tablet must keep working with no
+   * server at all — that is the whole point of the offline mode — so a failure
+   * here is swallowed and the game carries on exactly as before.
+   *
+   * The device stays authoritative and keeps playing every seat; it simply also
+   * sends what it is doing. Remote players cannot join (the server refuses them
+   * on a local lobby); spectators can.
+   */
+  async function startBroadcast(name: string) {
+    if (role.value !== 'offline') return
+    try {
+      const payload = await request<{
+        lobby: LobbyState
+        member: LobbyMember & { token: string }
+      }>('/', {
+        method: 'POST',
+        body: JSON.stringify({ nickname: name || 'Tisch', name, local: true }),
+      })
+      lobby.value = payload.lobby
+      code.value = payload.lobby.code
+      token.value = payload.member.token
+      memberId.value = payload.member.id
+      seat.value = null
+      role.value = 'broadcast'
+      connect()
+      schedulePublish()
+    } catch {
+      /* no server, or it said no: the game is played on this device anyway */
+    }
   }
 
   /** The games a television could watch. No codes; see OpenLobby. */
@@ -201,6 +269,12 @@ export const useNetStore = defineStore('net', () => {
       lobby.value = JSON.parse((event as MessageEvent).data)
       const me = lobby.value?.members.find((m) => m.id === memberId.value)
       if (me) seat.value = me.seat
+      void seatLatecomers()
+      // Whoever just arrived has no snapshot yet, and the game may sit
+      // untouched for a minute while somebody reads a question — so publish on
+      // the roster changing, not only on the state changing. Without this a
+      // television that joined mid-game waits in the lobby until the next move.
+      schedulePublish()
     })
     stream.addEventListener('snapshot', (event) => {
       if (isHost.value) return // the host is the authority; it never adopts one
@@ -245,6 +319,38 @@ export const useNetStore = defineStore('net', () => {
     // several actions finish after they return: proceedFromTurnGate fetches its
     // four questions without awaiting them, so publishing on the way out would
     // send everyone a selection screen with no cards on it.
+  }
+
+  /**
+   * Add anyone who joined after the game started.
+   *
+   * The server seats a latecomer at the end of the turn order; the host is what
+   * turns that seat into a player with a board. Driven off the roster event
+   * rather than a dedicated message, because the roster is already the thing
+   * that changes when somebody arrives.
+   *
+   * They start on an empty board, which in a game several rounds old is a real
+   * disadvantage — left uncompensated on purpose, since the 2x boost already
+   * favours whoever has answered fewest correctly (IDEA.md).
+   */
+  async function seatLatecomers() {
+    if (!isHost.value || game.status !== 'in_progress') return
+    const waiting = players.value
+      .filter((member) => member.seat !== null && member.seat >= game.players.length)
+      .sort((a, b) => (a.seat ?? 0) - (b.seat ?? 0))
+    for (const member of waiting) {
+      // Seats are contiguous and never move, so a gap would mean the roster and
+      // the game had already diverged — adding out of order would cement it.
+      if (member.seat !== game.players.length) break
+      await game.dispatch({
+        type: 'addPlayer',
+        args: [
+          member.nickname,
+          PLAYER_COLORS[member.seat] as PlayerColor,
+          { major_categories: [], subcategories: [] },
+        ],
+      })
+    }
   }
 
   /**
@@ -359,7 +465,7 @@ export const useNetStore = defineStore('net', () => {
    * mode it is in: offline and the host apply locally, everyone else posts.
    */
   async function act(intent: GameIntent) {
-    if (role.value === 'spectator') return
+    if (!canActNow.value) return
     if (role.value === 'offline') {
       await game.dispatch(intent)
       return
@@ -422,6 +528,32 @@ export const useNetStore = defineStore('net', () => {
 
   watch(() => game.session, schedulePublish, { deep: true })
 
+  /**
+   * A broadcast belongs to one game, so it ends with it.
+   *
+   * Resetting returns the store to 'setup'; leaving here closes the lobby so it
+   * stops appearing in the watch list as a game nobody is playing.
+   */
+  watch(
+    () => game.status,
+    (status) => {
+      if (status === 'setup' && isBroadcasting.value) void leave()
+    },
+  )
+
+  /**
+   * A broadcast belongs to one game, so it ends with it.
+   *
+   * Reset returns the store to 'setup'; leaving here closes the lobby and stops
+   * it appearing in the watch list as a game nobody is playing.
+   */
+  watch(
+    () => game.status,
+    (status) => {
+      if (status === 'setup' && isBroadcasting.value) void leave()
+    },
+  )
+
   watch(
     () => game.state,
     (state) => {
@@ -439,11 +571,14 @@ export const useNetStore = defineStore('net', () => {
     error,
     connected,
     isOnline,
+    isMultiDevice,
     isHost,
-    canAct,
+    isBroadcasting,
+    canActNow,
     players,
     spectators,
     createLobby,
+    startBroadcast,
     joinLobby,
     listOpenLobbies,
     watchLobby,

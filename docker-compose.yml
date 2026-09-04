@@ -28,6 +28,12 @@ services:
     volumes:
       - ./questions:/corpus
       - backend-data:/data
+    # The same gitignored .env the pipeline uses. Marked optional so the stack
+    # still comes up without one — the corpus editor then refuses to open,
+    # which is the intended failure.
+    env_file:
+      - path: .env
+        required: false
     environment:
       - QUIZTHAT_CORPUS_DIR=/corpus
       - DJANGO_DB_PATH=/data/db.sqlite3

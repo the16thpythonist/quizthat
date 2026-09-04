@@ -9,11 +9,17 @@ to it, and one client stays authoritative.
 import os
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # The repository root, so the corpus can be read from questions/ in place.
 # Overridable for the container, where the folder is mounted elsewhere.
 REPO_ROOT = Path(os.environ.get("QUIZTHAT_REPO_ROOT", BASE_DIR.parent))
+
+# The same gitignored .env the pipeline reads for its API keys. Secrets belong
+# there and not in this file, which is committed.
+load_dotenv(REPO_ROOT / ".env")
 CORPUS_DIR = Path(os.environ.get("QUIZTHAT_CORPUS_DIR", REPO_ROOT / "questions"))
 
 # Development default. Set DJANGO_SECRET_KEY before exposing this anywhere.
@@ -89,6 +95,24 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": [],
     "UNAUTHENTICATED_USER": None,
 }
+
+# ─── Corpus editor login ────────────────────────────────────────
+#
+# One shared login for whoever curates the questions — there are no user
+# accounts, and this guards exactly one thing: the editor at /corpus/, which
+# can rewrite question files. Everything to do with playing a game is open, as
+# players and televisions have nobody to sign in as.
+#
+# Deliberately read from the environment rather than written here: this file is
+# committed and pushed, and a password in it would live in the git history for
+# good. With QUIZTHAT_ADMIN_PASSWORD unset the editor refuses to open at all,
+# so forgetting to configure it fails loudly rather than leaving the corpus
+# writable by anyone on the network.
+ADMIN_USER = os.environ.get("QUIZTHAT_ADMIN_USER", "admin")
+ADMIN_PASSWORD = os.environ.get("QUIZTHAT_ADMIN_PASSWORD", "")
+
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = "Lax"
 
 STATIC_URL = "static/"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"

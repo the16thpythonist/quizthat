@@ -65,7 +65,7 @@ function handleTap() {
  * nothing left to protect.
  */
 onMounted(() => {
-  if (net.isOnline) void act.proceedFromPassGate()
+  if (net.isMultiDevice) void act.proceedFromPassGate()
 })
 </script>
 

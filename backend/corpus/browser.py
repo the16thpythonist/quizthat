@@ -13,9 +13,11 @@ from django.http import Http404, HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import reverse
 
+from .auth import admin_required
 from .service import index
 
 
+@admin_required
 def question_list(request):
     filters = {
         "text": request.GET.get("q", ""),
@@ -42,6 +44,7 @@ def question_list(request):
     )
 
 
+@admin_required
 def question_edit(request, question_id: str, language: str):
     try:
         meta = index.read_meta(question_id)

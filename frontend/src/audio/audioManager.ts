@@ -29,6 +29,25 @@ const QUEUE_GAP_MS = 200 // pause between sequential voice lines
 // ─── Audio Manager ──────────────────────────────────────────────
 
 class AudioManager {
+  /**
+   * Suppresses stings and voice lines without touching the player's settings.
+   *
+   * A device watching somebody else's turn renders the real screens, and those
+   * screens play their own audio on mount. That is exactly what a television
+   * should do — but four phones in the same room, each a beat out of step with
+   * the others, is unlistenable. So the phones mirror silently and the TV does
+   * not.
+   *
+   * Music is deliberately unaffected: the bed belongs to the room, and cutting
+   * it every time a player's turn ended would be worse than leaving it.
+   */
+  private silenced = false
+
+  setSilenced(silenced: boolean): void {
+    this.silenced = silenced
+    if (silenced) this.clearQueue()
+  }
+
   private settings: AudioSettings = {
     masterVolume: 0.8,
     musicVolume: 0.5,
@@ -174,7 +193,7 @@ class AudioManager {
   enqueueVoice(src: string, onEnd?: () => void): void {
     // Dropped rather than queued-and-muted, so the callback still fires and
     // anything sequenced behind the line is not left waiting on silence.
-    if (!this.settings.voiceEnabled) {
+    if (!this.settings.voiceEnabled || this.silenced) {
       onEnd?.()
       return
     }
@@ -207,7 +226,7 @@ class AudioManager {
    * queued straight after it would sit there unplayed.
    */
   playVoiceNow(src: string): void {
-    if (!this.settings.voiceEnabled) return
+    if (!this.settings.voiceEnabled || this.silenced) return
     this.queue = [{ src }]
     if (this.currentVoice) {
       // Fades out, then playNext() picks up the entry above.
@@ -442,7 +461,7 @@ class AudioManager {
    * turn.
    */
   playSfx(src: string, { pitchJitter = 0 }: { pitchJitter?: number } = {}): void {
-    if (!this.settings.sfxEnabled) return
+    if (!this.settings.sfxEnabled || this.silenced) return
     if (this.sfxUnavailable.has(src)) return
 
     let sfx = this.sfxCache.get(src)

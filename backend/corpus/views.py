@@ -4,6 +4,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from .auth import is_signed_in
 from .service import index
 
 
@@ -26,7 +27,17 @@ def corpus_index(request):
 
 @api_view(["POST"])
 def reload_index(request):
-    """Re-scan the folder, after the pipeline has written to it."""
+    """
+    Re-scan the folder, after the pipeline has written to it.
+
+    Behind the editor's login: it is cheap but it is still a write-shaped
+    action, and the reads either side of it are already public because nginx
+    serves the same files.
+    """
+    if not is_signed_in(request):
+        return Response(
+            {"detail": "Sign in to the corpus editor first."}, status=status.HTTP_403_FORBIDDEN
+        )
     return Response({"question_count": index.reload()})
 
 

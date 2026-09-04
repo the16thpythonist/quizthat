@@ -37,6 +37,10 @@ class Lobby(models.Model):
     # joining is still by code, so names may repeat and nothing has to be unique.
     name = models.CharField(max_length=60, blank=True)
     code = models.CharField(max_length=CODE_LENGTH, unique=True, default=new_code)
+    # A shared-tablet game that is broadcasting itself so a television can show
+    # the boards. Every seat is played on the one device, so it takes spectators
+    # but never remote players.
+    local = models.BooleanField(default=False)
     status = models.CharField(max_length=16, choices=Status.choices, default=Status.OPEN)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -49,7 +53,7 @@ class Lobby(models.Model):
         return f"{self.name or self.code} ({self.status})"
 
     @classmethod
-    def create_unique(cls, name: str = "") -> "Lobby":
+    def create_unique(cls, name: str = "", local: bool = False) -> "Lobby":
         """
         Draw a code, retrying on the rare collision.
 
@@ -60,7 +64,7 @@ class Lobby(models.Model):
         for _ in range(10):
             code = new_code()
             if not cls.objects.filter(code=code).exists():
-                return cls.objects.create(code=code, name=name)
+                return cls.objects.create(code=code, name=name, local=local)
         raise RuntimeError("Could not allocate a free lobby code")
 
 

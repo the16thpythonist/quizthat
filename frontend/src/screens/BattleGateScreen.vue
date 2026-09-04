@@ -34,7 +34,7 @@ const remaining = computed(() => {
  * the question.
  */
 onMounted(() => {
-  if (net.isOnline) void act.proceedFromBattleGate()
+  if (net.isMultiDevice) void act.proceedFromBattleGate()
 })
 </script>
 

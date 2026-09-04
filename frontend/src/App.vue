@@ -23,7 +23,7 @@ import SettingsSheet from './components/SettingsSheet.vue'
 import AnimationTestScreen from './screens/AnimationTestScreen.vue'
 import AudioTestScreen from './screens/AudioTestScreen.vue'
 import LobbyScreen from './screens/LobbyScreen.vue'
-import SpectatorScreen from './screens/SpectatorScreen.vue'
+import MirrorScreen from './screens/MirrorScreen.vue'
 
 const game = useGameStore()
 const net = useNetStore()
@@ -39,34 +39,19 @@ const inLobby = ref(false)
 const lobbyMode = ref<'play' | 'watch'>('play')
 
 /**
- * Whether this device may act on the current state.
- *
- * Offline, always — one tablet, whoever is holding it. Online, only the seat
- * the game is waiting on, and never a spectator. This is where the pass-the-
- * device gates are replaced: instead of trusting people not to look, a phone
- * that is not being waited on is simply not shown the interactive screen.
- */
-const myTurn = computed(() => {
-  if (!net.isOnline) return true
-  if (net.role === 'spectator') return false
-  // Announcements and the victory screen belong to nobody in particular; the
-  // host drives those so one slow phone cannot hold up the table.
-  if (game.awaitingSeat === null) return net.isHost
-  return net.seat === game.awaitingSeat
-})
-
-/**
  * Which screen this device shows.
  *
  * The lobby is resolved here and nowhere else. Rendering it from two branches
- * meant that creating a lobby — which flips `net.isOnline` — swapped one
+ * meant that creating a lobby — which flips `net.isMultiDevice` — swapped one
  * instance of LobbyScreen for another, remounting it and losing the step the
  * player was on.
  */
 const currentScreen = computed(() => {
-  const beforeTheGame = !net.isOnline || game.status !== 'in_progress'
-  if ((inLobby.value || net.isOnline) && beforeTheGame) return LobbyScreen
-  if (!myTurn.value) return SpectatorScreen
+  const beforeTheGame = !net.isMultiDevice || game.status !== 'in_progress'
+  if ((inLobby.value || net.isMultiDevice) && beforeTheGame) return LobbyScreen
+  // A device the game is not waiting on watches instead of playing — the same
+  // screens, read-only. `canActNow` is the one gate; see net.ts.
+  if (!net.canActNow) return MirrorScreen
   return screenForState(game.state)
 })
 

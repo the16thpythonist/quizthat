@@ -1,0 +1,15 @@
+{% extends "corpus/base.html" %}
+{% block title %}Corpus editor disabled{% endblock %}
+{% block content %}
+  <p class="msg error">The corpus editor has no password set, so it is closed.</p>
+  <p>
+    Add these to the repo-root <code>.env</code> (gitignored) and restart the backend:
+  </p>
+  <pre>QUIZTHAT_ADMIN_USER=…
+QUIZTHAT_ADMIN_PASSWORD=…</pre>
+  <p class="muted">
+    It refuses rather than opening unprotected: this editor rewrites the question
+    files every game draws from, and a server that quietly left them writable to
+    anyone on the network would be worse than one that will not start.
+  </p>
+{% endblock %}

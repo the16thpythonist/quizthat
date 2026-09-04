@@ -1,0 +1,22 @@
+{% extends "corpus/base.html" %}
+{% block title %}Sign in · QuizThat corpus{% endblock %}
+{% block content %}
+  <form method="post" style="max-width: 22rem">
+    {% csrf_token %}
+    <input type="hidden" name="next" value="{{ next }}">
+    {% if error %}<p class="msg error">{{ error }}</p>{% endif %}
+    <p>
+      <label for="username">Username</label><br>
+      <input id="username" name="username" autocomplete="username" autofocus>
+    </p>
+    <p>
+      <label for="password">Password</label><br>
+      <input id="password" name="password" type="password" autocomplete="current-password">
+    </p>
+    <button type="submit">Sign in</button>
+    <p class="muted">
+      One shared login for whoever curates the questions. Set in the repo-root
+      <code>.env</code>; playing a game needs no account.
+    </p>
+  </form>
+{% endblock %}

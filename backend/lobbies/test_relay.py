@@ -95,11 +95,13 @@ class TestLobbyLifecycle:
         code, host = make_lobby(api)
         assert auth(api, host).post(f"/api/lobbies/{code}/start/").status_code == 409
 
-    def test_a_player_cannot_join_a_game_in_progress(self, api):
+    def test_a_player_may_join_a_game_in_progress(self, api):
+        # Latecomers are allowed in and seated at the end; see TestJoiningLate
+        # for what that costs them.
         code, host = make_lobby(api)
         join(api, code, "Bob")
         auth(api, host).post(f"/api/lobbies/{code}/start/")
-        assert join(api, code, "Cara").status_code == 409
+        assert join(api, code, "Cara").status_code == 201
 
     def test_a_spectator_can_join_a_game_in_progress(self, api):
         # The TV is switched on after everyone has already sat down.
@@ -329,7 +331,7 @@ class TestNamesAndWatching:
         for row in rows:
             assert "code" not in row
             assert "token" not in row
-        assert set(rows[0]) == {"id", "name", "status", "player_count", "created_at"}
+        assert set(rows[0]) == {"id", "name", "status", "player_count", "created_at", "local"}
 
     def test_the_listing_counts_players_not_spectators(self, api):
         code, _ = make_lobby(api, "Alice")
@@ -382,3 +384,106 @@ class TestNamesAndWatching:
             format="json",
         )
         assert response.status_code == 403
+
+
+@pytest.mark.django_db
+class TestJoiningLate:
+    def test_a_player_can_join_a_game_in_progress(self, api):
+        code, host = make_lobby(api, "Alice")
+        join(api, code, "Bob")
+        auth(api, host).post(f"/api/lobbies/{code}/start/")
+
+        response = join(api, code, "Cara")
+        assert response.status_code == 201
+        # Seated at the end of the turn order, not squeezed in.
+        assert response.data["member"]["seat"] == 2
+
+    def test_a_latecomer_never_takes_a_seat_somebody_holds(self, api):
+        code, host = make_lobby(api, "Alice")
+        join(api, code, "Bob")
+        auth(api, host).post(f"/api/lobbies/{code}/start/")
+        join(api, code, "Cara")
+        join(api, code, "Dan")
+
+        seats = sorted(
+            Member.objects.filter(lobby__code=code, role=Member.Role.PLAYER).values_list(
+                "seat", flat=True
+            )
+        )
+        assert seats == [0, 1, 2, 3]
+
+    def test_spectators_do_not_consume_a_seat(self, api):
+        code, host = make_lobby(api, "Alice")
+        join(api, code, "Bob")
+        auth(api, host).post(f"/api/lobbies/{code}/start/")
+        join(api, code, "TV", role="spectator")
+
+        response = join(api, code, "Cara")
+        assert response.data["member"]["seat"] == 2
+
+    def test_a_late_join_still_respects_the_six_player_limit(self, api):
+        code, host = make_lobby(api, "P0")
+        join(api, code, "P1")
+        auth(api, host).post(f"/api/lobbies/{code}/start/")
+        for n in range(2, 6):
+            assert join(api, code, f"P{n}").status_code == 201
+        assert join(api, code, "P6").status_code == 409
+
+    def test_a_late_join_still_refuses_a_duplicate_nickname(self, api):
+        code, host = make_lobby(api, "Alice")
+        join(api, code, "Bob")
+        auth(api, host).post(f"/api/lobbies/{code}/start/")
+        assert join(api, code, "bob").status_code == 409
+
+    def test_a_finished_game_cannot_be_joined(self, api):
+        code, host = make_lobby(api, "Alice")
+        join(api, code, "Bob")
+        auth(api, host).post(f"/api/lobbies/{code}/leave/")  # host leaving closes it
+        assert join(api, code, "Cara").status_code == 409
+
+
+@pytest.mark.django_db
+class TestBroadcastingALocalGame:
+    """
+    A shared-tablet game that publishes itself so a television can follow it.
+
+    Everyone is sitting at the same device, so it takes spectators but never
+    remote players — there is no seat for a second device to occupy.
+    """
+
+    def make_local(self, api, name="Alice, Bob"):
+        return api.post(
+            "/api/lobbies/", {"nickname": "Tisch", "name": name, "local": True}, format="json"
+        )
+
+    def test_a_local_game_can_be_opened(self, api):
+        response = self.make_local(api)
+        assert response.status_code == 201
+        assert response.data["lobby"]["local"] is True
+        assert Lobby.objects.get(code=response.data["lobby"]["code"]).local
+
+    def test_an_ordinary_lobby_is_not_local(self, api):
+        code, _ = make_lobby(api)
+        assert Lobby.objects.get(code=code).local is False
+
+    def test_it_is_listed_for_spectators(self, api):
+        self.make_local(api, name="Alice, Bob")
+        rows = APIClient().get("/api/lobbies/open/").data
+        assert [row["name"] for row in rows] == ["Alice, Bob"]
+        assert rows[0]["local"] is True
+
+    def test_a_television_may_watch_it(self, api):
+        lobby_id = Lobby.objects.get(code=self.make_local(api).data["lobby"]["code"]).id
+        response = APIClient().post(f"/api/lobbies/watch/{lobby_id}/", {}, format="json")
+        assert response.status_code == 201
+        assert response.data["member"]["role"] == "spectator"
+
+    def test_a_remote_player_may_not_join_it(self, api):
+        code = self.make_local(api).data["lobby"]["code"]
+        response = join(api, code, "Cara")
+        assert response.status_code == 409
+        assert "one device" in response.data["detail"]
+
+    def test_a_spectator_may_still_join_by_code(self, api):
+        code = self.make_local(api).data["lobby"]["code"]
+        assert join(api, code, "TV", role="spectator").status_code == 201

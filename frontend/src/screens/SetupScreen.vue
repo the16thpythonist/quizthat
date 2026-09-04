@@ -2,6 +2,7 @@
 import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useGameStore } from '../stores/game'
+import { useNetStore } from '../stores/net'
 import { useActions } from '../composables/useActions'
 import type { PlayerColor, Expertise } from '../types/session'
 import { COLOR_HEX, PLAYER_COLORS } from '../types/session'
@@ -10,6 +11,7 @@ import SettingsPanel from '../components/SettingsPanel.vue'
 
 const { t } = useI18n()
 const game = useGameStore()
+const net = useNetStore()
 const act = useActions()
 
 const emit = defineEmits<{ multiDevice: []; spectate: [] }>()
@@ -106,8 +108,13 @@ function handleRemovePlayer(index: number) {
   }
 }
 
-function handleStartGame() {
-  if (canStart.value) act.startGame()
+async function handleStartGame() {
+  if (!canStart.value) return
+  await act.startGame()
+  // Offer the game to any television on the network. Best-effort by design:
+  // a shared tablet must keep working with no server at all, so a failure in
+  // here is swallowed and nothing about the game changes.
+  void net.startBroadcast(game.players.map((p) => p.name).join(', '))
 }
 
 function handleNewGame() {

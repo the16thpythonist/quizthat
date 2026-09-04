@@ -77,10 +77,16 @@ own phone, plus an optional TV joined as a read-only spectator. The shape:
 - **`VALID_TRANSITIONS` is enforced**, via `_setState`. That is what refuses a
   malformed or out-of-turn intent.
 
-- **Who may act is decided in `App.vue`**, from `game.awaitingSeat`. That is what
-  replaces the pass-the-device gates: a phone the game is not waiting on is never
-  shown the interactive screen. `redactSessionFor()` is the other half — a guest
-  cannot be shown a secret and asked not to look.
+- **`net.canActNow` is the single gate.** A device the game is not waiting on
+  renders `MirrorScreen`: the *real* screens, read-only. Mirroring is not passive —
+  PegPlacementScreen places pegs from a watcher, JokerTargetSheet curses on mount —
+  so the check lives in `net.act()`, where every action already passes, not on taps.
+  `redactSessionFor()` is the other half: a guest cannot be shown a secret and asked
+  not to look. What a player is part-way through typing never leaves their device,
+  which is why the TV can show the question and options but not the answer.
+- **A local game broadcasts itself.** Starting a shared-tablet game opens a lobby
+  marked `local`, so a television can watch it. Best-effort: playing round a tablet
+  must keep working with no server at all, so a failure there is swallowed.
 - **Screens call `useActions()`**, not the store directly: `act.selectSlot(2)` routes
   through the transport so no screen knows which mode it is in.
 

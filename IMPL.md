@@ -736,6 +736,15 @@ index for search, and `/corpus/` is a plain-Django browser (not Django Admin,
 which is built on models) whose editor writes back to the JSON files — an edit
 shows up as an ordinary `git diff`.
 
+### Admin login
+
+`corpus/auth.py` guards the editor and nothing else. One shared username and
+password from the repo-root `.env` (`QUIZTHAT_ADMIN_USER` /
+`QUIZTHAT_ADMIN_PASSWORD`) — not Django's auth system, which would mean a user
+table and a reset flow for one credential. **With no password set the editor
+refuses to open**, so a server nobody configured cannot quietly leave the
+question files writable to the network. Playing a game needs no account.
+
 ### `stats/` — match history
 
 `Profile` is keyed on the casefolded nickname, so "jonas" and "Jonas" are one
